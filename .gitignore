@@ -1,3 +1,6 @@
+# Local environment (never commit — contains resolved tokens)
+.envrc
+
 # Dependencies
 node_modules/
 .venv/
