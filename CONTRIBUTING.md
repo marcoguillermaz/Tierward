@@ -350,7 +350,7 @@ This section is for repo administrators handling release cycles. Contributors do
 2. **Sync local main**: `git checkout main && git pull origin main`.
 3. **Create the tag**: `git tag -a v<MAJOR>.<MINOR>.<PATCH> -m "v<MAJOR>.<MINOR>.<PATCH> - <one-line summary>"`. Push with `git push origin v<MAJOR>.<MINOR>.<PATCH>`.
 4. **Run `/humanize`** on the GitHub Release notes draft (domain `announcement`).
-5. **Create the GitHub Release**: `gh release create v<MAJOR>.<MINOR>.<PATCH> --title "..." --notes "$(cat humanized-notes.md)"`. The active `gh` account must have repo write scope (verify with `gh auth status --active`); switch to `marcoguillermaz` account if `gh auth switch --user marcoguillermaz` is needed.
+5. **Create the GitHub Release**: `.claude/scripts/gh-release.sh v<MAJOR>.<MINOR>.<PATCH> "Release title" humanized-notes.md`. The script pins `GH_TOKEN` to `marcoguillermaz` on its own; no manual account switch needed. Output is the release URL.
 6. **Comment on the closed issue** with a humanized closing note pointing to the Release URL.
 7. **Update `roadmap-status.md`** locally: roadmap row → Done with the merge date and PR number. The file is gitignored under `.claude/initiatives/` — local source of truth.
 8. **Sync the GitHub Project**: `gh project item-edit --project-id <project-id> --id <item-id> --field-id <Status-field-id> --single-select-option-id <Done-option-id>`. The current project IDs live in `.claude/initiatives/roadmap-status.md` (gitignored).
@@ -369,7 +369,7 @@ npm publish
 
 ### Auth scoping protocol
 
-The `gh` CLI account `marcoguillermaz-spec` is read-only on this repo (no `workflow` scope). Release creation requires `marcoguillermaz`. After git operations the active account often reverts — always run `gh auth switch --user marcoguillermaz` immediately before any release-affecting `gh` invocation. Inline the switch in the same Bash call to avoid the silent revert window.
+The `gh` CLI account `marcoguillermaz-spec` is read-only on this repo (no `workflow` scope). Release creation requires `marcoguillermaz`. `.claude/scripts/gh-release.sh` pins `GH_TOKEN=$(gh auth token --user marcoguillermaz)` as its first action: the correct token is injected regardless of which account is currently active. Do not call `gh auth switch` before running the script; it is not needed for release operations.
 
 ### Branch protection
 
