@@ -82,12 +82,7 @@ MEMORY.md
 .env.example
 .sync-report.md
 tasks/
-docs/reviews/*
-!docs/reviews/external-review-prompt.md
-!docs/reviews/[0-9]*-quick/
-!docs/reviews/[0-9]*-quick/**
-!docs/reviews/[0-9]*-full/
-!docs/reviews/[0-9]*-full/**
+docs/reviews/
 docs/specs/
 docs/implementation-checklist.md
 docs/refactoring-backlog.md
