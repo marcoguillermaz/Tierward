@@ -4,7 +4,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js >= 22](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org)
 [![CI](https://github.com/marcoguillermaz/claude-dev-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoguillermaz/claude-dev-kit/actions/workflows/ci.yml)
-[![1129 integration checks](https://img.shields.io/badge/integration-1129%20checks-blue.svg)](#testing)
 
 > Scaffold for legible, reviewable AI-assisted development.
 > Claude generates. Your team decides.
@@ -49,7 +48,7 @@ After init, open Claude Code and start working. The scaffold is active immediate
 
 Start at Tier 0. Move up when you need more structure: `npx mg-claude-dev-kit upgrade --tier=m`
 
-### 22 audit skills
+### 24 audit skills
 
 Executable multi-step programs that run inside Claude Code. Not prompt instructions - structured audit workflows with model routing (haiku for mechanical checks, sonnet for analysis).
 
@@ -77,6 +76,8 @@ Executable multi-step programs that run inside Claude Code. Not prompt instructi
 | `/dependency-audit`    | M L   | Outdated package audit: Tier A (safe batch) / B (non-core major) / C (core/breaking-risk) classification, changelog summary for Tier B/C, codebase impact grep, runtime LTS status. Stack-aware (node-ts/python/swift); agnostic fallback for other stacks. Audit-only in v1; mutating apply-tier-a deferred to Q4. **MCP-aware (v1.20+)**: Step 2 queries `package-registry-mcp` for multi-ecosystem package metadata with WebFetch fallback. |
 | `/pr-review`           | M L   | Autonomous local PR review via gh CLI: spawns review subagent on the diff, classifies findings (Critical / Major / Minor) using universal + stack-specific severity criteria, posts review as PR comment for audit trail. Configurable via team-settings.json `prReviewSeverity`. Read-only. `--deep` escalates to opus for sensitive changes. Also exposed as `cdk_pr_review` MCP tool. |
 | `/skill-review`        | M L   | Quality review pipeline for skill portfolios. Spec compliance, cross-tier coherence, behavioral fixtures.                               |
+| `/dependency-scan`     | M L   | Pipeline-integrated (Phase 1): forked-context scan that returns the full file list — routes, components, shared types, DB tables — fed into the Phase 1 STOP gate. Six structurally independent checks (C1–C6) with a "Mandatory additions" section. |
+| `/context-review`      | L     | Pipeline-integrated (Phase 8.5): forked-context review that runs after block closure to recompact `CLAUDE.md` and detect context drift before the next block opens. Tier L only.                  |
 
 Skills are conditionally installed based on your project: `hasApi`, `hasDatabase`, `hasFrontend`, `hasDesignSystem`.
 
@@ -86,7 +87,7 @@ Node.js/TS, Node.js/JS, Python, Go, Swift, Kotlin, Rust, .NET, Ruby, Java - plus
 
 ### MCP server (v1.17.0+)
 
-The `mg-claude-dev-kit` package ships an MCP server (`claude-dev-kit-mcp` binary) alongside the CLI, version-locked, single `npm install -g`. Any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio) can query CDK governance state without the CDK CLI running. Five read-only tools cover doctor report, team-settings, last arch-audit, skill inventory, and package metadata. Full reference in the [MCP server](#mcp-server) section below.
+The `mg-claude-dev-kit` package ships an MCP server (`claude-dev-kit-mcp` binary) alongside the CLI, version-locked, single `npm install -g`. Any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio) can query CDK governance state without the CDK CLI running. Six read-only tools cover doctor report, team-settings, last arch-audit, skill inventory, package metadata, and `/pr-review` comments. Full reference in the [MCP server](#mcp-server) section below.
 
 ### Incremental adoption
 
@@ -133,7 +134,7 @@ The Stop hook in `settings.json` is the core enforcement mechanism. It blocks Cl
 npx mg-claude-dev-kit init                    # scaffold wizard
 npx mg-claude-dev-kit init --dry-run          # preview without writing
 npx mg-claude-dev-kit init --answers file.json  # skip prompts (CI/automation)
-npx mg-claude-dev-kit doctor                  # validate setup (28 checks)
+npx mg-claude-dev-kit doctor                  # validate setup (29 checks)
 npx mg-claude-dev-kit doctor --report         # JSON output for CI
 npx mg-claude-dev-kit doctor --ci             # silent, exit 1 on failure
 npx mg-claude-dev-kit upgrade                 # update template files
@@ -164,14 +165,14 @@ Read-only tools exposed:
 
 | Tool | Returns |
 | ---- | ------- |
-| `cdk_doctor_report` | `doctor --report` JSON (28 checks) |
+| `cdk_doctor_report` | `doctor --report` JSON (29 checks) |
 | `cdk_team_settings` | parsed `.claude/team-settings.json` |
 | `cdk_arch_audit_status` | last `arch-audit` run timestamp + age |
 | `cdk_skill_inventory` | installed skills + frontmatter snapshot |
 | `cdk_package_meta` | CDK package name, version, CLI path, cwd |
 | `cdk_pr_review` | reads existing `/pr-review` skill comments on a GitHub PR (verdict, severity counts). Read-only — to generate a fresh review, invoke the `/pr-review` CDK skill. |
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. No mutating tools in v1.17.0 by design.
+The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.22.0.
 
 ---
 
@@ -204,7 +205,7 @@ node packages/cli/test/integration/run.js    # 1129 integration checks
 node --test packages/cli/test/unit/*.test.js   # 373 unit tests
 ```
 
-Covers: file structure per tier, Stop hook presence, pipeline gate counts, placeholder resolution, skill pruning, security variant selection, native stack adaptation, rubric scoring, cross-stack content invariants (10 stacks), golden-file assertions (Swift, Node-TS, Python), full CLI execution via `--answers` fixtures.
+Covers: file structure per tier, Stop hook presence, pipeline gate counts, placeholder resolution, skill pruning, security variant selection, native stack adaptation, rubric scoring, cross-stack content invariants (10 stacks — the named stacks excluding the `other` fallback), golden-file assertions (Swift, Node-TS, Python), full CLI execution via `--answers` fixtures.
 
 ---
 

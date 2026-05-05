@@ -977,6 +977,20 @@ Unlike other skills, this one **applies changes directly**. Targets: early retur
 
 Conventional Commits automation. Auto-detects commit type, scope, and description from staged changes.
 
+#### /dependency-audit
+
+**File**: `.claude/skills/dependency-audit/SKILL.md` | **Tier**: M, L | **Backlog prefix**: `DEP-n`
+
+Outdated-package audit with severity classification. Three tiers: Tier A (safe batch — patch and minor bumps for non-core packages), Tier B (non-core major), Tier C (core or breaking-risk). Tier B and Tier C entries include a one-paragraph changelog summary plus a grep-based codebase impact note. Runtime LTS status is reported alongside the package report. Stack-aware (`node-ts`, `python`, `swift`); other stacks fall back to a generic outdated-listing pass.
+
+When the [`package-registry-mcp`](https://github.com/Artmann/package-registry-mcp) server is wired in `.mcp.json`, Step 2 calls `mcp__package-registry-mcp__lookup_package` for current package metadata (latest version, repository URL, maintainer, dist-tags) and uses the returned repo URL to fetch the GitHub releases changelog. Falls back to WebFetch with an explicit warning when the MCP server is unreachable. Audit-only in v1; mutating apply-tier-a is deferred.
+
+#### /pr-review
+
+**File**: `.claude/skills/pr-review/SKILL.md` | **Tier**: M, L
+
+Autonomous local pull-request review via the `gh` CLI. Spawns a review subagent on the PR diff, classifies findings as Critical / Major / Minor using universal plus stack-specific severity criteria, and posts the review as a PR comment for audit trail. Configurable through `.claude/team-settings.json` `prReviewSeverity`. Read-only — no merges, no code changes. The `--deep` flag escalates the subagent to opus for sensitive changes. The skill is also exposed as the `cdk_pr_review` MCP tool, which reads existing review comments rather than generating fresh ones.
+
 ---
 
 ## 11. Pipeline-integrated skills (Tier M / L)
@@ -1187,7 +1201,7 @@ npx mg-claude-dev-kit doctor --report  # JSON compliance output for CI pipelines
 npx mg-claude-dev-kit doctor --ci      # silent mode: exit 1 if any check fails
 ```
 
-Runs 28 checks:
+Runs 29 checks:
 
 1. Claude Code CLI is installed and reachable
 2. `CLAUDE.md` is present
@@ -1216,9 +1230,10 @@ Runs 28 checks:
 25. Stop hook has `timeout` configured and ≤ 600s (warn if missing - prevents hanging test commands)
 26. Anthropic-influenced files match the installed CDK template — `arch-audit/advanced-checks.md` in v1.15.0 (warn on drift, suggest `upgrade --anthropic`)
 27. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
-28. No duplicate entries in `permissions.deny` list (warn if duplicates found)
+28. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
+29. No duplicate entries in `permissions.deny` list (warn if duplicates found)
 
-Checks 12-28 are skipped for Tier 0 projects.
+Checks 12-29 are skipped for Tier 0 projects.
 
 **`--report` output**: machine-readable JSON with timestamp, cwd, summary (passed/warned/failed/skipped), and per-check details. Consumed by CI systems or external audit tools.
 
@@ -1254,19 +1269,20 @@ Enforcement points: `init` (refuse + explain), `upgrade` (refuse + suggest), `ad
 
 `init-from-context` does not enforce `team-settings.json` because the target directory is greenfield; a parent `team-settings.json` doesn't propagate by design.
 
-v1.16.0 keeps enforcement strictly CLI-side. Native `Skill()` permission rules in `.claude/settings.json` are not generated this release: Claude Code's permission grammar for skills is not part of the documented public schema. Native rule generation tracks for v1.17+, after upstream verification.
+v1.16.0 introduced CLI-side enforcement only; native `Skill()` permission rules in `.claude/settings.json` were not generated at the time because Claude Code's permission grammar for skills was not part of the documented public schema. v1.21.0 closed that gap with a `PreToolUse` hook on the `Skill` matcher (`.claude/hooks/team-settings-enforcement.mjs`) that refuses skill invocations violating `blockedSkills` or `allowedSkills` at runtime — covered by doctor check #28 (`team-settings-runtime-hook`).
 
 ### MCP server
 
 The `mg-claude-dev-kit` npm package ships two binaries: `claude-dev-kit` (the wizard CLI) and `claude-dev-kit-mcp` (a Model Context Protocol server). Version-locked, single install.
 
-The MCP server exposes CDK governance state to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). Five read-only tools:
+The MCP server exposes CDK governance state to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). Six read-only tools:
 
 - `cdk_doctor_report` — runs `doctor --report` and returns the JSON
 - `cdk_team_settings` — parsed `.claude/team-settings.json` contents
 - `cdk_arch_audit_status` — last arch-audit run timestamp + age in days
 - `cdk_skill_inventory` — installed skills with frontmatter snapshot
 - `cdk_package_meta` — package name, version, CLI path, project root
+- `cdk_pr_review` — reads existing `/pr-review` comments on a GitHub PR (verdict + severity counts). Read-only; to generate a fresh review, invoke the `/pr-review` CDK skill.
 
 Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user-scoped):
 
@@ -1278,7 +1294,7 @@ Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user
 }
 ```
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from the calling process's `cwd`. No mutating tools in v1.17.0 — adoption signal first, then read-write surface in a future minor.
+The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.22.0. A read-write surface remains a future-minor decision contingent on adoption signal.
 
 ### Adding team-specific rules
 
@@ -1410,4 +1426,4 @@ Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy 
 
 ---
 
-_Last updated: 2026-04-23 - v1.10.4_
+_Last updated: 2026-04-28 - v1.22.0_

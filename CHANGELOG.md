@@ -9,6 +9,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Documentation drift sync** (no behavior change). Realigned README, CONTRIBUTING and `docs/operational-guide.md` with the v1.22.0 codebase after a deep-review pass surfaced stale numbers and missing sections.
+  - Test counts updated: 1129 integration checks (was 979), 373 unit tests across 61 suites (was 332 across 50), ~118 integration scenarios (was ~40).
+  - Doctor count updated: 29 checks (was 28). The numbered list in operational-guide §13 now includes `team-settings-runtime-hook`, scaffolded back in v1.21.0 but never enumerated.
+  - Audit-skill count corrected to 24 (was 22) by adding `/dependency-scan` (Tier M+L) and `/context-review` (Tier L) to the README skill table. Both were already covered in operational-guide §11 as pipeline-integrated skills; the README simply omitted them.
+  - MCP-server tool count corrected to six (was five). `cdk_pr_review` shipped as the sixth tool but the introductory sentence was never updated.
+  - Operational-guide §10 now has dedicated entries for `/dependency-audit` and `/pr-review`, which were listed in the README skill table but missing from the per-skill detail section.
+  - Operational-guide footer bumped from "v1.10.4" to "v1.22.0".
+  - Hardcoded "1129 integration checks" badge removed from the README header to retire a recurring per-release maintenance debt; the exact count remains in §Testing.
+  - Statements about v1.16.0 and v1.17.0 in the operational-guide reframed in past tense so readers do not infer those are the current state.
+
 ---
 
 ## [1.22.0] — 2026-04-28
