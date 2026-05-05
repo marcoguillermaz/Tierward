@@ -247,3 +247,7 @@ To report a security issue, see [SECURITY.md](SECURITY.md).
 ## License
 
 [MIT](LICENSE)
+
+---
+
+Built and maintained by [Marco Guillermaz](https://github.com/marcoguillermaz). Distributed on npm as [`mg-claude-dev-kit`](https://www.npmjs.com/package/mg-claude-dev-kit). Discussions and questions: [GitHub Discussions](https://github.com/marcoguillermaz/claude-dev-kit/discussions).

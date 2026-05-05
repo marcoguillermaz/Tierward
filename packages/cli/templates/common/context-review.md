@@ -19,10 +19,17 @@ Each check has a specific, verifiable pass/fail condition.
 
 **Scope**: every non-code-block line in CLAUDE.md and auto-memory MEMORY.md.
 **Flag** non-English words that are clearly explanatory prose, not quoted values or domain terms.
-Configure the keyword list for your project's primary non-English language risk. Default (Italian):
-`obbligatori`, `opzional`, `rimozione`, `rimosso`, `aggiunto`, `aggiornato`, `necessario`, `corretto`, `utilizza`, `gestisce`, `nota bene`, `attenzione`, `verificare`
 
-**Run on CLAUDE.md**: `grep -n "[NON_ENGLISH_KEYWORDS]" CLAUDE.md` - replace `[NON_ENGLISH_KEYWORDS]` with a pipe-separated list of indicator words for your language.
+**Configure the keyword list for your team's primary non-English language risk.** The check is opt-in: set `[NON_ENGLISH_KEYWORDS]` to a pipe-separated list of indicator words for the language your team accidentally falls back to. Examples:
+
+- Italian: `però|perché|attualmente|verifica|aggiorna|necessario|obbligatori`
+- Spanish: `también|aunque|actualmente|verificar|actualizar|necesario|obligatorio`
+- French: `également|cependant|actuellement|vérifier|mettre à jour|nécessaire|obligatoire`
+- German: `auch|jedoch|derzeit|prüfen|aktualisieren|notwendig|erforderlich`
+
+If your team writes in English natively and never code-switches, leave `[NON_ENGLISH_KEYWORDS]` empty and skip C2.
+
+**Run on CLAUDE.md**: `grep -nE "[NON_ENGLISH_KEYWORDS]" CLAUDE.md` (replace the placeholder with your configured list).
 **Run on auto-memory**: same grep on `~/.claude/projects/<project-path-hash>/memory/MEMORY.md` (run `ls ~/.claude/projects/` to find your project hash)
 **Pass**: 0 matches, or all matches are inside quoted UI strings or domain values.
 **Fail**: translate flagged text to English.
