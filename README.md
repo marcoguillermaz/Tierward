@@ -33,6 +33,19 @@ The wizard detects your project state and guides you through setup. Three paths 
 
 After init, open Claude Code and start working. The scaffold is active immediately.
 
+### Context Builder (v1.23.0)
+
+Want the scaffold to come out the same way every time, and to leave a written record of what you asked for? Run `context` before `init`:
+
+```bash
+npx mg-claude-dev-kit context        # produces CONTEXT.md
+npx mg-claude-dev-kit init           # reads CONTEXT.md, scaffolds with no further prompts
+# or one-shot:
+npx mg-claude-dev-kit context --all  # runs context then init
+```
+
+`CONTEXT.md` is a schema-validated project context file. Greenfield gets a PM-friendly interview; existing repos go through three-phase inference: algorithmic detection, LLM extraction, hybrid PM review. The first question routes you to a PM or developer flow — the developer flow is a stub in v1.23.0 and gets a proper research-backed design later. Tier M and L are not covered by the v1 schema; the legacy wizard still handles them.
+
 ---
 
 ## What it does

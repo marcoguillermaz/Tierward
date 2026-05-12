@@ -138,6 +138,19 @@ The wizard asks about your project state first:
 
 Three init paths are available. All support `--dry-run` (preview without writing) and `--answers file.json` (skip prompts for CI/automation).
 
+#### Optional: `context` sub-command (v1.23.0+)
+
+If you want the scaffold to be reproducible and reviewable, run `context` before `init`:
+
+```bash
+npx mg-claude-dev-kit context        # produces CONTEXT.md
+npx mg-claude-dev-kit init           # reads CONTEXT.md, scaffolds with no further prompts
+```
+
+Or chain them: `context --all`. When `CONTEXT.md` is present in the cwd, `init` reads it and scaffolds without asking anything else. Pass `--ignore-context` to fall back to the prompt-based flow.
+
+`CONTEXT.md` is a schema-validated project context file: Zod schema v1, 16 MUST PASS structural checks, plus six inter-field constraints. Greenfield gets a PM-friendly interview; existing repos go through three-phase inference — algorithmic detection wrapping `detect-stack`, optional LLM extraction, hybrid PM review. The first question routes you to a PM or developer flow. The developer flow is a stub in v1.23.0; a research-backed design replaces it later. Tier M and L are not covered by the v1 schema and still go through the legacy wizard.
+
 ---
 
 ### 4a. Greenfield - new project from scratch
@@ -1426,4 +1439,4 @@ Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy 
 
 ---
 
-_Last updated: 2026-04-28 - v1.22.0_
+_Last updated: 2026-05-12 - v1.23.0_

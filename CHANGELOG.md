@@ -9,6 +9,37 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+(none)
+
+---
+
+## [1.23.0] — 2026-05-12
+
+### Added
+
+- **Context Builder — `context` sub-command** that writes a `CONTEXT.md` for `init` to consume. Greenfield runs a PM-friendly interview; existing repos go through three-phase inference: algorithmic `detect-stack` wrap, LLM extraction, hybrid PM review. The frontmatter is Zod schema v1: 16 MUST PASS structural checks plus six inter-field constraints (tier-0 forces scaffold options off, mode-greenfield excludes sources/inference, dotted-path keys for `confidence` and `pending_decisions`, and so on). The body has three sections: What we are building, Operational constraints, Open questions.
+- **`init` reads CONTEXT.md** when it finds one in the cwd and scaffolds deterministically, no further prompts. `--ignore-context` falls back to the prompt-based flow.
+- **Persona check Q1** routes to the PM flow or the dev-flow stub. Five options: Software Engineer / Developer, Product Manager, Tech Lead, Founder / Solo builder, Other. Developer and Tech Lead hit the dev stub for now — the real dev-oriented interview lands in v1.1, once PM-driven research is in.
+- **`--all` flag on `context`** chains `init` right after writing `CONTEXT.md`, so the two steps collapse into one command.
+- **`validate-context.js`** utility: deterministic MUST PASS validator covering file presence, frontmatter parse, schema conformance, and inter-field constraints. Exposed as `validateContextFile()` and `validateContextContent()`. Called by `context` after write and by `init` before scaffold.
+- **JS dependency**: `js-yaml ^4.1.1` for frontmatter parsing.
+
+### Pilot test results
+
+- **3/3 PASS strict** on the locked acceptance gate (R1 greenfield, R2 staff-manager Node-TS, R3 python-audit-project) across a 3-model cross-LLM rubric. Substitute jury this round: Perplexity sonar-pro + OpenAI gpt-4o + Mistral Large. The locked jury is Opus + Sonnet + Gemini — see `docs/reviews/context-builder-pilot-v1.md` for the caveats.
+- Phase 2 LLM extraction ran end-to-end on the OpenAI gpt-4o stand-in.
+- Tests: 499/499 unit tests pass (+91 new for context-builder).
+
+### Notes
+
+- Tier M and L are out of scope for the v1 schema. Picking them in the PM flow raises `TIER_NOT_SUPPORTED_V1` and redirects to the legacy wizard.
+- The legacy `init-greenfield`, `init-in-place`, and `init-from-context` modules still work. The v1 → v2 deprecation path lives in `memory/project_context_builder_implementation_v1.md`.
+- `docs/reviews/context-builder-pilot-v1.md` is gitignored — that report stays local to the maintainer.
+
+---
+
+## [1.22.0-postrelease-docs] — drift sync
+
 ### Changed
 
 - **Documentation drift sync** (no behavior change). Realigned README, CONTRIBUTING and `docs/operational-guide.md` with the v1.22.0 codebase after a deep-review pass surfaced stale numbers and missing sections.
