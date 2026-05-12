@@ -53,7 +53,12 @@ async function readProjectNameFromManifest(dir) {
 }
 
 function hasGithubRemote(dir) {
+  // Only check `git remote` when `.git` exists in dir itself, otherwise git
+  // walks up to the parent repo and reports unrelated remotes (caused a
+  // CI-only regression on fixture dirs nested inside a git working tree).
   try {
+    const dotGit = path.join(dir, '.git');
+    if (!fs.pathExistsSync(dotGit)) return false;
     const remotes = execSync('git remote -v', { cwd: dir, stdio: 'pipe' }).toString();
     return /(?:^|[@/])github\.com[:/]/.test(remotes);
   } catch {
