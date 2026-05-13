@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { program } from 'commander';
 import { init } from './commands/init.js';
+import { contextCommand } from './commands/context.js';
 import { doctor } from './commands/doctor.js';
 import { upgrade } from './commands/upgrade.js';
 import { addSkill, addRule } from './commands/add.js';
@@ -25,7 +26,19 @@ program
     '--answers <json>',
     'Bypass interactive prompts with JSON answers (for automation and testing)',
   )
+  .option(
+    '--ignore-context',
+    'Skip auto-detection of CONTEXT.md in the current directory (prompt as usual)',
+  )
   .action(init);
+
+program
+  .command('context')
+  .description('Generate CONTEXT.md (project context file consumed by `init`)')
+  .option('--mode <mode>', 'Override mode auto-detection (greenfield|in-place|from-context)')
+  .option('--skip-llm', 'Skip Phase 2 LLM extraction (offline runs)')
+  .option('--all', 'Auto-chain `init` after writing CONTEXT.md')
+  .action(contextCommand);
 
 program
   .command('doctor')

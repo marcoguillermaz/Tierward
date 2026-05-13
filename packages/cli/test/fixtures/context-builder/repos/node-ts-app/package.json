@@ -1,0 +1,14 @@
+{
+  "name": "node-ts-app",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "npx vitest run",
+    "dev": "npm run server",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
