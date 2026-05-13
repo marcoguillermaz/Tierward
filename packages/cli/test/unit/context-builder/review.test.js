@@ -26,6 +26,41 @@ describe('getDottedPath / setDottedPath', () => {
     setDottedPath(obj, 'a.b.c', 'hello');
     assert.deepEqual(obj, { a: { b: { c: 'hello' } } });
   });
+
+  // ── Prototype-pollution guard (CodeQL js/prototype-polluting-function) ──
+
+  it('setDottedPath refuses __proto__ segment (throws)', () => {
+    assert.throws(() => setDottedPath({}, '__proto__.polluted', 1), /Unsafe dotted-path/);
+  });
+
+  it('setDottedPath refuses prototype segment (throws)', () => {
+    assert.throws(() => setDottedPath({}, 'a.prototype.polluted', 1), /Unsafe dotted-path/);
+  });
+
+  it('setDottedPath refuses constructor segment (throws)', () => {
+    assert.throws(() => setDottedPath({}, 'constructor.polluted', 1), /Unsafe dotted-path/);
+  });
+
+  it('setDottedPath does not pollute Object.prototype', () => {
+    const obj = {};
+    try {
+      setDottedPath(obj, '__proto__.evil', 'pwned');
+    } catch {
+      // expected throw
+    }
+    assert.equal({}.evil, undefined, 'Object.prototype.evil should not be set');
+  });
+
+  it('getDottedPath ignores __proto__ segments', () => {
+    assert.equal(getDottedPath({}, '__proto__.toString'), undefined);
+  });
+
+  it('getDottedPath returns undefined for inherited properties (own-only)', () => {
+    class Foo {}
+    Foo.prototype.x = 'inherited';
+    const f = new Foo();
+    assert.equal(getDottedPath(f, 'x'), undefined);
+  });
 });
 
 describe('mergeLlmIntoDraft', () => {

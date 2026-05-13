@@ -17,7 +17,18 @@
 import inquirer from 'inquirer';
 
 /**
- * Walk a dotted path on an object. Returns undefined if any step is missing.
+ * Keys that, if traversed, would let callers reach (and mutate) the
+ * prototype chain. We refuse to read or write them via dotted paths.
+ */
+const PROTO_POLLUTION_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+function isOwnSafeProperty(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key) && !PROTO_POLLUTION_KEYS.has(key);
+}
+
+/**
+ * Walk a dotted path on an object. Returns undefined if any step is
+ * missing or hits a forbidden prototype-polluting segment.
  */
 export function getDottedPath(obj, dottedPath) {
   if (!obj || !dottedPath) return undefined;
@@ -25,6 +36,8 @@ export function getDottedPath(obj, dottedPath) {
   let cur = obj;
   for (const p of parts) {
     if (cur === null || cur === undefined) return undefined;
+    if (PROTO_POLLUTION_KEYS.has(p)) return undefined;
+    if (!Object.prototype.hasOwnProperty.call(cur, p)) return undefined;
     cur = cur[p];
   }
   return cur;
@@ -32,17 +45,36 @@ export function getDottedPath(obj, dottedPath) {
 
 /**
  * Set a dotted path on an object (mutates). Creates intermediate objects.
+ * Refuses any path segment in PROTO_POLLUTION_KEYS to prevent prototype
+ * pollution attacks (CodeQL js/prototype-polluting-function).
  */
 export function setDottedPath(obj, dottedPath, value) {
   const parts = dottedPath.split('.');
+  for (const p of parts) {
+    if (PROTO_POLLUTION_KEYS.has(p)) {
+      throw new Error(`Unsafe dotted-path segment: "${p}"`);
+    }
+  }
   let cur = obj;
   for (let i = 0; i < parts.length - 1; i++) {
-    if (cur[parts[i]] === undefined || cur[parts[i]] === null) {
-      cur[parts[i]] = {};
+    const key = parts[i];
+    if (!isOwnSafeProperty(cur, key) || cur[key] === null || cur[key] === undefined) {
+      Object.defineProperty(cur, key, {
+        value: {},
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
-    cur = cur[parts[i]];
+    cur = cur[key];
   }
-  cur[parts[parts.length - 1]] = value;
+  const lastKey = parts[parts.length - 1];
+  Object.defineProperty(cur, lastKey, {
+    value,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
 }
 
 /**
