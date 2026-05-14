@@ -119,7 +119,7 @@ A skip is a legitimate outcome. Silent degradation is not.
 
 ***** STOP - Path A: spec review. Path B: requirements summary. Wait for explicit confirmation before Phase 2. *****
 
-## Phase 1.5 - Design review *(blocks touching >5 files or introducing new patterns)*
+## Phase 1.5 - Design review *(blocks touching >5 files or new patterns)*
 
 - Present data flow, data structures, main trade-offs.
 - State discarded alternatives and rationale.
