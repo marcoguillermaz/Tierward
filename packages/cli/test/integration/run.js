@@ -916,6 +916,50 @@ async function scenarioPipelineGateCount() {
   }
 }
 
+// Template coverage scenarios — issue #138.
+// Each delegates to a standalone script under packages/cli/test/template-coverage/.
+// See docs/architecture/test-coverage-strategy.md for the rationale and registry.
+
+const TEMPLATE_COVERAGE_DIR = path.resolve(__dirname, '../template-coverage');
+
+function runTemplateCoverageScript(scriptName, label) {
+  const scriptPath = path.join(TEMPLATE_COVERAGE_DIR, scriptName);
+  try {
+    const stdout = execFileSync('node', [scriptPath], { stdio: ['ignore', 'pipe', 'pipe'] });
+    pass(label);
+    if (VERBOSE) console.log(stdout.toString());
+  } catch (err) {
+    const stdout = err.stdout ? err.stdout.toString() : '';
+    const stderr = err.stderr ? err.stderr.toString() : '';
+    const tail = (stdout + stderr).trim().split('\n').slice(-6).join(' | ');
+    fail(label, tail || err.message);
+  }
+}
+
+async function scenarioCrossTierLint() {
+  section('Cross-tier semantic lint (issue #138, approach A)');
+  runTemplateCoverageScript(
+    'cross-tier-lint.mjs',
+    'cross-tier lint: registry concepts aligned across tiers',
+  );
+}
+
+async function scenarioGateEnumeration() {
+  section('Gate clause enumeration (issue #138, approach B)');
+  runTemplateCoverageScript(
+    'gate-enum.mjs',
+    'gate enumeration: per-tier gate counts above sanity threshold',
+  );
+}
+
+async function scenarioPlaceholderCoverage() {
+  section('Placeholder coverage on templates (issue #138, approach C)');
+  runTemplateCoverageScript(
+    'placeholder-check.mjs',
+    'placeholder coverage: every UPPER_SNAKE_CASE placeholder documented',
+  );
+}
+
 async function scenarioNewStacks() {
   section('New named stacks - placeholder resolution + basic structure');
 
@@ -3958,6 +4002,9 @@ async function main() {
   await scenarioPerfAuditPlaceholders();
   await scenarioSkillDevApplicabilityCheck();
   await scenarioPipelineGateCount();
+  await scenarioCrossTierLint();
+  await scenarioGateEnumeration();
+  await scenarioPlaceholderCoverage();
   await scenarioSkillPruning();
   await scenarioTierSSkillPruning();
   await scenarioUiAuditPruning();

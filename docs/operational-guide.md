@@ -24,6 +24,7 @@
 14. [Conventions and non-negotiables](#14-conventions-and-non-negotiables)
 15. [Maintaining the scaffold](#15-maintaining-the-scaffold)
     15b. [Anthropic drift tracking](#15b-anthropic-drift-tracking)
+    15c. [Template coverage tests (maintainer-only)](#15c-template-coverage-tests-maintainer-only)
 16. [Frequently asked questions](#16-frequently-asked-questions)
 
 ---
@@ -1350,6 +1351,26 @@ CDK features risk being absorbed as Anthropic ships native Claude Code capabilit
 **Issue management**: Issues are labeled `anthropic-drift` and include the feature ID in the title as `[drift:feature-id]`. The tracker deduplicates by checking for existing open issues with the same feature ID. Stale issues (>30 days) are auto-closed.
 
 **Local dry-run**: `node .github/drift-tracker/check-drift.mjs --dry-run --days=30`
+
+---
+
+## 15c. Template coverage tests (maintainer-only)
+
+CDK ships normative prose inside `pipeline.md` per tier and inside per-tier `CLAUDE.md` templates. Drift between tiers, broken gate clauses, and undocumented placeholders quietly degrade what customers receive. The template-coverage layer catches these regressions before the templates reach `npm`.
+
+Three standalone scripts under `packages/cli/test/template-coverage/`:
+
+```bash
+node packages/cli/test/template-coverage/cross-tier-lint.mjs     # registry-driven cross-tier semantic lint
+node packages/cli/test/template-coverage/gate-enum.mjs           # enumerate every gate clause per tier
+node packages/cli/test/template-coverage/placeholder-check.mjs   # verify every UPPER_SNAKE_CASE placeholder is documented
+```
+
+Pass `--json` to any of them for machine-readable output. Exit code is non-zero on a violation. The three scripts also run as scenarios inside the main integration suite — `node packages/cli/test/integration/run.js` fails if any of them fail.
+
+The concept registry consumed by `cross-tier-lint.mjs` lives in `packages/cli/test/template-coverage/cross-tier-concepts.json`. When adding a new phase or normative paragraph that must remain aligned across tiers, update the registry before changing the templates. The lint will flag the mismatch until both sides agree.
+
+Strategy, cost-benefit, and the explicit decision on deferred approaches (LLM-based semantic eval, behavioral fixture testing): [docs/architecture/test-coverage-strategy.md](architecture/test-coverage-strategy.md).
 
 ---
 

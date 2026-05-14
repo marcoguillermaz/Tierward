@@ -40,6 +40,7 @@
 - Product UI language: **[Italian / English / other]**. Code/commits: **English**.
 - Status/enum values: `[ENUM_CASE_CONVENTION]`.
 - Every API route: verify caller role before any operation.
+- Test cleanup pattern: `[TEST_CLEANUP_PATTERN]` (e.g. truncate tables in test setup, clear fixtures in afterEach, reset mock services).
 - [Other non-obvious conventions.]
 
 ## Known Patterns

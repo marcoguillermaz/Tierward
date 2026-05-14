@@ -217,11 +217,13 @@ The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise 
 ## Testing
 
 ```bash
-node packages/cli/test/integration/run.js    # 1129 integration checks
+node packages/cli/test/integration/run.js    # 1132 integration checks
 node --test packages/cli/test/unit/*.test.js   # 554 unit tests
 ```
 
 Covers: file structure per tier, Stop hook presence, pipeline gate counts, placeholder resolution, skill pruning, security variant selection, native stack adaptation, rubric scoring, cross-stack content invariants (10 stacks — the named stacks excluding the `other` fallback), golden-file assertions (Swift, Node-TS, Python), full CLI execution via `--answers` fixtures.
+
+A separate **template-coverage** layer (under `packages/cli/test/template-coverage/`) hard-fails on cross-tier semantic drift, missing gate clauses, and undocumented placeholders in the shipped templates. The three scripts (`cross-tier-lint.mjs`, `gate-enum.mjs`, `placeholder-check.mjs`) run standalone for local work and automatically inside `run.js`. Strategy and concept registry: [docs/architecture/test-coverage-strategy.md](docs/architecture/test-coverage-strategy.md).
 
 ---
 
