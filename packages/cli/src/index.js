@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { program } from 'commander';
 import { init } from './commands/init.js';
 import { contextCommand } from './commands/context.js';
+import { validateContext } from './commands/validate-context.js';
 import { doctor } from './commands/doctor.js';
 import { upgrade } from './commands/upgrade.js';
 import { addSkill, addRule } from './commands/add.js';
@@ -39,6 +40,12 @@ program
   .option('--skip-llm', 'Skip Phase 2 LLM extraction (offline runs)')
   .option('--all', 'Auto-chain `init` after writing CONTEXT.md')
   .action(contextCommand);
+
+program
+  .command('validate-context [file]')
+  .description('Validate a CONTEXT.md against schema v1 (defaults to ./CONTEXT.md)')
+  .option('--json', 'Emit machine-readable JSON instead of human-readable output')
+  .action(validateContext);
 
 program
   .command('doctor')

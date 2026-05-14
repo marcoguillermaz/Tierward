@@ -1439,4 +1439,4 @@ Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy 
 
 ---
 
-_Last updated: 2026-05-12 - v1.23.0_
+_Last updated: 2026-05-14 - v1.25.0_

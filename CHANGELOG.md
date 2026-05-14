@@ -13,6 +13,22 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.25.0] — 2026-05-14
+
+### Added
+
+- **`validate-context` sub-command** — `npx mg-claude-dev-kit validate-context [file]` runs the 16 MUST PASS + 6 inter-field checks against a hand-edited or generated `CONTEXT.md` and exits 0 on pass, 1 on any failure. Defaults to `./CONTEXT.md` when no path is given. `--json` switches output to a parseable JSON shape (`{ valid, errors, data, body }`) on stdout, regardless of pass/fail. Use case: CI gating (`npx mg-claude-dev-kit validate-context && npm run build`), pre-commit hooks on hand-edited CONTEXT.md, reproducible sanity check.
+- `packages/cli/src/commands/validate-context.js` (NEW) — exposes `buildValidationOutput()` (pure formatter) and `validateContext()` (CLI entry).
+- `packages/cli/test/unit/context-builder/validate-context-command.test.js` (NEW) — 12 tests: 5 pure-formatter cases + 7 CLI subprocess integration tests (valid / invalid / missing / `--json` / default path / `--help`).
+
+### Notes
+
+- 539/539 unit tests pass (+12 from the new CLI command).
+- The validator function itself is unchanged from v1.23.0 — this is a CLI surface, not a logic change.
+- Closes v1.1 P1 from the reopened roadmap. P2 (`--from-yaml`) and P3 (tier M/L) remain ahead.
+
+---
+
 ## [1.24.0] — 2026-05-14
 
 ### Changed
