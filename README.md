@@ -188,7 +188,7 @@ Read-only tools exposed:
 | `cdk_package_meta`      | CDK package name, version, CLI path, cwd                                                                                                                         |
 | `cdk_pr_review`         | reads existing `/pr-review` skill comments on a GitHub PR (verdict, severity counts). Read-only — to generate a fresh review, invoke the `/pr-review` CDK skill. |
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.22.0.
+The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.27.0.
 
 ---
 
@@ -218,7 +218,7 @@ The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise 
 
 ```bash
 node packages/cli/test/integration/run.js    # 1129 integration checks
-node --test packages/cli/test/unit/*.test.js   # 373 unit tests
+node --test packages/cli/test/unit/*.test.js   # 554 unit tests
 ```
 
 Covers: file structure per tier, Stop hook presence, pipeline gate counts, placeholder resolution, skill pruning, security variant selection, native stack adaptation, rubric scoring, cross-stack content invariants (10 stacks — the named stacks excluding the `other` fallback), golden-file assertions (Swift, Node-TS, Python), full CLI execution via `--answers` fixtures.
@@ -248,7 +248,7 @@ Covers: file structure per tier, Stop hook presence, pipeline gate counts, place
 
 See [GitHub Milestones](https://github.com/marcoguillermaz/claude-dev-kit/milestones) for the 12-month plan.
 
-**Current**: v1.22.0 ships the **`/skill-dev` v2 hotspot enhancement** — the differentiating piece of the closed `/debt-triage` sub-track (Issue #97 sub-track 2), folded into `/skill-dev` per the 2026-04-28 cross-LLM verdict. New Step 3b "Hotspot priority (churn × debt)" intersects per-file debt count with `git log --since="6.months.ago" --numstat` churn data, ranks files into a 4-quadrant matrix (Q1 hot mess / Q2 stable rot / Q3 flaky frontier / Q4 cold corner), and renders a top-10 hotspot table in the audit report. The hotspot section does NOT change which findings get added to the backlog (Step 4 still applies the same severity rules) — it re-orders backlog work by leverage. Stack-agnostic; gracefully skips on non-Git projects or projects with insufficient signal. Integration: 1129 checks (+15 from `scenarioSkillDevHotspot`). The v1.21.0 PreToolUse runtime enforcement remains in place; v1.20.0 MCP-aware audit skills (`/security-audit` + `/dependency-audit`) remain pinned to `mcp-nvd` and `package-registry-mcp`.
+**Current**: v1.27.0 closes the Context Builder v1.1 cycle. The `context` sub-command produces a schema-validated `CONTEXT.md` that `init` reads to scaffold the project without prompting (`context --all` runs both steps in one shot; `context --from-yaml file.md` skips the interview for templates and CI; `validate-context` runs as a standalone CI gate). The schema covers all four pipeline tiers (0/S/M/L), including a feature-flag block (`has_api`, `has_database`, `has_frontend`, `has_design_system` + `design_system_name`, `has_prd`) and an `audit_model` field on M/L. The dev-flow persona reuses the legacy wizard's technical questions and auto-derives `tier.rationale` from `teamSize + workScope`. Carried forward from earlier releases: v1.22.0's `/skill-dev` v2 hotspot step (Step 3b "Hotspot priority (churn × debt)"), v1.21.0's PreToolUse runtime enforcement, and v1.20.0's MCP-aware audit skills (`/security-audit` + `/dependency-audit`) pinned to `mcp-nvd` and `package-registry-mcp`.
 
 **Next**: `/arch-audit` MCP-aware once the upstream Anthropic spec MCP server lands. `/privacy-audit` re-eval (Issue #97 sub-track 3) when AST tracing matures or demand signal materializes. Q2 #3 VitePress docs site (ICE 432) stays on hold.
 
