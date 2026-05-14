@@ -28,8 +28,11 @@ Lack of shared process - the issue is neither Claude nor the human, it is the ab
 - **Permissions**: a value area still unexplored - to be developed, especially for Tier L.
 - **Familiarity assumption**: the tiers themselves guide the expected familiarity level. Tier 0 = zero assumptions. Tier L = experienced user.
 
+## Shipped
+
+- **Context Builder (v1.23.0 → v1.27.0)**: now part of CDK as the `context` sub-command. A guided interview between Claude and the user (PM, Dev, Tech Lead, Founder, Other) produces a schema-validated `CONTEXT.md`, which `init` then consumes to scaffold deterministically. Greenfield runs either a PM-friendly interview or a developer flow that reuses the legacy wizard's technical questions. Existing repos go through three-phase inference: algorithmic detection, LLM extraction, hybrid PM review. The schema covers all four pipeline tiers (0/S/M/L). Companion CLI: `validate-context` for CI gating, `--from-yaml` to bypass the interview for templates and automation.
+
 ## Roadmap
 
-- **Context Builder** - a separate tool that PRECEDES claude-dev-kit. A guided interview between Claude and the user (PM, Dev, Designer) to define stack, team, goals, and constraints. Output: structured context that claude-dev-kit consumes to scaffold the right tier automatically. This is the product that makes CDK accessible to the non-developer Product Trio.
 - Specialised templates for common stacks (extensions, not core)
 - Permissions governance expansion (settings.json allow/deny tier-appropriate)
