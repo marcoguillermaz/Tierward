@@ -88,4 +88,7 @@ export const TECH_STACK_CHOICES = [
   { name: 'Other / mixed', value: 'other' },
 ];
 
-export const HARD_STOP_TIERS = Object.freeze(['m', 'l']);
+// As of v1.27.0 tier M/L are supported in the schema. The constant is
+// retained as an empty array so callers that import it still find the
+// export but the hard-stop no longer triggers.
+export const HARD_STOP_TIERS = Object.freeze([]);

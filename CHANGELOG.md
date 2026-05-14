@@ -13,6 +13,34 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.27.0] — 2026-05-14
+
+### Added
+
+- **Tier M and L coverage in the schema.** v1.0-1.2.6 capped `tier.selected` to `'0' | 's'` and raised `TIER_NOT_SUPPORTED_V1` on M/L. v1.27.0 widens the enum to `'0' | 's' | 'm' | 'l'` and reintroduces the feature flags the legacy wizard already collected:
+  - `commands.build`, `commands.e2e` (optional, nullable)
+  - `features` block (optional, tier M/L only): `has_api`, `has_database`, `has_frontend`, `has_design_system`, `design_system_name`, `has_prd`
+  - `audit_model` (string, optional)
+- **Inter-field constraints** added to the Zod schema:
+  - **C7** — `features.has_design_system=true` requires `features.design_system_name`
+  - **C8** — `features` block forbidden on tier 0/S (no consumers in the scaffold)
+- PM flow + dev flow ask the M/L extras only when `tier in {m, l}` (and `hasDesignSystem`/`auditModel` only when `hasFrontend=true`).
+- `init.dispatchFromContext` forwards the new fields to the legacy `init-*` sub-flows so a CONTEXT.md with tier M/L scaffolds deterministically without re-prompting.
+- 4 new fixtures: `valid-tier-m.md`, `valid-tier-l.md`, `invalid-c7-design-system-missing-name.md`, `invalid-c8-features-on-tier-s.md`.
+- 2 new tests in `validate-context.test.js` for C7 and C8; 4 new flow tests (PM tier M, PM tier L, dev tier M, dev tier L).
+
+### Changed
+
+- `HARD_STOP_TIERS` export in both `pm-flow.js` and `dev-flow.js` is now an empty array — kept for source-compat with any plugin that imports it. Legacy callers stop seeing the `TIER_NOT_SUPPORTED_V1` throw.
+
+### Notes
+
+- 554/554 unit tests pass (+4 from the new tier M/L coverage). Lint + format clean.
+- Backward-compatible by construction: every CONTEXT.md produced by v1.23-v1.26 (tier 0/S, no `features` block) still validates without change.
+- Closes v1.1 P3, the last item from the reopened roadmap. v1.1 is now feature-complete.
+
+---
+
 ## [1.26.0] — 2026-05-14
 
 ### Added

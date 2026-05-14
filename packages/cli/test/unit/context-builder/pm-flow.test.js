@@ -196,29 +196,49 @@ describe('runPmInterview (prefilledAnswers)', () => {
     assert.equal(frontmatter.tier.selected, '0');
   });
 
-  it('throws TIER_NOT_SUPPORTED_V1 when tier=m', async () => {
-    await assert.rejects(
-      runPmInterview({
-        mode: 'greenfield',
-        prefilledAnswers: { ...baseExperienced, tier: 'm' },
-      }),
-      (err) => err.code === 'TIER_NOT_SUPPORTED_V1',
-    );
+  it('accepts tier=m in v1.27.0+ (no hard stop)', async () => {
+    const { frontmatter, body } = await runPmInterview({
+      mode: 'greenfield',
+      prefilledAnswers: {
+        ...baseExperienced,
+        tier: 'm',
+        hasApi: true,
+        hasDatabase: true,
+        hasFrontend: true,
+        hasDesignSystem: true,
+        designSystemName: 'shadcn/ui',
+        hasPrd: false,
+        auditModel: 'claude-sonnet-4-6',
+        e2eCommand: 'npx playwright test',
+      },
+    });
+    const result = validateContextContent(serializeContext(frontmatter, body));
+    assert.equal(result.valid, true, `errors: ${JSON.stringify(result.errors)}`);
+    assert.equal(frontmatter.tier.selected, 'm');
+    assert.equal(frontmatter.features.has_api, true);
+    assert.equal(frontmatter.features.design_system_name, 'shadcn/ui');
+    assert.equal(frontmatter.audit_model, 'claude-sonnet-4-6');
   });
 
-  it('throws TIER_NOT_SUPPORTED_V1 when tier=l', async () => {
-    await assert.rejects(
-      runPmInterview({
-        mode: 'greenfield',
-        prefilledAnswers: { ...baseExperienced, tier: 'l' },
-      }),
-      (err) => err.code === 'TIER_NOT_SUPPORTED_V1',
-    );
+  it('accepts tier=l in v1.27.0+', async () => {
+    const { frontmatter } = await runPmInterview({
+      mode: 'greenfield',
+      prefilledAnswers: {
+        ...baseExperienced,
+        tier: 'l',
+        hasApi: false,
+        hasDatabase: true,
+        hasFrontend: false,
+        hasPrd: true,
+      },
+    });
+    assert.equal(frontmatter.tier.selected, 'l');
+    assert.equal(frontmatter.features.has_prd, true);
   });
 });
 
 describe('HARD_STOP_TIERS export', () => {
-  it('lists m and l as blocked tiers', () => {
-    assert.deepEqual([...HARD_STOP_TIERS].sort(), ['l', 'm']);
+  it('is empty in v1.27.0+ (tier M/L are supported)', () => {
+    assert.deepEqual([...HARD_STOP_TIERS], []);
   });
 });
