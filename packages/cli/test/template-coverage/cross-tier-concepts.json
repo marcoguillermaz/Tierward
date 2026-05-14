@@ -1,0 +1,112 @@
+{
+  "$comment": "Cross-tier concept registry for shipped pipeline.md templates. See docs/architecture/test-coverage-strategy.md §7 for the maintenance contract. Each entry declares a concept that MUST remain aligned across the tiers listed in appliesTo. matchType: exact-text | section-presence | structural. canonicalForm is the source-of-truth string for exact-text. For structural, items lists the required ordered sub-elements.",
+  "version": 1,
+  "concepts": [
+    {
+      "id": "placeholder-behavior-paragraph",
+      "description": "The four-line normative paragraph defining how Claude handles unconfigured command placeholders.",
+      "appliesTo": ["tier-s", "tier-m", "tier-l"],
+      "matchType": "exact-text",
+      "canonicalForm": "When a command placeholder in `CLAUDE.md` (type-check, build, test, E2E, or dev-server command) has no configured value (absent or left as a comment placeholder):\n- Emit a visible step: `[SKIP] No <command-name> configured for this stack — verify manually if applicable.`\n- Do NOT proceed as if the command succeeded.\n- Do NOT mark the gate green.\n\nA skip is a legitimate outcome. Silent degradation is not."
+    },
+    {
+      "id": "execution-keywords-list",
+      "description": "The four execution keywords that authorize autonomous action after a STOP gate.",
+      "appliesTo": ["tier-s", "tier-m", "tier-l"],
+      "matchType": "exact-text",
+      "canonicalForm": "`Execute` · `Proceed` · `Confirmed` · `Go ahead`"
+    },
+    {
+      "id": "never-commit-to-main-staging",
+      "description": "Cross-cutting rule forbidding direct commits to main or staging.",
+      "appliesTo": ["tier-s", "tier-m", "tier-l"],
+      "matchType": "section-presence",
+      "marker": "Never commit to `main` or `staging`"
+    },
+    {
+      "id": "secret-hygiene",
+      "description": "Cross-cutting rule banning committed secrets.",
+      "appliesTo": ["tier-s", "tier-m", "tier-l"],
+      "matchType": "section-presence",
+      "marker": "Secret hygiene"
+    },
+    {
+      "id": "phase-1-5-design-review-heading",
+      "description": "Phase 1.5 Design review heading with the canonical gate clause.",
+      "appliesTo": ["tier-m", "tier-l"],
+      "matchType": "exact-text",
+      "canonicalForm": "## Phase 1.5 - Design review *(blocks touching >5 files or new patterns)*"
+    },
+    {
+      "id": "phase-5d-three-tracks",
+      "description": "Phase 5d block-scoped quality audit decomposes into Track A (UI), Track B (API/DB + compliance), Track C (Test + doc + infra).",
+      "appliesTo": ["tier-m", "tier-l"],
+      "matchType": "structural",
+      "items": [
+        "**Track A - UI audit**",
+        "**Track B - API/DB + compliance audit**",
+        "**Track C - Test + doc + infra audit**"
+      ]
+    },
+    {
+      "id": "security-checklist-five-items",
+      "description": "Phase 2 security checklist enumerates API routes, DB tables, CLI, native mobile, and the explicit-skip fallback.",
+      "appliesTo": ["tier-m", "tier-l"],
+      "matchType": "structural",
+      "items": [
+        "If block adds/modifies API routes",
+        "If block adds/modifies DB tables",
+        "If project is CLI",
+        "If project is native mobile",
+        "If none of the above apply to this block"
+      ]
+    },
+    {
+      "id": "phase-8-three-commit-sequence",
+      "description": "Phase 8 commit sequence: source (Commit 1, already in Phase 3), docs (Commit 2), context (Commit 3).",
+      "appliesTo": ["tier-m", "tier-l"],
+      "matchType": "structural",
+      "items": ["**Commit 1**", "**Commit 2 - docs**", "**Commit 3 - context**"]
+    },
+    {
+      "id": "severity-handling-critical-major-minor",
+      "description": "Phase 5d severity handling defines Critical / Major / Minor outcomes.",
+      "appliesTo": ["tier-m", "tier-l"],
+      "matchType": "structural",
+      "items": ["**Critical**", "**Major**", "**Minor**"]
+    },
+    {
+      "id": "phase-6-stop-gate",
+      "description": "Phase 6 outcome checklist heading must include the STOP marker.",
+      "appliesTo": ["tier-m", "tier-l"],
+      "matchType": "section-presence",
+      "marker": "## Phase 6 - Outcome checklist ⏸ STOP"
+    }
+  ],
+  "mayDiverge": [
+    {
+      "id": "numbering-scheme",
+      "description": "tier-s uses FL-N (Fast Lane), tier-m and tier-l use Phase-N. Intentional asymmetry."
+    },
+    {
+      "id": "phase-1-6-visual-ux",
+      "description": "Phase 1.6 Visual & UX Design is MANDATORY in tier-l only; tier-m folds visual review into Phase 1.5 when relevant."
+    },
+    {
+      "id": "plan-lock-context-reset",
+      "description": "Plan lock + context reset section is tier-l only — reflects the complex-domain workflow where explicit plan-mode locking is warranted."
+    },
+    {
+      "id": "structural-requirements-pipeline",
+      "description": "Pipeline for Structural Requirements Changes (R1–R4) is tier-l only — needed when stakeholders change scope on already-implemented blocks in long-running projects."
+    },
+    {
+      "id": "adr-write-in-phase-8",
+      "description": "ADR write step in Phase 8 is tier-l only — reflects the architecture-decision discipline expected at that tier."
+    },
+    {
+      "id": "phase-8-5-delegation",
+      "description": "tier-m runs C1–C3 grep checks inline; tier-l delegates to /context-review skill. Both reach the same outcome (12 checks complete)."
+    }
+  ]
+}
