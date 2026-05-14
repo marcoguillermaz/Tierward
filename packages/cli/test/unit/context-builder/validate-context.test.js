@@ -42,6 +42,8 @@ describe('validateContextFile — valid fixtures', () => {
     'valid-in-place.md',
     'valid-from-context.md',
     'valid-tier-0.md',
+    'valid-tier-m.md',
+    'valid-tier-l.md',
   ]) {
     it(`${file} passes`, () => {
       const result = validateContextFile(fx(file));
@@ -156,6 +158,22 @@ describe('validateContextFile — inter-field constraints', () => {
       hasC6,
       `expected a pending_decisions dotted-path error, got: ${JSON.stringify(result.errors)}`,
     );
+  });
+
+  it('C7 (v1.27.0+): has_design_system=true without design_system_name fails', () => {
+    const result = validateContextFile(fx('invalid-c7-design-system-missing-name.md'));
+    assert.equal(result.valid, false);
+    const hasC7 = result.errors.some(
+      (e) => /design_system_name/.test(e.message) && e.path.includes('design_system_name'),
+    );
+    assert.ok(hasC7, `expected design_system_name error, got: ${JSON.stringify(result.errors)}`);
+  });
+
+  it('C8 (v1.27.0+): features block on tier S fails', () => {
+    const result = validateContextFile(fx('invalid-c8-features-on-tier-s.md'));
+    assert.equal(result.valid, false);
+    const hasC8 = result.errors.some((e) => /features block requires tier M or L/.test(e.message));
+    assert.ok(hasC8, `expected C8 error, got: ${JSON.stringify(result.errors)}`);
   });
 });
 

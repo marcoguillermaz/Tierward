@@ -96,8 +96,8 @@ export function assembleDevQuestions({ mode, projectNameDefault, algoDefaults } 
       default: 's',
       choices: [
         { name: 'S — Fast Lane (bugfixes, ≤3 files)', value: 's' },
-        { name: 'M — Standard (v1.1+ — use legacy `init` for now)', value: 'm' },
-        { name: 'L — Full (v1.1+ — use legacy `init` for now)', value: 'l' },
+        { name: 'M — Standard (feature blocks, 1-2 weeks)', value: 'm' },
+        { name: 'L — Full (complex domain, team)', value: 'l' },
       ],
     },
     {
@@ -122,6 +122,66 @@ export function assembleDevQuestions({ mode, projectNameDefault, algoDefaults } 
       when: (a) => a.familiarity !== '0',
       default: (a) => cmdDefaults.dev ?? STACK_DEFAULTS[a.techStack]?.dev ?? '',
     },
+    // ── Tier M / L extras (v1.27.0+) — same questions as PM flow ─
+    {
+      type: 'input',
+      name: 'e2eCommand',
+      message: 'E2E / integration test command? (leave blank to skip)',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: '',
+    },
+    {
+      type: 'confirm',
+      name: 'hasApi',
+      message: 'Does this project expose an API?',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: false,
+    },
+    {
+      type: 'confirm',
+      name: 'hasDatabase',
+      message: 'Does this project use a database?',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: true,
+    },
+    {
+      type: 'confirm',
+      name: 'hasFrontend',
+      message: 'Does this project have a UI?',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: true,
+    },
+    {
+      type: 'confirm',
+      name: 'hasDesignSystem',
+      message: 'Component library / design system?',
+      when: (a) => (a.tier === 'm' || a.tier === 'l') && a.hasFrontend === true,
+      default: true,
+    },
+    {
+      type: 'input',
+      name: 'designSystemName',
+      message: 'Design system name:',
+      when: (a) =>
+        (a.tier === 'm' || a.tier === 'l') && a.hasFrontend === true && a.hasDesignSystem === true,
+      default: 'component library',
+      validate: (v) => v.trim().length > 0 || 'Required',
+    },
+    {
+      type: 'confirm',
+      name: 'hasPrd',
+      message: 'Track a PRD per feature block?',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: false,
+    },
+    {
+      type: 'input',
+      name: 'auditModel',
+      message: 'Preferred Claude model for deep-analysis skills?',
+      when: (a) => (a.tier === 'm' || a.tier === 'l') && a.hasFrontend === true,
+      default: 'claude-sonnet-4-6',
+    },
+    // ──────────────────────────────────────────────────────────────
     {
       type: 'confirm',
       name: 'includePreCommit',
@@ -213,6 +273,25 @@ export function buildDevFrontmatter({ answers, mode, generatedByVersion, algoOut
     if (algoOutput?.pending_decisions?.length > 0) {
       fm.pending_decisions = algoOutput.pending_decisions;
     }
+  }
+
+  // v1.27.0+ tier M/L feature flags + audit_model + extra commands.
+  if (answers.e2eCommand !== undefined) {
+    fm.commands.e2e = answers.e2eCommand.trim() === '' ? null : answers.e2eCommand.trim();
+  }
+  if (answers.buildCommand !== undefined) {
+    fm.commands.build = answers.buildCommand.trim() === '' ? null : answers.buildCommand.trim();
+  }
+  if (tierSelected === 'm' || tierSelected === 'l') {
+    const features = {};
+    if (answers.hasApi !== undefined) features.has_api = answers.hasApi;
+    if (answers.hasDatabase !== undefined) features.has_database = answers.hasDatabase;
+    if (answers.hasFrontend !== undefined) features.has_frontend = answers.hasFrontend;
+    if (answers.hasDesignSystem !== undefined) features.has_design_system = answers.hasDesignSystem;
+    if (answers.designSystemName) features.design_system_name = answers.designSystemName;
+    if (answers.hasPrd !== undefined) features.has_prd = answers.hasPrd;
+    if (Object.keys(features).length > 0) fm.features = features;
+    if (answers.auditModel) fm.audit_model = answers.auditModel;
   }
 
   return fm;

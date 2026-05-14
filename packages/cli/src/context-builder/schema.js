@@ -29,7 +29,10 @@ export const STACK_PRIMARY = z.enum([
 
 export const PROJECT_MODE = z.enum(['greenfield', 'in-place', 'from-context']);
 
-export const TIER_V1 = z.enum(['0', 's']);
+// TIER_V1 keeps the legacy export name for source compatibility with
+// v1.0-v1.2 callers. As of v1.27.0 it accepts the full 0/S/M/L matrix.
+export const TIER_V1 = z.enum(['0', 's', 'm', 'l']);
+export const TIER_VALUES = TIER_V1;
 
 export const CONFIDENCE = z.enum(['high', 'medium', 'low', 'declared']);
 
@@ -44,11 +47,20 @@ export const VALID_DOTTED_PATHS = [
   'commands.test',
   'commands.type_check',
   'commands.dev',
+  'commands.build',
+  'commands.e2e',
   'tier.selected',
   'tier.rationale',
   'scaffold_options.include_pre_commit',
   'scaffold_options.include_github',
   'sources.primary_repo',
+  'features.has_api',
+  'features.has_database',
+  'features.has_frontend',
+  'features.has_design_system',
+  'features.design_system_name',
+  'features.has_prd',
+  'audit_model',
 ];
 
 // ── Sub-schemas ──────────────────────────────────────────────────────
@@ -73,6 +85,22 @@ const commandsSchema = z
     test: z.string().min(1),
     type_check: z.string().nullable().optional(),
     dev: z.string().nullable().optional(),
+    // v1.27.0+ (tier M/L): optional build / e2e commands.
+    build: z.string().nullable().optional(),
+    e2e: z.string().nullable().optional(),
+  })
+  .strict();
+
+// v1.27.0+ tier M/L feature flags. All optional — tier 0/S projects skip
+// the block entirely.
+const featuresSchema = z
+  .object({
+    has_api: z.boolean().optional(),
+    has_database: z.boolean().optional(),
+    has_frontend: z.boolean().optional(),
+    has_design_system: z.boolean().optional(),
+    design_system_name: z.string().min(1).optional(),
+    has_prd: z.boolean().optional(),
   })
   .strict();
 
@@ -130,10 +158,14 @@ const baseContextSchema = z
     sources: sourcesSchema.optional(),
     inference: inferenceSchema.optional(),
     pending_decisions: z.array(pendingDecisionSchema).optional(),
+
+    // v1.27.0+ tier M/L extensions (all optional, additive vs v1.0-1.2).
+    features: featuresSchema.optional(),
+    audit_model: z.string().min(1).optional(),
   })
   .strict();
 
-// ── Full schema with 6 inter-field constraints ───────────────────────
+// ── Full schema with inter-field constraints ─────────────────────────
 
 export const CONTEXT_SCHEMA_V1 = baseContextSchema.superRefine((data, ctx) => {
   // C1 — Tier 0 requires include_pre_commit=false AND include_github=false
@@ -215,6 +247,25 @@ export const CONTEXT_SCHEMA_V1 = baseContextSchema.superRefine((data, ctx) => {
           message: `Invalid dotted-path "${p.field}". Allowed paths: ${VALID_DOTTED_PATHS.join(', ')}`,
         });
       }
+    });
+  }
+
+  // C7 (v1.27.0+) — features.has_design_system=true requires design_system_name
+  if (data.features?.has_design_system === true && !data.features?.design_system_name) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['features', 'design_system_name'],
+      message: 'features.has_design_system=true requires features.design_system_name',
+    });
+  }
+
+  // C8 (v1.27.0+) — features block belongs to tier M/L. Tier 0/S projects
+  // must not carry feature flags (they have no consumers in the scaffold).
+  if (data.features && (data.tier.selected === '0' || data.tier.selected === 's')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['features'],
+      message: `features block requires tier M or L; tier ${data.tier.selected} has no consumers for feature flags`,
     });
   }
 });

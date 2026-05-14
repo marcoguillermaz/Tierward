@@ -18,7 +18,10 @@
 import inquirer from 'inquirer';
 import { DEFAULT_BODY } from '../writer.js';
 
-export const HARD_STOP_TIERS = ['m', 'l'];
+// HARD_STOP_TIERS was used in v1.0-v1.2 to block tier M/L. Kept as an
+// empty array in v1.27.0+ so legacy callers (tests, plugins) still find
+// the export but the hard-stop no longer triggers.
+export const HARD_STOP_TIERS = Object.freeze([]);
 
 /**
  * Default command suggestions per stack. Used as inquirer defaults so
@@ -134,6 +137,13 @@ export function buildFrontmatterFromAnswers(answers, ctx) {
   } else if (stackDefaults.dev) {
     commands.dev = stackDefaults.dev;
   }
+  // v1.27.0+ tier M/L extras
+  if (answers.e2eCommand !== undefined) {
+    commands.e2e = answers.e2eCommand.trim() === '' ? null : answers.e2eCommand.trim();
+  }
+  if (answers.buildCommand !== undefined) {
+    commands.build = answers.buildCommand.trim() === '' ? null : answers.buildCommand.trim();
+  }
 
   const frontmatter = {
     schema_version: 1,
@@ -156,6 +166,20 @@ export function buildFrontmatterFromAnswers(answers, ctx) {
       include_github: isTier0 ? false : (answers.includeGithub ?? false),
     },
   };
+
+  // v1.27.0+ tier M/L feature flags + audit_model.
+  // Only emit features block when tier is M or L (schema C8).
+  if (tierSelected === 'm' || tierSelected === 'l') {
+    const features = {};
+    if (answers.hasApi !== undefined) features.has_api = answers.hasApi;
+    if (answers.hasDatabase !== undefined) features.has_database = answers.hasDatabase;
+    if (answers.hasFrontend !== undefined) features.has_frontend = answers.hasFrontend;
+    if (answers.hasDesignSystem !== undefined) features.has_design_system = answers.hasDesignSystem;
+    if (answers.designSystemName) features.design_system_name = answers.designSystemName;
+    if (answers.hasPrd !== undefined) features.has_prd = answers.hasPrd;
+    if (Object.keys(features).length > 0) frontmatter.features = features;
+    if (answers.auditModel) frontmatter.audit_model = answers.auditModel;
+  }
 
   return frontmatter;
 }
@@ -261,8 +285,8 @@ export function assembleQuestions({ projectNameDefault } = {}) {
       default: (a) => suggestTier(a),
       choices: [
         { name: 'S — Fast Lane (bugfixes, ≤3 files)', value: 's' },
-        { name: 'M — Standard (v1.1 — use legacy wizard for now)', value: 'm' },
-        { name: 'L — Full (v1.1 — use legacy wizard for now)', value: 'l' },
+        { name: 'M — Standard (feature blocks, 1-2 weeks)', value: 'm' },
+        { name: 'L — Full (complex domain, team)', value: 'l' },
       ],
     },
     {
@@ -315,6 +339,66 @@ export function assembleQuestions({ projectNameDefault } = {}) {
       when: (a) => a.familiarity !== '0',
       default: (a) => STACK_DEFAULTS[a.techStack]?.dev ?? '',
     },
+    // ── Tier M / L extras (v1.27.0+) ──────────────────────────────
+    {
+      type: 'input',
+      name: 'e2eCommand',
+      message: 'E2E / integration test command? (leave blank to skip)',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: '',
+    },
+    {
+      type: 'confirm',
+      name: 'hasApi',
+      message: 'Does this project expose an API (REST / GraphQL / RPC)?',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: false,
+    },
+    {
+      type: 'confirm',
+      name: 'hasDatabase',
+      message: 'Does this project use a database?',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: true,
+    },
+    {
+      type: 'confirm',
+      name: 'hasFrontend',
+      message: 'Does this project have a UI?',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: true,
+    },
+    {
+      type: 'confirm',
+      name: 'hasDesignSystem',
+      message: 'Do you use a component library or design system (shadcn, MUI, Tailwind, …)?',
+      when: (a) => (a.tier === 'm' || a.tier === 'l') && a.hasFrontend === true,
+      default: true,
+    },
+    {
+      type: 'input',
+      name: 'designSystemName',
+      message: 'Design system name (e.g. shadcn/ui, MUI, Tailwind):',
+      when: (a) =>
+        (a.tier === 'm' || a.tier === 'l') && a.hasFrontend === true && a.hasDesignSystem === true,
+      default: 'component library',
+      validate: (v) => v.trim().length > 0 || 'Required when hasDesignSystem=true',
+    },
+    {
+      type: 'confirm',
+      name: 'hasPrd',
+      message: 'Track a PRD per feature block?',
+      when: (a) => a.tier === 'm' || a.tier === 'l',
+      default: false,
+    },
+    {
+      type: 'input',
+      name: 'auditModel',
+      message: 'Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?',
+      when: (a) => (a.tier === 'm' || a.tier === 'l') && a.hasFrontend === true,
+      default: 'claude-sonnet-4-6',
+    },
+    // ──────────────────────────────────────────────────────────────
     {
       type: 'confirm',
       name: 'includePreCommit',

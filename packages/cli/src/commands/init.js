@@ -97,6 +97,23 @@ async function dispatchFromContext(data, options) {
     includePreCommit: data.scaffold_options.include_pre_commit,
     includeGithub: data.scaffold_options.include_github,
   };
+  // v1.27.0+ tier M/L: forward the optional feature flags and extra
+  // commands so the legacy init-* sub-flows can scaffold M/L without
+  // re-prompting.
+  if (data.commands.e2e !== undefined) answersFromContext.e2eCommand = data.commands.e2e ?? '';
+  if (data.commands.build !== undefined)
+    answersFromContext.buildCommand = data.commands.build ?? '';
+  if (data.features?.has_api !== undefined) answersFromContext.hasApi = data.features.has_api;
+  if (data.features?.has_database !== undefined)
+    answersFromContext.hasDatabase = data.features.has_database;
+  if (data.features?.has_frontend !== undefined)
+    answersFromContext.hasFrontend = data.features.has_frontend;
+  if (data.features?.has_design_system !== undefined)
+    answersFromContext.hasDesignSystem = data.features.has_design_system;
+  if (data.features?.design_system_name)
+    answersFromContext.designSystemName = data.features.design_system_name;
+  if (data.features?.has_prd !== undefined) answersFromContext.hasPrd = data.features.has_prd;
+  if (data.audit_model) answersFromContext.auditModel = data.audit_model;
   const passthrough = { ...options, answers: JSON.stringify(answersFromContext) };
   switch (data.project.mode) {
     case 'greenfield':

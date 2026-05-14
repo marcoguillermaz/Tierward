@@ -206,24 +206,34 @@ describe('runDevInterview — greenfield', () => {
     assert.equal(frontmatter.tier.rationale, 'Brand new to Claude Code, exploring');
   });
 
-  it('throws TIER_NOT_SUPPORTED_V1 on tier=m', async () => {
-    await assert.rejects(
-      runDevInterview({
-        mode: 'greenfield',
-        prefilledAnswers: { ...baseGreenfield, tier: 'm' },
-      }),
-      (err) => err.code === 'TIER_NOT_SUPPORTED_V1',
-    );
+  it('accepts tier=m in v1.27.0+ with feature flags', async () => {
+    const { frontmatter, body } = await runDevInterview({
+      mode: 'greenfield',
+      generatedByVersion: '1.27.0',
+      prefilledAnswers: {
+        ...baseGreenfield,
+        tier: 'm',
+        hasApi: true,
+        hasDatabase: false,
+        hasFrontend: true,
+        hasDesignSystem: true,
+        designSystemName: 'Tailwind',
+        hasPrd: false,
+      },
+    });
+    const result = validateContextContent(serializeContext(frontmatter, body));
+    assert.equal(result.valid, true, `errors: ${JSON.stringify(result.errors)}`);
+    assert.equal(frontmatter.tier.selected, 'm');
+    assert.equal(frontmatter.features.design_system_name, 'Tailwind');
   });
 
-  it('throws TIER_NOT_SUPPORTED_V1 on tier=l', async () => {
-    await assert.rejects(
-      runDevInterview({
-        mode: 'greenfield',
-        prefilledAnswers: { ...baseGreenfield, tier: 'l' },
-      }),
-      (err) => err.code === 'TIER_NOT_SUPPORTED_V1',
-    );
+  it('accepts tier=l in v1.27.0+', async () => {
+    const { frontmatter } = await runDevInterview({
+      mode: 'greenfield',
+      generatedByVersion: '1.27.0',
+      prefilledAnswers: { ...baseGreenfield, tier: 'l', hasDatabase: true, hasFrontend: false },
+    });
+    assert.equal(frontmatter.tier.selected, 'l');
   });
 });
 
@@ -297,7 +307,7 @@ describe('runDevInterview — existing mode', () => {
 });
 
 describe('HARD_STOP_TIERS', () => {
-  it('lists m and l as blocked', () => {
-    assert.deepEqual([...HARD_STOP_TIERS].sort(), ['l', 'm']);
+  it('is empty in v1.27.0+ (tier M/L are supported)', () => {
+    assert.deepEqual([...HARD_STOP_TIERS], []);
   });
 });
