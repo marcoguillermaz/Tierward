@@ -169,7 +169,11 @@ export async function runFromYamlBypass({ sourcePath, cwd, silent, throwOnInvali
   }
 
   const targetPath = path.join(cwd, 'CONTEXT.md');
-  await fs.writeFile(targetPath, normalized, 'utf8');
+  // Explicit owner-rw / others-r mode. CONTEXT.md is a project config the
+  // team commits to git, not a secret — but the explicit mode silences
+  // CodeQL `js/insecure-temporary-file` taint when tests inject cwd from
+  // `os.tmpdir()` (the production path uses `process.cwd()`).
+  await fs.writeFile(targetPath, normalized, { encoding: 'utf8', mode: 0o644 });
   if (!silent) {
     console.log(
       chalk.green(
