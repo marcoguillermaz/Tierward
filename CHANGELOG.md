@@ -13,6 +13,27 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.26.0] — 2026-05-14
+
+### Added
+
+- **`--from-yaml <file>` bypass on `context`** — validate an existing `CONTEXT.md` or a raw YAML config and copy it into the cwd, skipping interview, inference, and review entirely. The bypass accepts two input shapes: full markdown with frontmatter (passed through unchanged), or raw YAML (wrapped with `---` delimiters + `DEFAULT_BODY` placeholder). On schema failure, nothing is written and the process exits 1 with the same human-readable error format used by `validate-context`. Combines with `--all` to chain `init` after the copy.
+- `packages/cli/src/commands/context.js` (MODIFIED) — `runFromYamlBypass()` and `normalizeFromYamlSource()` exported for programmatic use; the `contextCommand()` entry short-circuits to the bypass when `--from-yaml` is set.
+- `packages/cli/test/unit/context-builder/from-yaml-bypass.test.js` (NEW) — 11 tests: 3 normalizer cases + 4 programmatic bypass cases (raw YAML, full MD, missing file, invalid schema) + 4 CLI subprocess cases (valid / invalid / missing / `--help`).
+
+### Use cases
+
+- CI / automation: a template CONTEXT.md committed to the repo, validated and consumed by `init --use-context` in CI without any prompt.
+- Expert dev / template sharing: hand-edit a CONTEXT.md or copy one from another project, then bring it in deterministically.
+- Reproducibility: regenerate the same scaffold across machines by checking in the source CONTEXT.md and running `context --from-yaml` + `init --all`.
+
+### Notes
+
+- 550/550 unit tests pass (+11 from the new bypass coverage).
+- Closes v1.1 P2 from the reopened roadmap. P3 (tier M/L coverage in schema) remains ahead.
+
+---
+
 ## [1.25.0] — 2026-05-14
 
 ### Added

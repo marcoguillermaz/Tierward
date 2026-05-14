@@ -29,7 +29,7 @@ import {
   composeBodyMarkdown,
 } from '../context-builder/inference/review.js';
 import { writeContextFile, DEFAULT_BODY } from '../context-builder/writer.js';
-import { validateContextFile } from '../utils/validate-context.js';
+import { validateContextFile, validateContextContent } from '../utils/validate-context.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PKG_PATH = path.resolve(__dirname, '../../package.json');
@@ -111,11 +111,84 @@ function composeFinalFrontmatter(reviewed, ctx) {
 }
 
 /**
+ * Wrap raw YAML (no `---` delimiters) into a minimal CONTEXT.md skeleton
+ * with the DEFAULT_BODY placeholder. Markdown files with their own
+ * frontmatter are passed through untouched.
+ */
+export function normalizeFromYamlSource(content) {
+  if (content.startsWith('---\n')) return content;
+  return `---\n${content.replace(/\n+$/, '')}\n---\n\n${DEFAULT_BODY}`;
+}
+
+/**
+ * --from-yaml bypass: validate an existing CONTEXT.md / YAML config and
+ * copy it into the cwd. Skips interview, inference, and review entirely.
+ *
+ * Use cases: CI / automation, expert dev with a hand-edited file,
+ * template sharing across projects.
+ *
+ * @param {object} args
+ * @param {string} args.sourcePath - Path to the source file
+ * @param {string} args.cwd        - Target cwd (CONTEXT.md will be written here)
+ * @param {boolean} [args.silent]
+ * @param {boolean} [args.throwOnInvalid] - throw instead of process.exit(1)
+ * @returns {Promise<{ path: string, data: object }>}
+ */
+export async function runFromYamlBypass({ sourcePath, cwd, silent, throwOnInvalid }) {
+  const resolvedSource = path.resolve(sourcePath);
+  if (!(await fs.pathExists(resolvedSource))) {
+    const msg = `Source file not found: ${resolvedSource}`;
+    if (throwOnInvalid) {
+      const e = new Error(msg);
+      e.code = 'FROM_YAML_SOURCE_MISSING';
+      throw e;
+    }
+    console.error(chalk.red(msg));
+    process.exit(1);
+  }
+
+  const rawContent = await fs.readFile(resolvedSource, 'utf8');
+  const normalized = normalizeFromYamlSource(rawContent);
+  const validation = validateContextContent(normalized);
+
+  if (!validation.valid) {
+    if (!silent) {
+      console.error(chalk.red(`✗ ${path.basename(resolvedSource)} failed validation:`));
+      for (const err of validation.errors) {
+        const dotted = err.path?.length ? err.path.join('.') : '(root)';
+        console.error(`  [${err.code}] ${dotted}: ${err.message}`);
+      }
+    }
+    if (throwOnInvalid) {
+      const e = new Error('CONTEXT.md validation failed');
+      e.code = 'INVALID_CONTEXT';
+      e.errors = validation.errors;
+      throw e;
+    }
+    process.exit(1);
+  }
+
+  const targetPath = path.join(cwd, 'CONTEXT.md');
+  await fs.writeFile(targetPath, normalized, 'utf8');
+  if (!silent) {
+    console.log(
+      chalk.green(
+        `✓ Wrote ${path.relative(cwd, targetPath) || 'CONTEXT.md'} from ${path.relative(cwd, resolvedSource) || resolvedSource}`,
+      ),
+    );
+    console.log(chalk.green('✓ Schema validation passed'));
+  }
+
+  return { path: targetPath, data: validation.data, body: validation.body };
+}
+
+/**
  * Run the `context` sub-command.
  *
  * @param {object} options
  * @param {string} [options.mode] - Override mode auto-detection
  * @param {string} [options.persona] - Bypass Q1 persona prompt
+ * @param {string} [options.fromYaml] - Path to source file → bypass interview
  * @param {object} [options.prefilledAnswers] - For non-interactive runs (tests)
  * @param {Array}  [options.prefilledReviewAnswers] - Phase 3 prefilled review
  * @param {Function} [options.llmClient] - Override LLM client (tests)
@@ -127,6 +200,26 @@ export async function contextCommand(options = {}) {
   const cwd = options.cwd ?? process.cwd();
   const targetPath = path.join(cwd, 'CONTEXT.md');
   const generatedByVersion = await readPackageVersion();
+
+  // ── --from-yaml bypass: validate + copy, no interview ──────────────
+  if (options.fromYaml) {
+    const out = await runFromYamlBypass({
+      sourcePath: options.fromYaml,
+      cwd,
+      silent: options.silent,
+      throwOnInvalid: options.throwOnInvalid,
+    });
+
+    if (options.all) {
+      if (!options.silent) {
+        console.log();
+        console.log(chalk.dim('Auto-chaining `init` (--all flag)…'));
+      }
+      const { init } = await import('./init.js');
+      await init({ ...options, useContext: true });
+    }
+    return out;
+  }
 
   console.log();
   console.log(

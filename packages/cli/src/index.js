@@ -39,6 +39,10 @@ program
   .option('--mode <mode>', 'Override mode auto-detection (greenfield|in-place|from-context)')
   .option('--skip-llm', 'Skip Phase 2 LLM extraction (offline runs)')
   .option('--all', 'Auto-chain `init` after writing CONTEXT.md')
+  .option(
+    '--from-yaml <file>',
+    'Skip interview/inference: validate and copy an existing CONTEXT.md or YAML config into cwd',
+  )
   .action(contextCommand);
 
 program
