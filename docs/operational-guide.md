@@ -140,16 +140,23 @@ Three init paths are available. All support `--dry-run` (preview without writing
 
 #### Optional: `context` sub-command (v1.23.0+)
 
-If you want the scaffold to be reproducible and reviewable, run `context` before `init`:
+Run `context` before `init` to make the scaffold reproducible and reviewable:
 
 ```bash
-npx mg-claude-dev-kit context        # produces CONTEXT.md
-npx mg-claude-dev-kit init           # reads CONTEXT.md, scaffolds with no further prompts
+npx mg-claude-dev-kit context                       # produces CONTEXT.md
+npx mg-claude-dev-kit init                          # reads CONTEXT.md, scaffolds with no further prompts
+npx mg-claude-dev-kit context --all                 # one-shot: context then init
+npx mg-claude-dev-kit context --from-yaml file.md   # bypass: validate + copy an existing CONTEXT.md (v1.26.0+)
+npx mg-claude-dev-kit validate-context              # CI gate: exits 0 on pass, 1 on fail (v1.25.0+)
 ```
 
-Or chain them: `context --all`. When `CONTEXT.md` is present in the cwd, `init` reads it and scaffolds without asking anything else. Pass `--ignore-context` to fall back to the prompt-based flow.
+When `CONTEXT.md` is present in the cwd, `init` reads it and scaffolds without asking anything else. Pass `--ignore-context` to fall back to the prompt-based flow.
 
-`CONTEXT.md` is a schema-validated project context file: Zod schema v1, 16 MUST PASS structural checks, plus six inter-field constraints. Greenfield gets a PM-friendly interview; existing repos go through three-phase inference — algorithmic detection wrapping `detect-stack`, optional LLM extraction, hybrid PM review. The first question routes you to a PM or developer flow. The developer flow is a stub in v1.23.0; a research-backed design replaces it later. Tier M and L are not covered by the v1 schema and still go through the legacy wizard.
+`CONTEXT.md` is a schema-validated project context file: Zod schema, 16 MUST PASS structural checks, plus eight inter-field constraints (tier-0 forces scaffold options off, mode invariants, dotted-path keys, `design_system_name` required when `has_design_system=true`, features block forbidden on tier 0/S, and so on).
+
+Greenfield gets a PM-friendly interview. Existing repos go through three-phase inference: algorithmic detection wrapping `detect-stack`, optional LLM extraction, hybrid PM review. The first question routes you to a PM or developer flow. As of v1.24.0, the developer flow reuses the legacy `init` wizard's technical questions and auto-derives `tier.rationale` from `teamSize` + `workScope`, so devs skip the prose prompts.
+
+As of v1.27.0, the schema covers all four pipeline tiers. Tier M and L pick up the feature-flag block: `has_api`, `has_database`, `has_frontend`, `has_design_system` (plus `design_system_name`), `has_prd`, plus `audit_model` and the optional `commands.build` / `commands.e2e` fields.
 
 ---
 

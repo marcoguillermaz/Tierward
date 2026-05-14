@@ -33,18 +33,21 @@ The wizard detects your project state and guides you through setup. Three paths 
 
 After init, open Claude Code and start working. The scaffold is active immediately.
 
-### Context Builder (v1.24.0)
+### Context Builder (v1.27.0)
 
-Want the scaffold to come out the same way every time, and to leave a written record of what you asked for? Run `context` before `init`:
+Run `context` before `init` if you want the scaffold to come out the same way every time, with a written record of what you asked for:
 
 ```bash
-npx mg-claude-dev-kit context        # produces CONTEXT.md
-npx mg-claude-dev-kit init           # reads CONTEXT.md, scaffolds with no further prompts
-# or one-shot:
-npx mg-claude-dev-kit context --all  # runs context then init
+npx mg-claude-dev-kit context                       # produces CONTEXT.md
+npx mg-claude-dev-kit init                          # reads CONTEXT.md, scaffolds with no further prompts
+npx mg-claude-dev-kit context --all                 # one-shot: context then init
+npx mg-claude-dev-kit context --from-yaml file.md   # bypass interview, validate + copy
+npx mg-claude-dev-kit validate-context              # CI gate: exit 0/1 on schema check
 ```
 
-`CONTEXT.md` is a schema-validated project context file. Greenfield runs a PM-friendly interview; existing repos go through three-phase inference (algorithmic detection, LLM extraction, hybrid PM review). The first question routes you to a PM or developer flow. The developer flow (v1.24.0+) reuses the technical questions from the legacy `init` wizards (projectName, stack, commands, scaffold options) and auto-derives `tier.rationale` from team size + work scope, so devs are not asked to write PM rationale prose. Tier M and L are not covered by the v1 schema yet; the legacy wizard still handles them.
+`CONTEXT.md` is a schema-validated project context file. Greenfield runs a PM-friendly interview. Existing repos go through three-phase inference: algorithmic detection, LLM extraction, hybrid PM review. The first question routes you to a PM or developer flow. The developer flow reuses the technical questions from the legacy `init` wizards (projectName, stack, commands, scaffold options) and auto-derives `tier.rationale` from team size + work scope, so devs are not asked to write PM rationale prose.
+
+As of v1.27.0, the schema covers all four pipeline tiers: tier 0 (Discovery) and tier S (Fast Lane) for solo or bugfix work, tier M (Standard) for feature-block work with feature flags (`has_api`, `has_database`, `has_frontend`, `has_design_system`, `has_prd`), and tier L (Full) for complex domain projects.
 
 ---
 
