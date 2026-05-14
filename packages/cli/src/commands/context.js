@@ -19,7 +19,7 @@ import ora from 'ora';
 
 import { askPersona, routePersona } from '../context-builder/persona.js';
 import { runPmInterview } from '../context-builder/interview/pm-flow.js';
-import { runDevFlowStub } from '../context-builder/interview/dev-flow-stub.js';
+import { runDevInterview } from '../context-builder/interview/dev-flow.js';
 import { runAlgoInference } from '../context-builder/inference/algo.js';
 import { extractWithLlm } from '../context-builder/inference/llm.js';
 import {
@@ -146,11 +146,13 @@ export async function contextCommand(options = {}) {
   if (mode === 'greenfield') {
     const interview =
       flow === 'dev'
-        ? await runDevFlowStub({
+        ? await runDevInterview({
             mode,
+            cwd,
             generatedByVersion,
             prefilledAnswers: options.prefilledAnswers,
-            silent: options.silent,
+            llmClient: options.llmClient,
+            skipLlm: options.skipLlm,
             projectNameDefault: path.basename(cwd),
           })
         : await runPmInterview({
@@ -159,6 +161,18 @@ export async function contextCommand(options = {}) {
             prefilledAnswers: options.prefilledAnswers,
             projectNameDefault: path.basename(cwd),
           });
+    frontmatter = interview.frontmatter;
+    body = interview.body;
+  } else if (flow === 'dev') {
+    const interview = await runDevInterview({
+      mode,
+      cwd,
+      generatedByVersion,
+      prefilledAnswers: options.prefilledAnswers,
+      llmClient: options.llmClient,
+      skipLlm: options.skipLlm,
+      projectNameDefault: path.basename(cwd),
+    });
     frontmatter = interview.frontmatter;
     body = interview.body;
   } else {

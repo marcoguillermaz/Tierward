@@ -1,6 +1,6 @@
 {
   "name": "mg-claude-dev-kit",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "description": "Scaffold for legible, reviewable AI-assisted development",
   "type": "module",
   "bin": {
