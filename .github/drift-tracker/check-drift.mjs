@@ -1,9 +1,9 @@
 // Anthropic drift tracker — scans Anthropic docs for features overlapping with CDK.
 // Zero external dependencies. Runs on Node.js >= 22 (native fetch).
 
-import { readFileSync, appendFileSync, existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { readFileSync, appendFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -12,8 +12,8 @@ const REGEX_META = /[.*+?^${}()|[\]\\]/;
 // ── Feature manifest ────────────────────────────────────────────────────────
 
 export function loadFeatures(manifestPath) {
-  const p = manifestPath || join(__dirname, 'features.json');
-  const raw = JSON.parse(readFileSync(p, 'utf8'));
+  const p = manifestPath || join(__dirname, "features.json");
+  const raw = JSON.parse(readFileSync(p, "utf8"));
 
   if (!raw.features || !Array.isArray(raw.features)) {
     throw new Error('features.json must contain a "features" array');
@@ -22,9 +22,11 @@ export function loadFeatures(manifestPath) {
   const ids = new Set();
   for (const f of raw.features) {
     if (!f.id || !f.name || !f.risk || !f.keywords || !f.cdkFiles) {
-      throw new Error(`Feature "${f.id || '(unnamed)'}" missing required fields`);
+      throw new Error(
+        `Feature "${f.id || "(unnamed)"}" missing required fields`,
+      );
     }
-    if (!['high', 'medium', 'low'].includes(f.risk)) {
+    if (!["high", "medium", "low"].includes(f.risk)) {
       throw new Error(`Feature "${f.id}" has invalid risk: ${f.risk}`);
     }
     if (ids.has(f.id)) {
@@ -40,8 +42,8 @@ export function loadFeatures(manifestPath) {
 
 export async function fetchPage(url) {
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'claude-dev-kit-drift-tracker/1.0' },
-    redirect: 'follow',
+    headers: { "User-Agent": "claude-dev-kit-drift-tracker/1.0" },
+    redirect: "follow",
   });
   if (!res.ok) {
     throw new Error(`Fetch failed: ${res.status} ${res.statusText} for ${url}`);
@@ -50,22 +52,22 @@ export async function fetchPage(url) {
 }
 
 export function stripHtml(html) {
-  if (!html) return '';
+  if (!html) return "";
   let text = html;
   // Remove script/style blocks (closing tag may contain whitespace or attributes)
-  text = text.replace(/<script[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
-  text = text.replace(/<style[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
+  text = text.replace(/<script[^>]*>[\s\S]*?<\/script[^>]*>/gi, " ");
+  text = text.replace(/<style[^>]*>[\s\S]*?<\/style[^>]*>/gi, " ");
   // Strip remaining tags
-  text = text.replace(/<[^>]+>/g, ' ');
+  text = text.replace(/<[^>]+>/g, " ");
   // Decode entities — &amp; must be decoded LAST to avoid double-unescaping
   text = text.replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
   text = text.replace(/&#39;/g, "'");
   text = text.replace(/&quot;/g, '"');
-  text = text.replace(/&gt;/g, '>');
-  text = text.replace(/&lt;/g, '<');
-  text = text.replace(/&amp;/g, '&');
+  text = text.replace(/&gt;/g, ">");
+  text = text.replace(/&lt;/g, "<");
+  text = text.replace(/&amp;/g, "&");
   // Normalize whitespace
-  text = text.replace(/\s+/g, ' ');
+  text = text.replace(/\s+/g, " ");
   return text.trim();
 }
 
@@ -75,7 +77,8 @@ export function extractRecentChangelog(html, days = 7, now = new Date()) {
   cutoff.setHours(0, 0, 0, 0);
 
   const entries = [];
-  const blockRegex = /<Update\s+label="([^"]+)"\s+description="([^"]+)">([\s\S]*?)<\/Update>/gi;
+  const blockRegex =
+    /<Update\s+label="([^"]+)"\s+description="([^"]+)">([\s\S]*?)<\/Update>/gi;
   let match;
 
   while ((match = blockRegex.exec(html)) !== null) {
@@ -100,7 +103,9 @@ export function extractRecentChangelog(html, days = 7, now = new Date()) {
 // ── URL helpers ─────────────────────────────────────────────────────────────
 
 export function getISOWeek(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
@@ -110,7 +115,7 @@ export function getISOWeek(date) {
 export function currentWhatsNewUrl(now = new Date()) {
   const week = getISOWeek(now);
   const year = now.getFullYear();
-  return `https://docs.anthropic.com/en/docs/claude-code/whats-new/${year}-w${String(week).padStart(2, '0')}`;
+  return `https://docs.anthropic.com/en/docs/claude-code/whats-new/${year}-w${String(week).padStart(2, "0")}`;
 }
 
 // ── Keyword matching ────────────────────────────────────────────────────────
@@ -119,8 +124,8 @@ export function extractSnippet(text, position, radius = 100) {
   const start = Math.max(0, position - radius);
   const end = Math.min(text.length, position + radius);
   let snippet = text.slice(start, end).trim();
-  if (start > 0) snippet = '...' + snippet;
-  if (end < text.length) snippet = snippet + '...';
+  if (start > 0) snippet = "..." + snippet;
+  if (end < text.length) snippet = snippet + "...";
   return snippet;
 }
 
@@ -128,7 +133,7 @@ export function matchFeature(feature, text) {
   const lowerText = text.toLowerCase();
   const matchedKeywords = [];
   const snippets = [];
-  const mode = feature.keywordMode || 'any';
+  const mode = feature.keywordMode || "any";
 
   for (const kw of feature.keywords) {
     let found = false;
@@ -136,7 +141,7 @@ export function matchFeature(feature, text) {
 
     if (REGEX_META.test(kw)) {
       try {
-        const re = new RegExp(kw, 'i');
+        const re = new RegExp(kw, "i");
         const m = re.exec(text);
         if (m) {
           found = true;
@@ -162,7 +167,7 @@ export function matchFeature(feature, text) {
   }
 
   const matched =
-    mode === 'all'
+    mode === "all"
       ? matchedKeywords.length === feature.keywords.length
       : matchedKeywords.length > 0;
 
@@ -174,51 +179,56 @@ export function matchFeature(feature, text) {
 export function formatIssueBody(matchResult, feature, scanMeta) {
   const lines = [];
   lines.push(`## Anthropic Drift Alert: ${feature.name}`);
-  lines.push('');
+  lines.push("");
   lines.push(`**Risk level**: ${feature.risk.toUpperCase()}`);
   lines.push(`**Scan date**: ${scanMeta.scanDate}`);
   lines.push(`**Source**: ${scanMeta.changelogUrl}`);
-  lines.push('');
-  lines.push('### What was detected');
-  lines.push('');
-  lines.push('Keywords matched in Anthropic documentation:');
-  lines.push('');
-  lines.push('| Keyword | Context |');
-  lines.push('|---|---|');
+  lines.push("");
+  lines.push("### What was detected");
+  lines.push("");
+  lines.push("Keywords matched in Anthropic documentation:");
+  lines.push("");
+  lines.push("| Keyword | Context |");
+  lines.push("|---|---|");
   for (let i = 0; i < matchResult.matchedKeywords.length; i++) {
     const kw = matchResult.matchedKeywords[i];
-    const ctx = (matchResult.snippets[i] || '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+    const ctx = (matchResult.snippets[i] || "")
+      .replace(/\\/g, "\\\\")
+      .replace(/\|/g, "\\|")
+      .replace(/\n/g, " ");
     lines.push(`| \`${kw}\` | ${ctx} |`);
   }
 
   if (feature.cdkFiles.length > 0) {
-    lines.push('');
-    lines.push('### CDK files at risk');
-    lines.push('');
+    lines.push("");
+    lines.push("### CDK files at risk");
+    lines.push("");
     for (const f of feature.cdkFiles) {
       lines.push(`- \`${f}\``);
     }
   }
 
-  lines.push('');
-  lines.push('### Recommended action');
-  lines.push('');
-  lines.push('Review the Anthropic documentation and assess whether CDK\'s implementation still adds value beyond the native capability.');
-  lines.push('');
+  lines.push("");
+  lines.push("### Recommended action");
+  lines.push("");
+  lines.push(
+    "Review the Anthropic documentation and assess whether CDK's implementation still adds value beyond the native capability.",
+  );
+  lines.push("");
   lines.push(`- [Changelog](${scanMeta.changelogUrl})`);
 
   if (feature.notes) {
-    lines.push('');
-    lines.push('### Context');
-    lines.push('');
+    lines.push("");
+    lines.push("### Context");
+    lines.push("");
     lines.push(feature.notes);
   }
 
-  lines.push('');
-  lines.push('---');
+  lines.push("");
+  lines.push("---");
   lines.push(`_Generated by drift-tracker workflow. ${scanMeta.scanDate}_`);
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 // ── Scan orchestrator ───────────────────────────────────────────────────────
@@ -230,17 +240,19 @@ export async function scan(manifest, options = {}) {
 
   const result = {
     matches: [],
-    scanDate: new Date().toISOString().split('T')[0],
+    scanDate: new Date().toISOString().split("T")[0],
     changelogUrl,
     featuresChecked: features.length,
   };
 
   // Fetch changelog
-  let changelogText = '';
+  let changelogText = "";
   try {
     const html = await fetchPage(changelogUrl);
     const entries = extractRecentChangelog(html, days);
-    changelogText = entries.map((e) => `${e.version} ${e.date} ${e.text}`).join(' ');
+    changelogText = entries
+      .map((e) => `${e.version} ${e.date} ${e.text}`)
+      .join(" ");
 
     if (changelogText.length < 50 && entries.length === 0) {
       // Fallback: use full page text (no Update blocks found — page format may have changed)
@@ -248,7 +260,9 @@ export async function scan(manifest, options = {}) {
     }
 
     if (changelogText.length < 500) {
-      console.warn(`Warning: changelog text is short (${changelogText.length} chars) — page may be SPA-rendered or empty`);
+      console.warn(
+        `Warning: changelog text is short (${changelogText.length} chars) — page may be SPA-rendered or empty`,
+      );
     }
   } catch (err) {
     console.error(`Failed to fetch changelog: ${err.message}`);
@@ -279,26 +293,30 @@ export async function scan(manifest, options = {}) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const dryRun = args.includes('--dry-run') || process.env.DRY_RUN === 'true';
-  const daysArg = args.find((a) => a.startsWith('--days='));
-  const days = daysArg ? Number(daysArg.split('=')[1]) : 7;
-  const featuresArg = args.find((a) => a.startsWith('--features='));
-  const featuresPath = featuresArg ? featuresArg.split('=')[1] : undefined;
+  const dryRun = args.includes("--dry-run") || process.env.DRY_RUN === "true";
+  const daysArg = args.find((a) => a.startsWith("--days="));
+  const days = daysArg ? Number(daysArg.split("=")[1]) : 7;
+  const featuresArg = args.find((a) => a.startsWith("--features="));
+  const featuresPath = featuresArg ? featuresArg.split("=")[1] : undefined;
 
   const manifest = loadFeatures(featuresPath);
-  console.log(`Scanning ${manifest.features.length} features (lookback: ${days} days, dry-run: ${dryRun})`);
+  console.log(
+    `Scanning ${manifest.features.length} features (lookback: ${days} days, dry-run: ${dryRun})`,
+  );
 
   const result = await scan(manifest, { dryRun, days });
 
-  console.log(`Found ${result.matches.length} matches out of ${result.featuresChecked} features checked`);
+  console.log(
+    `Found ${result.matches.length} matches out of ${result.featuresChecked} features checked`,
+  );
 
   if (dryRun) {
     if (result.matches.length === 0) {
-      console.log('No drift detected.');
+      console.log("No drift detected.");
     } else {
       for (const m of result.matches) {
         console.log(`\n--- [${m.risk.toUpperCase()}] ${m.featureName} ---`);
-        console.log(`Keywords: ${m.matchedKeywords.join(', ')}`);
+        console.log(`Keywords: ${m.matchedKeywords.join(", ")}`);
         for (const s of m.snippets) {
           console.log(`  > ${s.slice(0, 120)}`);
         }
@@ -321,7 +339,9 @@ async function main() {
 }
 
 // Run if executed directly
-const isMain = process.argv[1] && fileURLToPath(import.meta.url).endsWith(process.argv[1].replace(/.*\//, ''));
+const isMain =
+  process.argv[1] &&
+  fileURLToPath(import.meta.url).endsWith(process.argv[1].replace(/.*\//, ""));
 if (isMain) {
   main().catch((err) => {
     console.error(err);
