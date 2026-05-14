@@ -13,6 +13,32 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.24.0] — 2026-05-14
+
+### Changed
+
+- **Dev flow ricablato sul wizard tecnico legacy**. v1.23.0 routed the `Software Engineer` and `Tech Lead` personas to a stub that fell back into the PM flow, which then forced PM-style prompts (`tier.rationale`, three body prose questions) on developers who already knew the answers. The dev branch now runs its own interview, reusing the technical questions from the legacy `init-greenfield` / `init-in-place` / `init-from-context` wizards: `projectName`, `description` (greenfield only), `techStack`, `testCommand`, `typeCheckCommand` (node only), `devCommand`, `includePreCommit`, `includeGithub`. `tier.rationale` is auto-derived from `teamSize + workScope` ("Solo developer, bugfix-sized changes (≤3 files)"). Body markdown defaults to placeholder for greenfield; in existing-mode the Phase 2 LLM fills sections when reachable, with silent fallback otherwise.
+- **Phase 2 LLM errors in dev flow are swallowed silently**. A dev running offline or without `ANTHROPIC_API_KEY` is no longer blocked.
+
+### Added
+
+- `src/context-builder/interview/dev-flow.js` — replaces `dev-flow-stub.js`.
+- `src/context-builder/interview/shared/stack-defaults.js` — extracted from `pm-flow.js` so both flows share one source of truth.
+- `src/context-builder/interview/shared/derive-rationale.js` — auto-derive logic with 4 unit tests.
+- `test/unit/context-builder/dev-flow.test.js` — 22 new tests covering greenfield + existing + tier 0 + tier M/L hard stop + Phase 2 silent skip + Phase 2 body sections.
+
+### Removed
+
+- `src/context-builder/interview/dev-flow-stub.js` (was a v1.0 placeholder).
+
+### Notes
+
+- 527/527 unit tests pass (+22 from the new dev-flow coverage).
+- Schema v1 unchanged. PM flow unchanged. The dev flow produces the same schema-conformant `CONTEXT.md` via a different question set.
+- Closes a v1.23.0 design error documented retroactively in `memory/project_context_builder_scope_v1.md`. v1.1 priorities P1-P3 (validate-context CLI, `--from-yaml`, tier M/L) remain ahead.
+
+---
+
 ## [1.23.0] — 2026-05-12
 
 ### Added
@@ -83,7 +109,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **`team-settings.json` runtime enforcement hook** (smoke-test review proposal, ICE ~240). New `.claude/hooks/team-settings-enforcement.mjs` script wired as a `PreToolUse` hook on the `Skill` matcher in `.claude/settings.json`. Refuses skill invocations that violate `blockedSkills` or `allowedSkills` at runtime, before the skill body executes. Closes the credibility gap flagged on v1.16: previously `team-settings.json` enforcement was CLI-only (a Claude Code session could bypass it by typing `/skill-name` directly); now it's mechanical at the agent runtime.
 - **Doctor check `team-settings-runtime-hook`** (warn-level): verifies the hook script is scaffolded AND `.claude/settings.json` registers it on the Skill matcher. Skips silently when `.claude/team-settings.json` is absent (unrestricted projects don't need the hook). Doctor check count: 28 → 29.
-- **Integration scenario `scenarioRuntimeEnforcementHook`** in `test/integration/run.js`: validates hook scaffolding across tier-s/m/l, settings.json registration, behavior on no-team-settings (allow), `blockedSkills` (deny JSON), `allowedSkills` whitelist (deny + custom-* bypass), non-Skill tools (passthrough), malformed settings (fail-open), and the doctor check passing/warning paths. ~14 new assertions.
+- **Integration scenario `scenarioRuntimeEnforcementHook`** in `test/integration/run.js`: validates hook scaffolding across tier-s/m/l, settings.json registration, behavior on no-team-settings (allow), `blockedSkills` (deny JSON), `allowedSkills` whitelist (deny + custom-\* bypass), non-Skill tools (passthrough), malformed settings (fail-open), and the doctor check passing/warning paths. ~14 new assertions.
 - **Hook protocol implementation** matches the Anthropic [PreToolUse hook spec](https://code.claude.com/docs/en/hooks): reads JSON from stdin (`tool_name`, `tool_input.skill_name`), returns `hookSpecificOutput.permissionDecision = "deny"` with reason on stdout for blocked invocations, exits 0 silently to allow.
 
 ### Changed
@@ -196,7 +222,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Notes
 
-- This is the first release in which CDK is itself an MCP citizen. Previously, CDK *consumed* MCP via the Playwright tools wired into the visual / responsive / accessibility / UI skills. Now CDK *publishes* an MCP server too, closing the asymmetry flagged in the 2026-04-26 MCP reassessment.
+- This is the first release in which CDK is itself an MCP citizen. Previously, CDK _consumed_ MCP via the Playwright tools wired into the visual / responsive / accessibility / UI skills. Now CDK _publishes_ an MCP server too, closing the asymmetry flagged in the 2026-04-26 MCP reassessment.
 - Read-only tool surface in v1.17.0 by design. Mutating tools (`cdk_apply_skill`, `cdk_run_doctor` triggered remotely) are deferred until adoption signal supports them.
 - Q3 #4b (MCP-aware audit skills, Issue #119, ICE 210) is the natural follow-on once 4a is in production. Schedule TBD.
 

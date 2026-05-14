@@ -6,10 +6,7 @@ import {
   routePersona,
   askPersona,
 } from '../../../src/context-builder/persona.js';
-import {
-  runDevFlowStub,
-  STUB_MESSAGE,
-} from '../../../src/context-builder/interview/dev-flow-stub.js';
+import { runDevInterview } from '../../../src/context-builder/interview/dev-flow.js';
 import { validateContextContent } from '../../../src/utils/validate-context.js';
 import { serializeContext } from '../../../src/context-builder/writer.js';
 
@@ -57,38 +54,27 @@ describe('askPersona', () => {
   });
 });
 
-describe('runDevFlowStub', () => {
-  it('falls back to PM flow and produces valid CONTEXT.md', async () => {
-    const { frontmatter, body } = await runDevFlowStub({
-      silent: true,
+describe('runDevInterview — smoke', () => {
+  it('produces a valid CONTEXT.md for greenfield (no body prose required)', async () => {
+    const { frontmatter, body } = await runDevInterview({
       mode: 'greenfield',
       prefilledAnswers: {
         familiarity: 'experienced',
-        projectName: 'stub-test',
-        description: 'A test',
+        projectName: 'dev-smoke',
+        description: 'A dev smoke test',
         techStack: 'node-ts',
         teamSize: 'solo',
         workScope: 'bugfix',
         tier: 's',
-        tierRationale: 'Test',
-        installCommand: 'npm install',
-        testCommand: 'npm test',
+        testCommand: 'npx vitest run',
         typeCheckCommand: 'npx tsc --noEmit',
         devCommand: 'npm run dev',
         includePreCommit: true,
         includeGithub: false,
-        bodyWhatBuilding: '',
-        bodyConstraints: '',
-        bodyOpenQuestions: '',
       },
     });
     const out = serializeContext(frontmatter, body);
     const result = validateContextContent(out);
     assert.equal(result.valid, true, `errors: ${JSON.stringify(result.errors)}`);
-  });
-
-  it('exports a non-empty STUB_MESSAGE', () => {
-    assert.ok(STUB_MESSAGE.length > 0);
-    assert.ok(STUB_MESSAGE.toLowerCase().includes('developer'));
   });
 });
