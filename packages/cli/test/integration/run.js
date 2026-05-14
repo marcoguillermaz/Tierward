@@ -2637,11 +2637,13 @@ async function scenarioDoctorCrossFileValidation() {
     fillStopHookTestCmd(corruptTier);
     fillClaudeMdTestCmd(corruptTier);
     const pipelinePath = path.join(corruptTier, '.claude/rules/pipeline.md');
-    if (fs.existsSync(pipelinePath)) {
+    try {
       const raw = fs.readFileSync(pipelinePath, 'utf8');
       const wrongH1 =
         tier === 's' ? '# Full Development Pipeline - Tier L\n' : '# Fast Lane Pipeline\n';
       fs.writeFileSync(pipelinePath, raw.replace(/^#[^\n]*\n/, wrongH1));
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
     }
     const tierReport = runDoctor(corruptTier);
     const tierStatus = getCheckStatus(tierReport, 'pipeline-md-tier-coherence');
@@ -2657,12 +2659,10 @@ async function scenarioDoctorCrossFileValidation() {
     fillStopHookTestCmd(corruptSecurity);
     fillClaudeMdTestCmd(corruptSecurity);
     const securityPath = path.join(corruptSecurity, '.claude/rules/security.md');
-    if (fs.existsSync(securityPath)) {
-      fs.writeFileSync(
-        securityPath,
-        '# Security Rules - Native Apple (macOS / iOS)\n\nStore secrets in Keychain only.\n',
-      );
-    }
+    fs.writeFileSync(
+      securityPath,
+      '# Security Rules - Native Apple (macOS / iOS)\n\nStore secrets in Keychain only.\n',
+    );
     const secReport = runDoctor(corruptSecurity);
     const secStatus = getCheckStatus(secReport, 'security-md-stack-alignment');
     if (secStatus === 'warn' || secStatus === 'fail') {
@@ -3169,7 +3169,7 @@ async function scenarioMcpAwareSkillsV120() {
         fail(`Tier ${tier}: security-audit Step 3c missing MCP-aware structure or fallback text`);
       }
 
-      if (/github\.com\/marcoeg\/mcp-nvd/.test(body)) {
+      if (body.includes('github.com/marcoeg/mcp-nvd')) {
         pass(`Tier ${tier}: security-audit pins mcp-nvd repo URL`);
       } else {
         fail(`Tier ${tier}: security-audit missing mcp-nvd repo URL pin`);
@@ -3206,7 +3206,7 @@ async function scenarioMcpAwareSkillsV120() {
         fail(`Tier ${tier}: dependency-audit Step 2 missing MCP-aware structure or fallback text`);
       }
 
-      if (/github\.com\/Artmann\/package-registry-mcp/.test(body)) {
+      if (body.includes('github.com/Artmann/package-registry-mcp')) {
         pass(`Tier ${tier}: dependency-audit pins package-registry-mcp repo URL`);
       } else {
         fail(`Tier ${tier}: dependency-audit missing package-registry-mcp repo URL pin`);
