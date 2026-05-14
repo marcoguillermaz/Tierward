@@ -30,7 +30,7 @@ Lack of shared process - the issue is neither Claude nor the human, it is the ab
 
 ## Shipped
 
-- **Context Builder (v1.23.0 → v1.27.0)** - now part of CDK as the `context` sub-command. Guided interview between Claude and the user (PM, Dev, Tech Lead, Founder, Other) that produces a schema-validated `CONTEXT.md` which `init` consumes to scaffold deterministically. Greenfield uses a PM-friendly interview or a developer-flow that reuses the legacy wizard's technical questions. Existing repos go through three-phase inference (algorithmic detection + LLM extraction + hybrid PM review). All four pipeline tiers (0/S/M/L) are covered by the schema. Companion CLI: `validate-context` for CI gating, `--from-yaml` bypass for templates and automation.
+- **Context Builder (v1.23.0 → v1.27.0)**: now part of CDK as the `context` sub-command. A guided interview between Claude and the user (PM, Dev, Tech Lead, Founder, Other) produces a schema-validated `CONTEXT.md`, which `init` then consumes to scaffold deterministically. Greenfield runs either a PM-friendly interview or a developer flow that reuses the legacy wizard's technical questions. Existing repos go through three-phase inference: algorithmic detection, LLM extraction, hybrid PM review. The schema covers all four pipeline tiers (0/S/M/L). Companion CLI: `validate-context` for CI gating, `--from-yaml` to bypass the interview for templates and automation.
 
 ## Roadmap
 
