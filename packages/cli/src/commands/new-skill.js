@@ -253,15 +253,8 @@ export async function newSkill(options) {
     process.exit(1);
   }
 
-  // Conflict check
   const targetDir = path.join(cwd, '.claude', 'skills', answers.name);
   const targetSkill = path.join(targetDir, 'SKILL.md');
-
-  if (fs.existsSync(targetSkill)) {
-    console.log(chalk.yellow(`⚠ .claude/skills/${answers.name}/SKILL.md already exists.`));
-    console.log('Remove it first or choose a different name.');
-    return;
-  }
 
   // Build content
   const skillContent = buildSkillMd(answers);
@@ -284,9 +277,19 @@ export async function newSkill(options) {
     return;
   }
 
-  // Write files
+  // Write files — flag 'wx' fails atomically if SKILL.md already exists,
+  // closing the check/write race window CodeQL flags as js/file-system-race.
   await fs.ensureDir(targetDir);
-  await fs.writeFile(targetSkill, skillContent);
+  try {
+    await fs.writeFile(targetSkill, skillContent, { flag: 'wx' });
+  } catch (err) {
+    if (err.code === 'EEXIST') {
+      console.log(chalk.yellow(`⚠ .claude/skills/${answers.name}/SKILL.md already exists.`));
+      console.log('Remove it first or choose a different name.');
+      return;
+    }
+    throw err;
+  }
   console.log(`${chalk.green('✓')} Created .claude/skills/${answers.name}/SKILL.md`);
 
   const targetTest = path.join(targetDir, 'test-skill.js');

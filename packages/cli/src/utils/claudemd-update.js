@@ -13,11 +13,17 @@ import path from 'path';
 export function registerSkillInClaudeMd(cwd, skillName, description) {
   const claudePath = path.join(cwd, 'CLAUDE.md');
 
-  if (!fs.existsSync(claudePath)) {
-    return { updated: false, reason: 'CLAUDE.md not found' };
+  // Read directly with try/catch to avoid the existsSync → readFile race
+  // CodeQL flags as js/file-system-race.
+  let content;
+  try {
+    content = fs.readFileSync(claudePath, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return { updated: false, reason: 'CLAUDE.md not found' };
+    }
+    throw err;
   }
-
-  const content = fs.readFileSync(claudePath, 'utf8');
 
   if (!content.includes('## Active Skills')) {
     return { updated: false, reason: 'No Active Skills section in CLAUDE.md' };
