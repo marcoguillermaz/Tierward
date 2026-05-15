@@ -155,7 +155,7 @@ After skill #12 (of 17), only Criticals under rule (c) enter current cycle. All 
 
 ## Per-skill pipeline
 
-Six phases per skill + Phase 9 midpoint (runs once across cycle).
+Six phases per skill + Phase 9 midpoint (mid-cycle) + Phase 10 final mechanical sweep (cycle closure).
 
 ### Phase 1 - Mechanical preflight
 
@@ -176,7 +176,24 @@ Checks:
    A match is flagged unless adjacent to a non-web context clause (`or equivalent`, `[web only]`, `if applicable`, `if the project has`). Output: list of unguarded matches per term. Feeds Phase 2.A (d)+(e) for human judgment on each candidate.
 8. **Reference file coverage check (stack-dependent skills only)** - for each check ID found in the body (grep pattern: `\*\*[A-Z][0-9]\+`), verify the same ID appears in the reference file (e.g., `PATTERNS.md`). Each missing ID = High candidate (skill silently provides no guidance for that check on any stack variant lacking coverage). Stack-agnostic skills: skip.
 
-**Fail handling**: Critical findings block Phase 2. Fixed in Phase 3.
+**Fail handling**: any FAIL row blocks Phase 2 entry per the Phase 1 → Phase 2 mechanical gate below. Critical findings route through Phase 3 first.
+
+#### Phase 1 → Phase 2 mechanical gate *(P3.1 — prevents Stage A drift to Stage B)*
+
+Before Phase 2 begins, emit a PASS/FAIL table over the 8 Phase 1 steps. Phase 2 MUST NOT start until every row reads PASS. A FAIL row routes findings through Phase 3 first; once fixed, re-run Phase 1 from step 1 and re-emit the table. The reviewer cannot mark a row PASS by judgment alone — each step has a mechanical verification (grep result, `wc -l` output, file existence, integration test count).
+
+| Step | Check | Status | Evidence required |
+|---|---|---|---|
+| 1 | Anthropic spec compliance (P1 C1-C8) | PASS\|FAIL | C1-C8 result table |
+| 2 | Line count ≤ 500 | PASS\|FAIL | `wc -l SKILL.md` |
+| 3 | Registry ↔ body coherence | PASS\|FAIL | grep diff vs `skill-registry.js` |
+| 4 | Allowed-tools ↔ body instructions | PASS\|FAIL | capability keyword grep |
+| 5 | Placeholder resolution | PASS\|FAIL | `[PLACEHOLDER]` token scan |
+| 6 | Model ↔ complexity alignment | PASS\|FAIL | line count + subagent heuristic |
+| 7 | Architectural + paradigm vocabulary scan (forms 4+5) | PASS\|FAIL | unguarded-match list |
+| 8 | Reference file coverage check (stack-dependent only) | PASS\|FAIL | check ID match across files |
+
+***** STOP - Phase 1 → Phase 2 gate. Phase 2 entry requires 100% PASS in the table above. Reviewer judgment cannot override a FAIL row. *****
 
 ### Phase 2 - Internal analysis + walkthrough
 
@@ -232,11 +249,11 @@ Grouped by gravity. 2.A/2.B/2.C autonomous; 2.D interactive; 2.E targeted on hig
 
 ***** STOP - cross-tier diff approval. Wait for execution keyword before Phase 2.E or Phase 3. *****
 
-#### 2.E - Behavioral fixtures *(D1 - targeted, 6 skills only)*
+#### 2.E - Behavioral fixtures *(D1 + P3.2 - targeted, 11 stack-dependent skills)*
 
-**Applies to**: ui-audit, visual-audit, ux-audit, responsive-audit, accessibility-audit, security-audit.
-**Rationale**: these skills have the highest false-positive / behavioral-drift risk (browser-based, pattern-heavy, subjective).
-**Skipped for**: all other 11 skills (document-audit sufficient).
+**Applies to**: ui-audit, visual-audit, accessibility-audit, responsive-audit, ux-audit, security-audit, api-design, migration-audit, perf-audit, test-audit, skill-db. Canonical list in `SKILLS_INVENTORY.md § Behavioral fixture targets`.
+**Rationale**: these 11 skills are stack-dependent — their checks vary by stack (web/native/CLI), depend on stack-conditional dispatch, or run live verification whose output differs by dialect/runtime. Textual correctness alone cannot catch known defect classes (false-positive on system colors, dialect-specific SQL, parser-format mismatch, viewport behavior).
+**Skipped for**: the other 6 skills (arch-audit, commit, context-review, dependency-scan, simplify, skill-dev) which are stack-agnostic — textual review is sufficient.
 
 **Procedure**:
 1. Define fixture pack per skill:
@@ -336,19 +353,43 @@ Same scrutiny as Phase 2 findings. **Emerging principle capture (O4)**: if a Pha
 
 **Fail handling**: if drift detected and unresolvable (calibration set itself ambiguous), pause cycle, update P5, user decides alignment direction.
 
+### Phase 10 - Final mechanical sweep *(new P3.3, cycle closure, portfolio-level)*
+
+**When**: after Phase 6 GO on the last skill of the cycle, before declaring cycle CLOSED per `## Review closing criterion`.
+**Executor**: Claude (mechanical-only, no MITL, no LLM jury, no walkthrough).
+**Input**: final-state `REVIEW_FRAMEWORK.md` + final-state `SPEC_SNAPSHOT.md` (authoritative reference at cycle close) + all 17 reviewed skills on disk.
+
+**Rationale (CC6)**: pipeline hardening commits (e.g. P1.1, P1.2, P1.3, P2, P3.1 of this same cycle) land progressively during the cycle. Skills reviewed early in the cycle were calibrated against an earlier pipeline version. Without this sweep, those skills retain residual drift against the final pipeline definition that ships with the release — the drift is invisible at midpoint (Phase 9 only scores the first 3 skills) and accumulates across cycles.
+
+**Procedure**:
+1. Read final `REVIEW_FRAMEWORK.md` and `SPEC_SNAPSHOT.md` as authoritative — these are the version that ships, not the version any individual skill was originally reviewed against.
+2. For each of the 17 reviewed skills, re-run **Phase 1 only** (the 8-step mechanical preflight). Do not re-run Phase 2 (walkthrough), Phase 3 (fixes), Phase 4 (LLM jury), or Phase 9 (drift). This sweep is preflight-only.
+3. Emit one consolidated report at `outputs/phase10-drift-sweep-<YYYY-MM-DD>.md` with a 17 × 8 PASS\|FAIL grid (skills × Phase 1 steps).
+4. **Any FAIL row → open a follow-up review item for next cycle** (e.g. record in `MEMORY.md` or roadmap backlog). Do NOT block current cycle closeout. Do NOT auto-fix. Do NOT escalate severity from the original review.
+
+**Output**: drift-sweep report + 0 or more follow-up items for next cycle.
+
+**Why preflight-only (not full Phase 1-6 re-run)**:
+- Phase 2 walkthrough and Phase 3 fixes are MITL — re-running on 17 skills would cost the same as a full second cycle.
+- Phase 1 mechanical steps catch the most common drift modes (frontmatter syntax updates, line-budget changes, registry/inventory drift, allowed-tools spec changes, placeholder grammar).
+- Anything Phase 1 cannot catch (semantic / behavioral drift) goes into the next cycle's normal Phase 2-3 flow — the follow-up item ensures it isn't lost.
+
+**Fail handling**: this phase cannot itself fail. A FAIL row is data, not a blocker. The cycle still CLOSES; the follow-up item carries the drift into the next cycle as input.
+
 ---
 
 ## Interactive decision points (man-in-the-loop)
 
 1. **Post-pre-work**: confirm P1, P2, P3, P4, P5 sequentially.
-2. **Phase 2.D #13**: per Anthropic opportunity, apply/roadmap/ignore.
-3. **Phase 2.D #14**: section-by-section walkthrough.
-4. **Phase 2.D #15 (C6)**: cross-tier diff approval (multi-tier skills only).
-5. **Phase 3 step 2**: confirm findings to apply before fixes.
-6. **Phase 3 → Phase 4 STOP (C7)**: approve fix diff before external LLMs.
-7. **Phase 5 confirmation**: confirm LLM finding fixes.
-8. **Phase 6 GO**: explicit authorization to proceed.
-9. **Phase 9 (D2)**: drift check resolution if drift detected.
+2. **Phase 1 → Phase 2 gate (P3.1)**: confirm 100% PASS on the 8-step mechanical table before Phase 2 starts. A FAIL row cannot be waived.
+3. **Phase 2.D #13**: per Anthropic opportunity, apply/roadmap/ignore.
+4. **Phase 2.D #14**: section-by-section walkthrough.
+5. **Phase 2.D #15 (C6)**: cross-tier diff approval (multi-tier skills only).
+6. **Phase 3 step 2**: confirm findings to apply before fixes.
+7. **Phase 3 → Phase 4 STOP (C7)**: approve fix diff before external LLMs.
+8. **Phase 5 confirmation**: confirm LLM finding fixes.
+9. **Phase 6 GO**: explicit authorization to proceed.
+10. **Phase 9 (D2)**: drift check resolution if drift detected.
 
 All other steps autonomous once corresponding gate is open.
 
@@ -361,7 +402,7 @@ Each skill review produces:
 - Decision log for opportunities (apply/roadmap/ignore with rationale).
 - Updated SKILL.md.
 - Updated integration test count.
-- **If in 6-skill fixture set (D1)**: fixture pack + expected/actual outputs.
+- **If in 11-skill stack-dependent fixture set (D1 + P3.2)**: fixture pack + expected/actual outputs.
 - Optional: roadmap entries in MEMORY.md.
 - **If emerging principle (O4)**: auto-memory feedback entry + framework amendment.
 
@@ -380,9 +421,10 @@ Cycle CLOSED only when ALL hold:
 5. Integration tests green on final state.
 6. Release note summarizing the cycle drafted (blocks affected, principles captured, severity mapping changes, behavioral fixture results).
 7. **Phase 9 midpoint drift check (D2)** executed and resolved.
-8. **All behavioral fixtures on 6-skill target (D1)** green.
+8. **All behavioral fixtures on 11-skill stack-dependent target (D1 + P3.2)** green.
+9. **Phase 10 final mechanical sweep (P3.3)** executed; the 17 × 8 drift-sweep report exists at `outputs/phase10-drift-sweep-<date>.md`. FAIL rows do NOT block closure but MUST be logged as follow-up items for the next cycle (the sweep itself is not allowed to be silently skipped).
 
-Until all eight hold, cycle OPEN. No version bump claiming "skills quality-reviewed" can ship.
+Until all nine hold, cycle OPEN. No version bump claiming "skills quality-reviewed" can ship.
 
 ---
 

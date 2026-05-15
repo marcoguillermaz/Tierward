@@ -99,18 +99,23 @@ Skills with 2 or 3 tier variants. Review approach per framework v1.2 Phase 2.B: 
 
 ---
 
-## Behavioral fixture targets (per D1: targeted)
+## Behavioral fixture targets (per D1 + P3.2)
 
-Framework v1.2 D1 decision: T2.1 behavioral fixtures applied to 6 UI/security skills where textual correctness is insufficient to catch known defect classes.
+Framework v1.2 D1 + P3.2 (cross-LLM synthesis 2026-04-29) decision: T2.1 behavioral fixtures applied to **11 stack-dependent skills** where textual correctness is insufficient to catch known defect classes. P3.2 expands the original 6-skill D1 set with 5 stack-dependent skills previously excluded (perf-audit, responsive-audit, test-audit, ux-audit, skill-db) — same rationale, same procedure.
 
-| Target skill | Rationale |
-|---|---|
-| ui-audit | stack-specific literals (e.g. system colors flagged as hardcoded) prove literal-correctness misses stack-sensitive defects |
-| visual-audit | subjective scoring (10 aesthetic dimensions) prone to domain-emotion labeling |
-| accessibility-audit | axe-core rule interpretation is judgment-heavy; false positives on hidden elements |
-| security-audit | false-negative risk highest (missed invariant violation) - hard invariants need fixture confirmation |
-| api-design | invocation context sensitivity (runs on routes that may not exist in all stacks) |
-| migration-audit | destructive-op severity depends on deployment model; fixtures pin expected labels |
+| Target skill | Rationale | Source |
+|---|---|---|
+| ui-audit | stack-specific literals (e.g. system colors flagged as hardcoded) prove literal-correctness misses stack-sensitive defects | D1 |
+| visual-audit | subjective scoring (10 aesthetic dimensions) prone to domain-emotion labeling | D1 |
+| accessibility-audit | axe-core rule interpretation is judgment-heavy; false positives on hidden elements | D1 |
+| responsive-audit | breakpoint behavior is browser-specific; fixtures pin expected viewport-handling at 375/768/1024 | P3.2 |
+| ux-audit | Nielsen heuristics interpretation is judgment-heavy; fixtures anchor task-completion + cognitive-load measurements | P3.2 |
+| security-audit | false-negative risk highest (missed invariant violation) - hard invariants need fixture confirmation | D1 |
+| api-design | invocation context sensitivity (runs on routes that may not exist in all stacks) | D1 |
+| migration-audit | destructive-op severity depends on deployment model; fixtures pin expected labels | D1 |
+| perf-audit | mode dispatch (web bundle / native I/O) is stack-conditional; fixtures validate each mode path | P3.2 |
+| test-audit | coverage parser auto-detects lcov/Istanbul/Cobertura/go/tarpaulin/xcresult — fixtures validate each parser path | P3.2 |
+| skill-db | live SQL verification with dialect-specific queries (Postgres / SQLite / MongoDB); fixtures pin expected reports per dialect | P3.2 |
 
 Per skill: 3 representative cases + 2 adversarial + 1 contamination probe + 1 severity-calibration case.
 
@@ -120,17 +125,17 @@ Per skill: 3 representative cases + 2 adversarial + 1 contamination probe + 1 se
 
 Framework v1.2 recommends the following sequence. Rationale: start with the skill that produced the motivating defect (ui-audit, Color.red), cross-tier families reviewed together, single-tier last.
 
-1. **ui-audit** (M + L) - motivating defect, behavioral fixtures required
-2. **visual-audit** (M + L) - behavioral fixtures required
-3. **accessibility-audit** (M + L) - behavioral fixtures required
-4. **responsive-audit** (M + L) - UI family closure
-5. **ux-audit** (M + L) - UI family closure
-6. **security-audit** (S + M + L) - behavioral fixtures required
-7. **api-design** (M + L) - behavioral fixtures required
-8. **migration-audit** (M + L) - behavioral fixtures required
-9. **skill-db** (M + L) - **Phase 9 midpoint drift check triggers after this skill**
-10. **test-audit** (M + L)
-11. **perf-audit** (S + M + L)
+1. **ui-audit** (M + L) - motivating defect, behavioral fixtures required (D1)
+2. **visual-audit** (M + L) - behavioral fixtures required (D1)
+3. **accessibility-audit** (M + L) - behavioral fixtures required (D1)
+4. **responsive-audit** (M + L) - behavioral fixtures required (P3.2)
+5. **ux-audit** (M + L) - behavioral fixtures required (P3.2)
+6. **security-audit** (S + M + L) - behavioral fixtures required (D1)
+7. **api-design** (M + L) - behavioral fixtures required (D1)
+8. **migration-audit** (M + L) - behavioral fixtures required (D1)
+9. **skill-db** (M + L) - behavioral fixtures required (P3.2); **Phase 9 midpoint drift check triggers after this skill**
+10. **test-audit** (M + L) - behavioral fixtures required (P3.2)
+11. **perf-audit** (S + M + L) - behavioral fixtures required (P3.2)
 12. **arch-audit** (S + M + L) - **freeze cutoff: after this skill, only Critical principles enter current cycle**
 13. **skill-dev** (S + M + L)
 14. **dependency-scan** (M + L)
