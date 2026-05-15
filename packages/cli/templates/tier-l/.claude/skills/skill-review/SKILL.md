@@ -1,6 +1,6 @@
 ---
 name: skill-review
-description: Orchestrate the skill-review framework v1.2 pipeline on a target skill or cross-tier family. Runs Phase 1 preflight, Phase 2 structural review with interactive walkthrough, Phase 3 fix + rollback, optional Phase 4 external LLM review, Phase 5 integration, Phase 6 closeout. Supports full, preflight-only, and fixtures-only modes. Enforces STOP gates and Phase 9 midpoint drift check when reviewing a portfolio.
+description: Orchestrate the skill-review framework v1.2 pipeline on a target skill or cross-tier family. Runs Phase 1 preflight, Phase 2 structural review with interactive walkthrough, Phase 3 fix + rollback, optional Phase 4 external LLM review, Phase 5 integration, Phase 6 closeout. Supports full, preflight-only, and fixtures-only modes. Enforces STOP gates, Phase 9 midpoint drift check, and Phase 10 final mechanical sweep at cycle closure when reviewing a portfolio.
 user-invocable: true
 model: opus
 context: fork
@@ -14,7 +14,7 @@ You are a skill-quality reviewer running the framework v1.2 pipeline. Your job: 
 
 - `skill-name` (required): target skill directory name (e.g. `ui-audit`, `security-audit`).
 - `tier` (optional, default `all`): which tier variants to review. `all` triggers cross-tier family review per framework §Phase 2.B.
-- `mode` (optional, default `full`): `full` runs all phases; `preflight-only` stops after Phase 1; `fixtures-only` runs only Phase 2.E behavioral fixtures (for the 6 UI/security skills targeted by D1).
+- `mode` (optional, default `full`): `full` runs all phases; `preflight-only` stops after Phase 1; `fixtures-only` runs only Phase 2.E behavioral fixtures (for the 11 stack-dependent skills targeted by D1 + P3.2 — canonical list in `SKILLS_INVENTORY.md § Behavioral fixture targets`).
 
 ## Supporting documents (load order at cycle-start)
 
@@ -102,7 +102,7 @@ If `tier:all`: load every tier variant, produce a column-by-column diff artifact
 
 Present findings to user. For multi-option review questions, ALWAYS use `AskUserQuestion` tool - never inline prose.
 
-### 2.E - Behavioral fixtures _(only for 6 targeted skills per D1: ui-audit, visual-audit, accessibility-audit, security-audit, api-design, migration-audit)_
+### 2.E - Behavioral fixtures _(only for 11 stack-dependent skills per D1 + P3.2 — canonical list in `SKILLS_INVENTORY.md § Behavioral fixture targets`)_
 
 - 3 representative cases: run the skill, record output, verify expected severity labels.
 - 2 adversarial cases: craft input that should trip the skill; verify skill catches it.
@@ -186,6 +186,21 @@ Procedure per `CALIBRATION_KIT.md §4`:
 5. Major drift → run `CALIBRATION_KIT.md §5` recalibration before next skill.
 
 Log outcome in `DRIFT_LOG.md` (create if absent).
+
+---
+
+## Phase 10 - Final mechanical sweep _(portfolio-level, cycle closure)_
+
+Trigger: after Phase 6 GO on the last skill of the cycle, before declaring cycle CLOSED.
+
+Procedure per `REVIEW_FRAMEWORK.md §Phase 10` (mechanical-only — no MITL, no LLM jury, no walkthrough):
+
+1. Treat final `REVIEW_FRAMEWORK.md` + `SPEC_SNAPSHOT.md` as authoritative — the version that ships.
+2. For each of the 17 reviewed skills, re-run **Phase 1 only** against the final spec (the 8-step preflight table). Skip Phase 2-6.
+3. Emit consolidated report at `outputs/phase10-drift-sweep-<YYYY-MM-DD>.md` with a 17 × 8 PASS\|FAIL grid.
+4. Any FAIL row → log as follow-up review item for next cycle (e.g. in `MEMORY.md` or roadmap backlog). Do NOT block closure, do NOT auto-fix, do NOT re-escalate severity.
+
+Rationale: pipeline hardening lands progressively during the cycle. Skills reviewed early are calibrated to an earlier framework version. Phase 9 catches mid-cycle drift on the first 3 skills only; without Phase 10, late-cycle hardening creates silent residual drift on early-cycle skills.
 
 ---
 

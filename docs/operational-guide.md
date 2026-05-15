@@ -1,6 +1,6 @@
 # claude-dev-kit - Operational Guide
 
-**Version**: 1.27.0
+**Version**: 1.28.0
 **Audience**: Builder PMs, tech leads, and senior developers using Claude Code - from first exploration to structured, reviewable delivery
 **Format**: Reference + step-by-step. Read section 1 and your target tier section first, then use the rest as a lookup.
 
@@ -984,7 +984,7 @@ Backlog prefix: `GDPR-` (SOC 2 and HIPAA reserve `SOC2-` / `HIPAA-` for v1.15+).
 
 **File**: `.claude/skills/skill-review/SKILL.md` | **Tier**: M (lite), L (full)
 
-Quality review pipeline for skill portfolios. Orchestrates Phase 1 preflight (C1-C8 spec compliance), Phase 2 structural review (fundamentals, cross-tier coherence, refinements, behavioral fixtures), Phase 3 fix + rollback, Phase 6 closeout. Tier M lite mode skips Phase 4 (external LLM review) and Phase 9 (midpoint drift check). Tier L full mode includes all phases. Includes 5 supporting documents: REVIEW_FRAMEWORK.md, SEVERITY_SCALE.md, SPEC_SNAPSHOT.md, SKILLS_INVENTORY.md, CALIBRATION_KIT.md.
+Quality review pipeline for skill portfolios. Runs Phase 1 preflight (C1–C8 spec compliance) → **Phase 1 → Phase 2 mechanical gate** (8-step PASS|FAIL table, no judgment override) → Phase 2 structural review (fundamentals, cross-tier coherence, refinements, behavioral fixtures across 11 stack-dependent skills) → Phase 3 fix + rollback → Phase 6 closeout. Tier M lite mode skips Phase 4 (external LLM review), Phase 9 (midpoint drift check), and Phase 10 (final mechanical sweep). Tier L full mode runs all phases, including a portfolio-level Phase 10 mechanical sweep at cycle closure: Phase 1 is re-run against the final framework spec to surface residual drift on skills reviewed early in the cycle. Ships with 5 supporting documents: REVIEW_FRAMEWORK.md, SEVERITY_SCALE.md, SPEC_SNAPSHOT.md, SKILLS_INVENTORY.md, CALIBRATION_KIT.md.
 
 #### /simplify
 
@@ -1315,7 +1315,7 @@ Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user
 }
 ```
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.27.0. A read-write surface remains a future-minor decision contingent on adoption signal.
+The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.28.0. A read-write surface remains a future-minor decision contingent on adoption signal.
 
 ### Adding team-specific rules
 
@@ -1467,4 +1467,4 @@ Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy 
 
 ---
 
-_Last updated: 2026-05-14 - v1.27.0_
+_Last updated: 2026-05-15 - v1.28.0_

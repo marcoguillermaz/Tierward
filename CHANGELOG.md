@@ -13,6 +13,30 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.28.0] — 2026-05-15
+
+### Added
+
+- **Skill-review pipeline P3 process robustness** (closes Q3 #10e, issue #132). Cross-LLM synthesis from `docs/reviews/2026-04-29-pipeline-meta/synthesis.md` identified three process-integrity gaps; this release closes all three.
+  - **P3.1 — Phase 1 → Phase 2 mechanical gate (CC5).** Before Phase 2 of `/skill-review` can begin, the reviewer must emit a PASS\|FAIL table covering all 8 Phase 1 preflight steps. Phase 2 entry requires 100% PASS — a FAIL row cannot be overridden by reviewer judgment. This closes the "Stage A → Stage B" gate that existed in the framework as a declaration but had no enforcement artifact behind it. Added to `REVIEW_FRAMEWORK.md` (tier-M and tier-L) and to the Interactive decision points list.
+  - **P3.2 — Behavioral fixture targets expanded from 6 to 11 stack-dependent skills (CC7).** The D1 fixture target set covered ui-audit, visual-audit, accessibility-audit, security-audit, api-design, and migration-audit; P3.2 adds perf-audit, responsive-audit, test-audit, ux-audit, and skill-db. Each added skill is stack-dependent — mode dispatch, dialect-specific output, parser auto-detection, browser-specific behavior — and textual review alone misses the defect classes the fixture pack is designed to catch. Updated `SKILLS_INVENTORY.md` (canonical list with rationale and D1\|P3.2 source tags), `REVIEW_FRAMEWORK.md` Phase 2.E header and Review closing criterion #8, and `SKILL.md` tier-L mode description and Phase 2.E anchor. Side-effect: a pre-existing disagreement between `REVIEW_FRAMEWORK.md` (which listed a different set of 6 skills) and `SKILLS_INVENTORY.md` is now resolved — the canonical list lives in the inventory and is referenced everywhere else.
+  - **P3.3 — Phase 10 final mechanical sweep at cycle closure (CC6).** New phase added to `REVIEW_FRAMEWORK.md` (tier-M and tier-L): after the Phase 6 GO on the last skill, re-run Phase 1 preflight against the final framework spec across all 17 reviewed skills. The sweep is mechanical only — no MITL, no LLM jury, no walkthrough. FAIL rows don't block closure but must be logged as follow-up items for the next cycle; the sweep itself cannot be silently skipped. This addresses drift from pipeline hardening that lands incrementally during a cycle, leaving early-reviewed skills calibrated to an earlier framework version. Tier-M lite mode skips Phase 10 alongside Phase 4 and Phase 9 (portfolios under 6 skills).
+- New "Phase 10" section in `SKILL.md` tier-L runbook; lite-mode skip statement in `SKILL.md` tier-M extended to cover Phase 10.
+
+### Changed
+
+- `REVIEW_FRAMEWORK.md` "Per-skill pipeline" intro: now reads "Six phases per skill + Phase 9 midpoint (mid-cycle) + Phase 10 final mechanical sweep (cycle closure)."
+- `REVIEW_FRAMEWORK.md` Phase 1 fail handling: routes findings through the new mechanical gate instead of the prior informal "Critical findings block Phase 2" wording.
+- `docs/operational-guide.md` `/skill-review` entry rewritten to reflect the gate, the 11-skill fixture target set, and Phase 10.
+- `REVIEW_FRAMEWORK.md` Review closing criterion grew from 8 to 9 conditions: Phase 10 execution + follow-up logging is now a release gate.
+
+### Notes
+
+- Vocabulary alignment: the synthesis used "Stage A / Stage B", "Phase 1b", "C1-C14", "MITL stop #1" from the meta-review prompt bundle. Shipped framework vocabulary (Phase 1 / Phase 2 / ... / Phase 9 / Phase 10, C1-C8) is preserved — the gate and fixture-set changes are mapped to the shipped names. No double-vocabulary debt added.
+- Files touched: 6 (4 framework/inventory mirrors + 2 SKILL.md runbooks). Strict parity between tier-M and tier-L for `REVIEW_FRAMEWORK.md` and `SKILLS_INVENTORY.md`.
+
+---
+
 ## [1.27.0] — 2026-05-14
 
 ### Added

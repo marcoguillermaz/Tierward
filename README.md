@@ -188,7 +188,7 @@ Read-only tools exposed:
 | `cdk_package_meta`      | CDK package name, version, CLI path, cwd                                                                                                                         |
 | `cdk_pr_review`         | reads existing `/pr-review` skill comments on a GitHub PR (verdict, severity counts). Read-only — to generate a fresh review, invoke the `/pr-review` CDK skill. |
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.27.0.
+The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.28.0.
 
 ---
 
@@ -250,7 +250,7 @@ A separate **template-coverage** layer (under `packages/cli/test/template-covera
 
 See [GitHub Milestones](https://github.com/marcoguillermaz/claude-dev-kit/milestones) for the 12-month plan.
 
-**Current**: v1.27.0 closes the Context Builder v1.1 cycle. The `context` sub-command produces a schema-validated `CONTEXT.md` that `init` reads to scaffold the project without prompting (`context --all` runs both steps in one shot; `context --from-yaml file.md` skips the interview for templates and CI; `validate-context` runs as a standalone CI gate). The schema covers all four pipeline tiers (0/S/M/L), including a feature-flag block (`has_api`, `has_database`, `has_frontend`, `has_design_system` + `design_system_name`, `has_prd`) and an `audit_model` field on M/L. The dev-flow persona reuses the legacy wizard's technical questions and auto-derives `tier.rationale` from `teamSize + workScope`. Carried forward from earlier releases: v1.22.0's `/skill-dev` v2 hotspot step (Step 3b "Hotspot priority (churn × debt)"), v1.21.0's PreToolUse runtime enforcement, and v1.20.0's MCP-aware audit skills (`/security-audit` + `/dependency-audit`) pinned to `mcp-nvd` and `package-registry-mcp`.
+**Current**: v1.28.0 closes Q3 #10e (skill-review pipeline P3 process robustness). Three gaps surfaced by the cross-LLM meta-review are now closed: a Phase 1 → Phase 2 gate that no longer yields to maintainer judgment, behavioral-fixture coverage up from 6 to 11 stack-dependent skills, and a Phase 10 mechanical sweep at cycle closure that catches drift on early-cycle skills against the final pipeline version. Carried forward: v1.27.0's Context Builder v1.1 cycle (schema-validated `CONTEXT.md` driving non-interactive scaffolding across all four tiers), v1.22.0's `/skill-dev` v2 hotspot step (churn × debt), v1.21.0's PreToolUse runtime enforcement, and v1.20.0's MCP-aware audit skills pinned to `mcp-nvd` and `package-registry-mcp`.
 
 **Next**: `/arch-audit` MCP-aware once the upstream Anthropic spec MCP server lands. `/privacy-audit` re-eval (Issue #97 sub-track 3) when AST tracing matures or demand signal materializes. Q2 #3 VitePress docs site (ICE 432) stays on hold.
 
