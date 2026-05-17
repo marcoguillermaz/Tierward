@@ -9,6 +9,13 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+      prod-minor-patch:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -16,3 +23,7 @@ updates:
       interval: "monthly"
     labels:
       - "dependencies"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

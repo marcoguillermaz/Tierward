@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js >= 22](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org)
 [![CI](https://github.com/marcoguillermaz/claude-dev-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoguillermaz/claude-dev-kit/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/marcoguillermaz/claude-dev-kit/badge)](https://securityscorecards.dev/viewer/?uri=github.com/marcoguillermaz/claude-dev-kit)
 
 > Scaffold for legible, reviewable AI-assisted development.
 > Claude generates. Your team decides.
