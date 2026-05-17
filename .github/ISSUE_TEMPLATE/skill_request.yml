@@ -1,0 +1,76 @@
+name: Skill request
+description: Request a new audit skill for claude-dev-kit
+labels: ["skill-request"]
+body:
+  - type: input
+    id: skill-name
+    attributes:
+      label: Skill name
+      description: Proposed name in kebab-case.
+      placeholder: "test-audit"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-checks
+    attributes:
+      label: What does this skill check?
+      description: Describe the audit/analysis this skill would perform. What problems does it catch?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: tiers
+    attributes:
+      label: Tier target
+      options:
+        - label: Tier S — Fast Lane (available to all projects)
+        - label: Tier M — Standard (team projects)
+        - label: Tier L — Full (enterprise/complex projects)
+
+  - type: dropdown
+    id: stack-scope
+    attributes:
+      label: Stack applicability
+      options:
+        - All stacks
+        - Web only (requires frontend)
+        - API only (requires API)
+        - Database only (requires database)
+        - Specific stacks
+    validations:
+      required: true
+
+  - type: input
+    id: specific-stacks
+    attributes:
+      label: If specific stacks, which ones?
+      placeholder: "e.g. node-ts, python, swift"
+    validations:
+      required: false
+
+  - type: textarea
+    id: install-condition
+    attributes:
+      label: Install condition
+      description: |
+        Under what conditions should this skill be installed?
+        Reference feature flags if known: `hasApi`, `hasFrontend`, `hasDatabase`, `hasDesignSystem`. Leave blank if unsure.
+    validations:
+      required: false
+
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Prior art
+      description: Existing tools, linters, or processes that do something similar. How would this skill differ?
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Examples, links, screenshots.
+    validations:
+      required: false
