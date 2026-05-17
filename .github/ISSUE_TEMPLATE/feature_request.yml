@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest an improvement or new capability
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the pain point or gap this addresses.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: beneficiaries
+    attributes:
+      label: Who benefits?
+      options:
+        - label: Builder PM
+        - label: Tech lead / staff engineer
+        - label: Developer on team using claude-dev-kit
+        - label: All users
+
+  - type: checkboxes
+    id: tiers
+    attributes:
+      label: Tier relevance
+      options:
+        - label: Tier 0 — Discovery
+        - label: Tier S — Fast Lane
+        - label: Tier M — Standard
+        - label: Tier L — Full
+        - label: All tiers
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you evaluated?
+    validations:
+      required: false
