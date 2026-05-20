@@ -241,6 +241,8 @@ const PROVIDERS = [
 ];
 
 async function anthropicCall({ apiKey, model, system, user }) {
+  // Note: `temperature` is omitted because Opus 4.7+ rejects it with a 400.
+  // Older Anthropic models accept it but defaulting is fine for review work.
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -253,7 +255,6 @@ async function anthropicCall({ apiKey, model, system, user }) {
       max_tokens: 8192,
       system,
       messages: [{ role: "user", content: user }],
-      temperature: 0.2,
     }),
   });
   if (!res.ok) throw new Error(`anthropic ${res.status}: ${await res.text()}`);

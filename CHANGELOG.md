@@ -13,6 +13,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.29.2] — 2026-05-20
+
+### Fixed
+
+- **`anthropicCall` in cross-LLM scripts** no longer sends `temperature`. The first live smoke test of `scripts/cross-llm-rubric.mjs` against an Anthropic key surfaced a 400 from Opus 4.7: `temperature is deprecated for this model`. Sonnet was unaffected but the locked jury requires all three providers to respond. Removed `temperature: 0.2` from `anthropicCall` in both `scripts/cross-llm-rubric.mjs` and `scripts/external-review.mjs`; the API default is fine for review-style judgment tasks. Smoke test path now reaches the parsing stage on Opus too.
+
+### Notes
+
+- Discovered during the live smoke of the rubric after v1.29.0 / v1.29.1 shipped (unit tests mock the provider call and so couldn't catch a real-world API change).
+- npm publish still pending, tracked separately in #181 (OIDC trusted-publisher registration required on npmjs.com).
+
+---
+
 ## [1.29.1] — 2026-05-20
 
 ### Fixed

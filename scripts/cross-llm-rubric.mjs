@@ -146,7 +146,10 @@ export function detectMode(content) {
   }
   const modeMatch = m[1].match(/^\s*mode:\s*['"]?([a-z-]+)['"]?\s*$/m);
   if (!modeMatch) {
-    throw makeError("BAD_CONTEXT", "CONTEXT.md frontmatter missing project.mode");
+    throw makeError(
+      "BAD_CONTEXT",
+      "CONTEXT.md frontmatter missing project.mode",
+    );
   }
   return modeMatch[1];
 }
@@ -167,11 +170,20 @@ export function renderCriteriaList(criteria) {
     .join("\n");
 }
 
-export function fillTemplate({ template, mode, repoSummary, contextMd, criteria }) {
+export function fillTemplate({
+  template,
+  mode,
+  repoSummary,
+  contextMd,
+  criteria,
+}) {
   const criteriaList = renderCriteriaList(criteria);
   return template
     .replace(/\{MODE\}/g, mode)
-    .replace(/\{REPO_SUMMARY\}/g, repoSummary || "(greenfield — no repo summary)")
+    .replace(
+      /\{REPO_SUMMARY\}/g,
+      repoSummary || "(greenfield — no repo summary)",
+    )
     .replace(/\{CONTEXT_MD_CONTENT\}/g, contextMd)
     .replace(/\{CRITERIA_LIST\}/g, criteriaList);
 }
@@ -179,6 +191,10 @@ export function fillTemplate({ template, mode, repoSummary, contextMd, criteria 
 // ---- providers -------------------------------------------------------------
 
 async function anthropicCall({ apiKey, model, system, user }) {
+  // Note: `temperature` is omitted. Newer Anthropic models (Opus 4.7+)
+  // reject `temperature` with a 400 `invalid_request_error`; older models
+  // accept it but the rubric task is judgment-heavy and the default
+  // sampling is fine. Smoke-tested 2026-05-20.
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -191,7 +207,6 @@ async function anthropicCall({ apiKey, model, system, user }) {
       max_tokens: 8192,
       system,
       messages: [{ role: "user", content: user }],
-      temperature: 0.2,
     }),
   });
   if (!res.ok) throw new Error(`anthropic ${res.status}: ${await res.text()}`);
@@ -306,7 +321,8 @@ export function aggregate({ criteria, providerResults }) {
   const medians = Object.values(perCriterion).map((c) => c.median);
   const allAboveTwo = medians.every((m) => m >= 2);
   const aboveTwoCount = medians.filter((m) => m >= 2).length;
-  const percentAboveTwo = medians.length === 0 ? 0 : aboveTwoCount / medians.length;
+  const percentAboveTwo =
+    medians.length === 0 ? 0 : aboveTwoCount / medians.length;
   const status = allAboveTwo && percentAboveTwo >= 0.8 ? "PASS" : "FAIL";
 
   return {
@@ -349,7 +365,9 @@ export function renderMarkdownReport({ aggregation, providerResults, meta }) {
   );
   lines.push("");
 
-  const malformed = providerResults.filter((p) => p.malformed).map((p) => p.name);
+  const malformed = providerResults
+    .filter((p) => p.malformed)
+    .map((p) => p.name);
   if (malformed.length > 0) {
     lines.push(
       `> **Warning**: malformed JSON response from: ${malformed.join(", ")} — their criteria default to score 0.`,
@@ -365,7 +383,9 @@ export function renderMarkdownReport({ aggregation, providerResults, meta }) {
 
   lines.push("## Per-provider models", "");
   for (const pr of providerResults) {
-    lines.push(`- **${pr.name}** — model: \`${pr.model}\`${pr.malformed ? " (malformed response)" : ""}`);
+    lines.push(
+      `- **${pr.name}** — model: \`${pr.model}\`${pr.malformed ? " (malformed response)" : ""}`,
+    );
   }
   lines.push("");
 
@@ -488,7 +508,9 @@ async function main() {
   const failed = settled.filter((s) => s.status === "rejected");
   if (failed.length > 0) {
     for (const f of failed) {
-      process.stderr.write(`provider error: ${f.reason?.message ?? f.reason}\n`);
+      process.stderr.write(
+        `provider error: ${f.reason?.message ?? f.reason}\n`,
+      );
     }
     process.exit(1);
   }
@@ -563,7 +585,14 @@ function makeError(code, message) {
 
 function exitErr(err) {
   process.stderr.write(`cross-llm-rubric: ${err.message}\n`);
-  process.exit(err.code === "MISSING_KEYS" || err.code === "BAD_ARGS" || err.code === "BAD_CONTEXT" || err.code === "BAD_TEMPLATE" ? 2 : 1);
+  process.exit(
+    err.code === "MISSING_KEYS" ||
+      err.code === "BAD_ARGS" ||
+      err.code === "BAD_CONTEXT" ||
+      err.code === "BAD_TEMPLATE"
+      ? 2
+      : 1,
+  );
 }
 
 const isMain = import.meta.url === `file://${process.argv[1]}`;
