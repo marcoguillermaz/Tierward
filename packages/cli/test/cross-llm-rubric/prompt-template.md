@@ -44,9 +44,15 @@ Score only the criteria that apply (existing-only criteria are skipped for green
 {CONTEXT_MD_CONTENT}
 ```
 
-### Criteria to score
+### Criteria to score (filtered for this run)
 
-**Accuracy (existing only — skip for greenfield):**
+Score **only** the criteria below — they are pre-filtered for the mode of this `CONTEXT.md`. Return one entry per criterion id in the JSON. Omitting any criterion id is treated as score 0.
+
+{CRITERIA_LIST}
+
+Criterion reference (full set, for context):
+
+**Accuracy (existing only):**
 
 - A1: `project.name` corresponds to the real repo name
 - A2: `project.description` reflects the real purpose (not boilerplate)
@@ -61,7 +67,7 @@ Score only the criteria that apply (existing-only criteria are skipped for green
 - Q2: Body "What we are building" is coherent with the frontmatter
 - Q3: Body "Operational constraints" is specific (no boilerplate)
 
-**Inference traceability (existing only — skip for greenfield):**
+**Inference traceability (existing only):**
 
 - T1: `inference.source_files` lists files that really exist in the repo
 - T2: Confidence levels are reasonable (not all "high" without evidence)

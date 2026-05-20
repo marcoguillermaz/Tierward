@@ -13,6 +13,31 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.29.0] — 2026-05-20
+
+### Added
+
+- **Cross-LLM rubric automation for Context Builder** (closes v1.1 P5 from the reopened roadmap). The SHOULD PASS scoring on `CONTEXT.md` (locked 2026-05-07, run manually during the v1.0 pilot on 2026-05-11) now runs as a single command. Maintainer-side gate, not an end-user feature.
+  - `scripts/cross-llm-rubric.mjs` — fans out to the locked jury (`claude-opus-4-7` + `claude-sonnet-4-6` + `gemini-2.5-pro`), parses each response as JSON, aggregates per-criterion medians, applies the threshold (all medians ≥ 2 AND ≥ 80 % of criteria with median ≥ 2), writes `report.json` + `report.md` + raw responses.
+  - **Hard-fail policy.** Missing `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` → exit 2 (config error, no models called). Any provider runtime error (network, 5xx, abort) → exit 1. Malformed JSON from one model does not abort the run: that model's missing criteria score 0 and the report flags `malformed: true`.
+  - **Provider extension.** `scripts/external-review.mjs` gains two Anthropic entries (`anthropic-opus` and `anthropic-sonnet`) so the locked jury can be invoked from there as well.
+  - **Calibration note.** The criteria were locked against schema v1 when only tier 0 / S were supported. v1.27.0 (2026-05-14) added tier M / L; A6 ("tier plausible") may discriminate less on M / L outputs and Q2 / Q3 do not yet reward acknowledgment of M / L feature flags. Re-calibrate the prompt template if M / L outputs become a routine target.
+
+### Changed
+
+- `packages/cli/test/cross-llm-rubric/prompt-template.md` — introduces a `{CRITERIA_LIST}` placeholder. The applicable criteria are now selected in code from `frontmatter.project.mode` (3 for greenfield, 12 for in-place / from-context) and injected into the prompt as an explicit list, rather than relying on the model to honor a "skip for greenfield" instruction.
+- `packages/cli/test/cross-llm-rubric/README.md` — rewritten for the automated flow; the manual pilot procedure is kept as a historical appendix.
+- `docs/operational-guide.md` — adds section 15d covering the rubric script, next to the existing template-coverage gates (15c).
+- `docs/reviews/context-builder-pilot-v1.md` — the automated script now resolves the pre-ship checklist item on locked-jury re-run.
+
+### Notes
+
+- 585/585 unit tests pass (+31 new tests for parsing, aggregation, threshold, and markdown rendering, all with mocked providers; no live LLM calls).
+- Maintainer-only surface: no new public CLI command, no new dependency in the user-installed package.
+- Closes v1.1 P5; P6 (stack adaptation post-scaffold) and P4 (persona-distribution telemetry, gated on ~1 month of adoption) remain open.
+
+---
+
 ## [1.28.0] — 2026-05-15
 
 ### Added

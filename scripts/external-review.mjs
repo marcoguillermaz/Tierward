@@ -21,8 +21,11 @@
  *   GEMINI_API_KEY      → gemini-2.5-pro
  *   MISTRAL_API_KEY     → mistral-large-latest
  *   PERPLEXITY_API_KEY  → sonar-pro
+ *   ANTHROPIC_API_KEY   → claude-opus-4-7    (provider name: anthropic-opus)
+ *   ANTHROPIC_API_KEY   → claude-sonnet-4-6  (provider name: anthropic-sonnet)
  *
- * Override a model id per provider with e.g. OPENAI_MODEL=gpt-5.
+ * Override a model id per provider with e.g. OPENAI_MODEL=gpt-5,
+ * ANTHROPIC_OPUS_MODEL=claude-opus-4-7, ANTHROPIC_SONNET_MODEL=claude-sonnet-4-6.
  *
  * Exit codes:
  *   0  all providers returned a response, no Critical findings
@@ -221,7 +224,42 @@ const PROVIDERS = [
       return j.choices?.[0]?.message?.content ?? "";
     },
   },
+  {
+    name: "anthropic-opus",
+    envKey: "ANTHROPIC_API_KEY",
+    modelEnv: "ANTHROPIC_OPUS_MODEL",
+    defaultModel: "claude-opus-4-7",
+    call: anthropicCall,
+  },
+  {
+    name: "anthropic-sonnet",
+    envKey: "ANTHROPIC_API_KEY",
+    modelEnv: "ANTHROPIC_SONNET_MODEL",
+    defaultModel: "claude-sonnet-4-6",
+    call: anthropicCall,
+  },
 ];
+
+async function anthropicCall({ apiKey, model, system, user }) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 8192,
+      system,
+      messages: [{ role: "user", content: user }],
+      temperature: 0.2,
+    }),
+  });
+  if (!res.ok) throw new Error(`anthropic ${res.status}: ${await res.text()}`);
+  const j = await res.json();
+  return j.content?.map((b) => b.text ?? "").join("\n") ?? "";
+}
 
 // ---- main ------------------------------------------------------------------
 
