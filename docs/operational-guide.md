@@ -25,6 +25,7 @@
 15. [Maintaining the scaffold](#15-maintaining-the-scaffold)
     15b. [Anthropic drift tracking](#15b-anthropic-drift-tracking)
     15c. [Template coverage tests (maintainer-only)](#15c-template-coverage-tests-maintainer-only)
+    15d. [Cross-LLM rubric for Context Builder (maintainer-only)](#15d-cross-llm-rubric-for-context-builder-maintainer-only)
 16. [Frequently asked questions](#16-frequently-asked-questions)
 
 ---
@@ -1371,6 +1372,27 @@ Pass `--json` to any of them for machine-readable output. Exit code is non-zero 
 The concept registry consumed by `cross-tier-lint.mjs` lives in `packages/cli/test/template-coverage/cross-tier-concepts.json`. When adding a new phase or normative paragraph that must remain aligned across tiers, update the registry before changing the templates. The lint will flag the mismatch until both sides agree.
 
 Strategy, cost-benefit, and the explicit decision on deferred approaches (LLM-based semantic eval, behavioral fixture testing): [docs/architecture/test-coverage-strategy.md](architecture/test-coverage-strategy.md).
+
+---
+
+## 15d. Cross-LLM rubric for Context Builder (maintainer-only)
+
+The Context Builder produces `CONTEXT.md` files that feed the rest of the scaffold. A deterministic schema validator covers structural correctness (16 MUST PASS criteria), but semantic quality (whether the description reflects reality, whether `tier.rationale` is non-tautological, whether inferred source files actually exist) requires human-level judgment. The cross-LLM rubric automates that judgment by asking three independent models to score each criterion 0-3, then aggregating by median.
+
+```bash
+node scripts/cross-llm-rubric.mjs \
+  --context path/to/CONTEXT.md \
+  --out path/to/output-dir/ \
+  [--repo-summary path/to/repo-summary.md]
+```
+
+Output: `report.json` (machine-readable), `report.md` (human-readable table), and `raw-<provider>.txt` for each model.
+
+The locked jury is `claude-opus-4-7` + `claude-sonnet-4-6` + `gemini-2.5-pro`. PASS requires all medians ≥ 2 **and** ≥ 80 % of criteria with median ≥ 2. The script hard-fails (exit 2) if `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` is missing, and hard-fails at runtime (exit 1) on any provider network error; a model that responds with malformed JSON is penalised in scoring rather than crashing the run.
+
+This is a maintainer gate: run it before any release that touches `packages/cli/src/context-builder/**`, the schema, or prompt templates. End users do not run it; they get the deterministic MUST PASS via `npx mg-claude-dev-kit validate-context`.
+
+Full reference: `packages/cli/test/cross-llm-rubric/README.md`. Locked design in `memory/project_context_builder_rubric_v1.md`.
 
 ---
 
