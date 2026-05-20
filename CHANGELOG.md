@@ -21,7 +21,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Notes
 
-- `npm audit` on the new lockfile reports 5 advisories (4 moderate, 1 high). All are in transitive dependencies this PR didn't touch; triage is tracked as a follow-up so this patch stays focused.
+- The fresh lockfile carried 5 advisories (4 moderate, 1 high — `fast-uri`, `hono`, `ip-address`, `express-rate-limit`) flagged by GitHub dependency-review. `npm audit fix` resolved all of them by bumping the affected transitive deps. Final state: 0 vulnerabilities.
 
 ---
 
