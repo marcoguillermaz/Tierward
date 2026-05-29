@@ -26,7 +26,10 @@ jobs:
           persist-credentials: false
 
       - name: Run analysis
-        uses: ossf/scorecard-action@v2.4.3
+        # Pinned to commit SHA per supply-chain hardening (Option C: only 3rd-party
+        # actions pinned; GitHub-owned actions/* + github/* trust semver).
+        # To bump: resolve new SHA via `gh api repos/ossf/scorecard-action/git/refs/tags/<vX.Y.Z>`.
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
         with:
           results_file: results.sarif
           results_format: sarif
