@@ -5,7 +5,12 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:
-  contents: read
+  # `contents: write` is required by the `enablePullRequestAutoMerge` GraphQL
+  # mutation that `gh pr merge --auto` performs. Scorecard flags this as
+  # over-broad, but rolling it back to `read` breaks the workflow with
+  # "Resource not accessible by integration". Documented dismissal of
+  # code-scanning alert #32.
+  contents: write
   pull-requests: write
 
 jobs:
