@@ -19,6 +19,11 @@ on:
   schedule:
     - cron: '21 20 * * 0'
 
+# Top-level default: read-only. The `analyze` job below scopes up
+# `security-events: write` for SARIF upload, per principle of least privilege.
+permissions:
+  contents: read
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
