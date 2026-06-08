@@ -1,0 +1,57 @@
+{
+  "name": "claude-dev-kit-vscode",
+  "displayName": "Claude Dev Kit",
+  "description": "Editor-native governance surfaces for claude-dev-kit: doctor health, skill/rule registry, and audit findings inside VS Code.",
+  "version": "0.0.1",
+  "publisher": "marcoguillermaz",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "claude",
+    "claude code",
+    "governance",
+    "claude-dev-kit"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "workspaceContains:.claude/settings.json"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "cdk.showDoctorReport",
+        "title": "Claude Dev Kit: Run Doctor Report"
+      }
+    ],
+    "configuration": {
+      "title": "Claude Dev Kit",
+      "properties": {
+        "cdk.cliPath": {
+          "type": "string",
+          "default": "claude-dev-kit",
+          "description": "Command used to invoke the claude-dev-kit CLI. Override with an absolute path if the CLI is not on PATH."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "typecheck": "tsc --noEmit",
+    "pretest": "node esbuild.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0"
+  }
+}
