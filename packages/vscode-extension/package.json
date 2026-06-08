@@ -21,15 +21,47 @@
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
-    "workspaceContains:.claude/settings.json"
+    "workspaceContains:.claude/settings.json",
+    "onView:cdk.governance"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cdk-governance",
+          "title": "Claude Dev Kit",
+          "icon": "resources/cdk.svg"
+        }
+      ]
+    },
+    "views": {
+      "cdk-governance": [
+        {
+          "id": "cdk.governance",
+          "name": "Governance"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "cdk.showDoctorReport",
         "title": "Claude Dev Kit: Run Doctor Report"
+      },
+      {
+        "command": "cdk.refreshGovernance",
+        "title": "Claude Dev Kit: Refresh Governance",
+        "icon": "$(refresh)"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "cdk.refreshGovernance",
+          "when": "view == cdk.governance",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "Claude Dev Kit",
       "properties": {

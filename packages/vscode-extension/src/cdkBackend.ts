@@ -1,5 +1,8 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { readdir, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 const execFileAsync = promisify(execFile);
 
@@ -25,6 +28,24 @@ export interface DoctorReport {
   cwd: string;
   summary: DoctorSummary;
   checks: DoctorCheck[];
+}
+
+export interface SkillInfo {
+  name: string;
+  isCustom: boolean;
+  description: string | null;
+  model: string | null;
+  userInvocable: boolean | null;
+  /** Absolute path to the skill's SKILL.md. */
+  path: string;
+}
+
+export interface RuleInfo {
+  name: string;
+  /** First Markdown heading, used as a human-readable label. */
+  title: string | null;
+  /** Absolute path to the rule file. */
+  path: string;
 }
 
 export interface ExecResult {
@@ -100,6 +121,93 @@ export class CdkBackend {
       throw new CdkBackendError('doctor --report did not return valid JSON.');
     }
   }
+
+  /**
+   * Lists the skills installed under `.claude/skills/`, reading each
+   * `SKILL.md` frontmatter directly from disk. Directories without a
+   * `SKILL.md` are skipped. Sorted by name.
+   */
+  async getSkillInventory(): Promise<SkillInfo[]> {
+    const skillsDir = join(this.projectRoot, '.claude', 'skills');
+    if (!existsSync(skillsDir)) {
+      return [];
+    }
+
+    const entries = await readdir(skillsDir, { withFileTypes: true });
+    const skills: SkillInfo[] = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const skillFile = join(skillsDir, entry.name, 'SKILL.md');
+      if (!existsSync(skillFile)) {
+        continue;
+      }
+      const frontmatter = parseFrontmatter(await readFile(skillFile, 'utf8'));
+      const userInvocable = frontmatter['user-invocable'];
+      skills.push({
+        name: entry.name,
+        isCustom: entry.name.startsWith('custom-'),
+        description: frontmatter.description ?? null,
+        model: frontmatter.model ?? null,
+        userInvocable: userInvocable != null ? userInvocable === 'true' : null,
+        path: skillFile,
+      });
+    }
+    return skills.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Lists the rule files under `.claude/rules/`, using each file's first
+   * Markdown heading as a label. Sorted by name.
+   */
+  async getRules(): Promise<RuleInfo[]> {
+    const rulesDir = join(this.projectRoot, '.claude', 'rules');
+    if (!existsSync(rulesDir)) {
+      return [];
+    }
+
+    const entries = await readdir(rulesDir, { withFileTypes: true });
+    const rules: RuleInfo[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.md')) {
+        continue;
+      }
+      const filePath = join(rulesDir, entry.name);
+      rules.push({
+        name: entry.name.replace(/\.md$/, ''),
+        title: firstHeading(await readFile(filePath, 'utf8')),
+        path: filePath,
+      });
+    }
+    return rules.sort((a, b) => a.name.localeCompare(b.name));
+  }
+}
+
+/** Minimal `key: value` frontmatter reader — matches the CDK MCP server's parser. */
+function parseFrontmatter(raw: string): Record<string, string> {
+  const match = raw.match(/^---\n([\s\S]*?)\n---/);
+  const frontmatter: Record<string, string> = {};
+  if (!match) {
+    return frontmatter;
+  }
+  for (const line of match[1].split('\n')) {
+    const pair = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (pair) {
+      frontmatter[pair[1]] = pair[2].trim();
+    }
+  }
+  return frontmatter;
+}
+
+function firstHeading(raw: string): string | null {
+  for (const line of raw.split('\n')) {
+    const heading = line.match(/^#\s+(.+)$/);
+    if (heading) {
+      return heading[1].trim();
+    }
+  }
+  return null;
 }
 
 function extractStdout(error: unknown): string | undefined {
