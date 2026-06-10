@@ -21,11 +21,11 @@
  *   GEMINI_API_KEY      → gemini-2.5-pro
  *   MISTRAL_API_KEY     → mistral-large-latest
  *   PERPLEXITY_API_KEY  → sonar-pro
- *   ANTHROPIC_API_KEY   → claude-opus-4-7    (provider name: anthropic-opus)
+ *   ANTHROPIC_API_KEY   → claude-opus-4-8    (provider name: anthropic-opus)
  *   ANTHROPIC_API_KEY   → claude-sonnet-4-6  (provider name: anthropic-sonnet)
  *
  * Override a model id per provider with e.g. OPENAI_MODEL=gpt-5,
- * ANTHROPIC_OPUS_MODEL=claude-opus-4-7, ANTHROPIC_SONNET_MODEL=claude-sonnet-4-6.
+ * ANTHROPIC_OPUS_MODEL=claude-opus-4-8, ANTHROPIC_SONNET_MODEL=claude-sonnet-4-6.
  *
  * Exit codes:
  *   0  all providers returned a response, no Critical findings
@@ -228,7 +228,7 @@ const PROVIDERS = [
     name: "anthropic-opus",
     envKey: "ANTHROPIC_API_KEY",
     modelEnv: "ANTHROPIC_OPUS_MODEL",
-    defaultModel: "claude-opus-4-7",
+    defaultModel: "claude-opus-4-8",
     call: anthropicCall,
   },
   {
