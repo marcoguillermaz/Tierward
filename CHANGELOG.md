@@ -18,6 +18,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **`docs/operational-guide.md`** version header and footer synced from `1.28.0` to `1.29.2` to match `packages/cli/package.json` (closes the arch-audit CDK-C19 version-triple drift). The MCP read-only posture note now reads "unchanged through v1.29.2". Added a maintainer comment flagging the file size (~1490 lines, ~2.5x the ~600-line soft threshold from arch-audit P5) and a future progressive-disclosure split as a tracked task.
 - **`docs/reviews/anthropic-spec-deviations.md`** last-reviewed date refreshed to 2026-06-10 with an arch-audit re-review note: documented deviations still hold, source URLs still resolve, and the current model tier (`claude-opus-4-8`, plus `claude-fable-5` GA from 2026-06-09) is recorded for awareness.
+- **`README.md`** stale `v1.28.0` stamps synced to `v1.29.2`: the MCP read-only posture line and the "Current" release blurb, which now headlines the v1.29.x cross-LLM rubric automation. The arch-audit CDK-C19 version-triple check did not cover the README, so this drift slipped past the prior round; the local audit check has been extended to include it.
 
 ---
 
