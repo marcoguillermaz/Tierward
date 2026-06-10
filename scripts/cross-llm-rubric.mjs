@@ -3,9 +3,15 @@
  * Cross-LLM rubric — automated SHOULD PASS scoring for CONTEXT.md.
  *
  * Locked jury (memory/project_context_builder_rubric_v1.md, 2026-05-07):
- *   - claude-opus-4-7
+ *   - claude-opus-4-8   (re-baselined 2026-06-10 from claude-opus-4-7, now superseded)
  *   - claude-sonnet-4-6
  *   - gemini-2.5-pro
+ *
+ * Re-baseline note (2026-06-10): the Opus seat was deliberately moved from
+ * claude-opus-4-7 to claude-opus-4-8 (current Opus tier). This is intentional,
+ * not stale drift. Scores produced after this date are NOT directly comparable
+ * to the v1.0 pilot results scored under the 4.7 jury — treat 2026-06-10 as a
+ * new scoring baseline.
  *
  * Threshold (locked 2026-05-07):
  *   - All criterion medians >= 2 AND
@@ -83,7 +89,7 @@ const LOCKED_JURY = [
     name: "opus",
     envKey: "ANTHROPIC_API_KEY",
     modelEnv: "ANTHROPIC_OPUS_MODEL",
-    defaultModel: "claude-opus-4-7",
+    defaultModel: "claude-opus-4-8",
     call: anthropicCall,
   },
   {

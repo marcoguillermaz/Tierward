@@ -9,7 +9,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-(none)
+### Changed
+
+- **Cross-LLM rubric jury re-baselined to Opus 4.8.** The Opus seat in `scripts/cross-llm-rubric.mjs` moved from `claude-opus-4-7` to `claude-opus-4-8` (current Opus tier). This is a deliberate re-baseline, not stale drift: scores produced from 2026-06-10 onward are **not** directly comparable to the v1.0 CONTEXT.md pilot results scored under the 4.7 jury. The header comment records 2026-06-10 as the new scoring baseline.
+- **`scripts/external-review.mjs` default Opus model** bumped from `claude-opus-4-7` to `claude-opus-4-8` (maintainer-only cross-LLM review tool; not shipped in the scaffold payload).
+
+### Docs
+
+- **`docs/operational-guide.md`** version header and footer synced from `1.28.0` to `1.29.2` to match `packages/cli/package.json` (closes the arch-audit CDK-C19 version-triple drift). The MCP read-only posture note now reads "unchanged through v1.29.2". Added a maintainer comment flagging the file size (~1490 lines, ~2.5x the ~600-line soft threshold from arch-audit P5) and a future progressive-disclosure split as a tracked task.
+- **`docs/reviews/anthropic-spec-deviations.md`** last-reviewed date refreshed to 2026-06-10 with an arch-audit re-review note: documented deviations still hold, source URLs still resolve, and the current model tier (`claude-opus-4-8`, plus `claude-fable-5` GA from 2026-06-09) is recorded for awareness.
 
 ---
 
