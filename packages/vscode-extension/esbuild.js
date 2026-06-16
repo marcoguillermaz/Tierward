@@ -37,8 +37,20 @@ async function main() {
     outfile: 'dist/health.js',
   });
 
+  // Pure diagnostic-spec builder + check→file map, vscode-free, standalone for tests.
+  const diagnostics = await esbuild.context({
+    ...baseOptions,
+    entryPoints: ['src/diagnostics.ts'],
+    outfile: 'dist/diagnostics.js',
+  });
+
   if (watch) {
-    await Promise.all([extension.watch(), backend.watch(), health.watch()]);
+    await Promise.all([
+      extension.watch(),
+      backend.watch(),
+      health.watch(),
+      diagnostics.watch(),
+    ]);
     console.log('[esbuild] watching…');
     return;
   }
@@ -46,9 +58,11 @@ async function main() {
   await extension.rebuild();
   await backend.rebuild();
   await health.rebuild();
+  await diagnostics.rebuild();
   await extension.dispose();
   await backend.dispose();
   await health.dispose();
+  await diagnostics.dispose();
   console.log('[esbuild] build complete');
 }
 
