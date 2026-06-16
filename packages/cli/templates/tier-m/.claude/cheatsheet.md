@@ -37,6 +37,7 @@ Run these on demand. Each skill reads the codebase, produces a structured report
 | `/arch-audit` | CLAUDE.md compliance, Anthropic docs drift, ecosystem consistency, hook config | Weekly; after upgrading Claude Code; after changing CLAUDE.md |
 | `/commit` | Classify staged changes, generate conventional commit message, execute commit | After every implementation phase to commit work |
 | `/security-audit` | Auth guards, input validation, sensitive data in responses, HTTP headers | Before production deploy; after adding new API routes |
+| `/skill-security` | Security scan for Claude Code skills using SkillSpector: prompt injection, data exfiltration, MCP tool poisoning, supply chain, taint tracking | Before installing any third-party skill |
 | `/skill-dev` | Coupling, duplication, dead code, magic strings, oversized components | Before major refactoring; quarterly review |
 | `/skill-db` | Missing indexes, access control gaps, constraint completeness, N+1 queries | After migration waves; before production releases |
 | `/migration-audit` | Migration file safety: lock-heavy DDL, missing rollback, data loss, unsafe ALTER TYPE | After writing a migration, before applying to staging |
