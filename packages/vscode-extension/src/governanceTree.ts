@@ -52,7 +52,9 @@ export class GovernanceTreeProvider implements vscode.TreeDataProvider<Governanc
         item.description = skill.isCustom ? 'custom' : (skill.model ?? undefined);
         item.tooltip = skill.description ?? undefined;
         item.iconPath = new vscode.ThemeIcon(skill.isCustom ? 'star-full' : 'symbol-method');
-        item.contextValue = 'cdk.skill';
+        // `.invocable` gates the "Run in Claude Code" action to user-invocable
+        // skills, matching the codelens and palette filters.
+        item.contextValue = skill.userInvocable === true ? 'cdk.skill.invocable' : 'cdk.skill';
         item.resourceUri = vscode.Uri.file(skill.path);
         item.command = openFileCommand(skill.path);
         return item;

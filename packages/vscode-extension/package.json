@@ -51,6 +51,19 @@
         "command": "cdk.refreshGovernance",
         "title": "Claude Dev Kit: Refresh Governance",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "cdk.runSkill",
+        "title": "Claude Dev Kit: Run Skill in Claude Code"
+      },
+      {
+        "command": "cdk.runSkillByName",
+        "title": "Claude Dev Kit: Run Skill (by name)"
+      },
+      {
+        "command": "cdk.runSkillInCc",
+        "title": "Run in Claude Code",
+        "icon": "$(play)"
       }
     ],
     "menus": {
@@ -59,6 +72,28 @@
           "command": "cdk.refreshGovernance",
           "when": "view == cdk.governance",
           "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "cdk.runSkillInCc",
+          "when": "view == cdk.governance && viewItem == cdk.skill.invocable",
+          "group": "inline"
+        },
+        {
+          "command": "cdk.runSkillInCc",
+          "when": "view == cdk.governance && viewItem == cdk.skill.invocable",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "cdk.runSkillByName",
+          "when": "false"
+        },
+        {
+          "command": "cdk.runSkillInCc",
+          "when": "false"
         }
       ]
     },

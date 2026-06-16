@@ -44,12 +44,20 @@ async function main() {
     outfile: 'dist/diagnostics.js',
   });
 
+  // Pure Claude Code bridge (URI builder + skill-header parser), standalone for tests.
+  const ccBridge = await esbuild.context({
+    ...baseOptions,
+    entryPoints: ['src/ccBridge.ts'],
+    outfile: 'dist/ccBridge.js',
+  });
+
   if (watch) {
     await Promise.all([
       extension.watch(),
       backend.watch(),
       health.watch(),
       diagnostics.watch(),
+      ccBridge.watch(),
     ]);
     console.log('[esbuild] watching…');
     return;
@@ -59,10 +67,12 @@ async function main() {
   await backend.rebuild();
   await health.rebuild();
   await diagnostics.rebuild();
+  await ccBridge.rebuild();
   await extension.dispose();
   await backend.dispose();
   await health.dispose();
   await diagnostics.dispose();
+  await ccBridge.dispose();
   console.log('[esbuild] build complete');
 }
 
