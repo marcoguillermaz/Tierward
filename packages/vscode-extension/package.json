@@ -6,6 +6,15 @@
   "publisher": "marcoguillermaz",
   "license": "MIT",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marcoguillermaz/claude-dev-kit.git",
+    "directory": "packages/vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/marcoguillermaz/claude-dev-kit/issues"
+  },
+  "homepage": "https://github.com/marcoguillermaz/claude-dev-kit/tree/main/packages/vscode-extension#readme",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -113,11 +122,15 @@
     "watch": "node esbuild.js --watch",
     "typecheck": "tsc --noEmit",
     "pretest": "node esbuild.js",
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "vscode:prepublish": "node esbuild.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.1",
     "typescript": "^5.6.0"
   }
