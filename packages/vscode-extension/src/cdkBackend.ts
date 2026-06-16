@@ -57,6 +57,18 @@ export interface ArchAuditStatus {
   lastRunIso: string | null;
 }
 
+/**
+ * One combined fetch of everything the health surfaces need, so the status bar
+ * and the Problems-panel diagnostics render from a single `doctor` invocation
+ * instead of each shelling out on their own. `report` is null when `doctor`
+ * could not run (CLI unresolved), in which case `error` carries the reason.
+ */
+export interface HealthSnapshot {
+  archAudit: ArchAuditStatus;
+  report: DoctorReport | null;
+  error: string | null;
+}
+
 export interface ExecResult {
   stdout: string;
   stderr: string;
@@ -216,6 +228,22 @@ export class CdkBackend {
       };
     } catch {
       return { everRan: false, lastRunUnix: null, lastRunIso: null };
+    }
+  }
+
+  /**
+   * Fetches the arch-audit status and the doctor report in one shot for the
+   * health surfaces. `doctor` failures are captured (not thrown) so a missing
+   * CLI degrades gracefully: `report` is null and `error` holds the reason.
+   */
+  async getHealthSnapshot(): Promise<HealthSnapshot> {
+    const archAudit = await this.getArchAuditStatus();
+    try {
+      const report = await this.getDoctorReport();
+      return { archAudit, report, error: null };
+    } catch (error) {
+      const message = error instanceof CdkBackendError ? error.message : String(error);
+      return { archAudit, report: null, error: message };
     }
   }
 }
