@@ -1,6 +1,6 @@
 # claude-dev-kit - Operational Guide
 
-**Version**: 1.29.2
+**Version**: 1.30.0
 **Audience**: Builder PMs, tech leads, and senior developers using Claude Code - from first exploration to structured, reviewable delivery
 **Format**: Reference + step-by-step. Read section 1 and your target tier section first, then use the rest as a lookup.
 
@@ -1318,7 +1318,7 @@ Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user
 }
 ```
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.29.2. A read-write surface remains a future-minor decision contingent on adoption signal.
+The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.30.0. A read-write surface remains a future-minor decision contingent on adoption signal.
 
 ### Adding team-specific rules
 
@@ -1491,4 +1491,4 @@ Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy 
 
 ---
 
-_Last updated: 2026-06-10 - v1.29.2_
+_Last updated: 2026-06-16 - v1.30.0_

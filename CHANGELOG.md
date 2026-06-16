@@ -9,16 +9,28 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [1.30.0] — 2026-06-16
+
+### Added
+
+- **VS Code extension — governance tree view (P1).** A CDK sidebar panel lists all installed skills (with tier badges) and all active governance rules from `.claude/rules/`. Clicking any entry opens the file directly in the editor. Requires the `claude-dev-kit-mcp` server running alongside the extension. (#196)
+- **VS Code extension — health monitoring and status bar (P2).** A status-bar item shows live CDK health: the `doctor` check result and the staleness of the last `arch-audit` run. The item turns amber when the audit is more than 7 days old and red when doctor reports errors. Clicking opens the CDK output channel with the full diagnostic output. (#201)
+- **VS Code extension — diagnostics in Problems panel (P3).** CDK doctor findings are now surfaced as VS Code diagnostics (errors and warnings) in the Problems panel, with file-level attribution. Findings with a resolvable file path open the relevant file on click. Refreshes automatically when the extension detects a doctor re-run. (#203)
+- **`/skill-security` — SkillSpector integration (tier S, M, L).** New audit skill that scans Claude Code skill files for 64 vulnerability patterns: prompt injection, data exfiltration, MCP tool poisoning, supply-chain attacks, and taint tracking across tool call chains. Scaffolded at tier S and above; listed in the cheatsheet for all tiers. (#202)
+
 ### Changed
 
-- **Cross-LLM rubric jury re-baselined to Opus 4.8.** The Opus seat in `scripts/cross-llm-rubric.mjs` moved from `claude-opus-4-7` to `claude-opus-4-8` (current Opus tier). This is a deliberate re-baseline, not stale drift: scores produced from 2026-06-10 onward are **not** directly comparable to the v1.0 CONTEXT.md pilot results scored under the 4.7 jury. The header comment records 2026-06-10 as the new scoring baseline.
-- **`scripts/external-review.mjs` default Opus model** bumped from `claude-opus-4-7` to `claude-opus-4-8` (maintainer-only cross-LLM review tool; not shipped in the scaffold payload).
+- **Cross-LLM rubric jury re-baselined to Opus 4.8.** The Opus seat in `scripts/cross-llm-rubric.mjs` moved from `claude-opus-4-7` to `claude-opus-4-8`. This is a deliberate re-baseline: scores produced from 2026-06-10 onward are **not** directly comparable to the v1.0 CONTEXT.md pilot results scored under the 4.7 jury.
+- **`scripts/external-review.mjs` default Opus model** bumped from `claude-opus-4-7` to `claude-opus-4-8` (maintainer-only tool; not shipped in the scaffold payload).
+- **Staging workflow.** `staging` is now the default branch and permanent integration base. All feature work branches off `staging` via a local `new-worktree.sh` helper (gitignored). `main` is squash-only, promoted from `staging` at release time.
 
 ### Docs
 
-- **`docs/operational-guide.md`** version header and footer synced from `1.28.0` to `1.29.2` to match `packages/cli/package.json` (closes the arch-audit CDK-C19 version-triple drift). The MCP read-only posture note now reads "unchanged through v1.29.2". Added a maintainer comment flagging the file size (~1490 lines, ~2.5x the ~600-line soft threshold from arch-audit P5) and a future progressive-disclosure split as a tracked task.
-- **`docs/reviews/anthropic-spec-deviations.md`** last-reviewed date refreshed to 2026-06-10 with an arch-audit re-review note: documented deviations still hold, source URLs still resolve, and the current model tier (`claude-opus-4-8`, plus `claude-fable-5` GA from 2026-06-09) is recorded for awareness.
-- **`README.md`** stale `v1.28.0` stamps synced to `v1.29.2`: the MCP read-only posture line and the "Current" release blurb, which now headlines the v1.29.x cross-LLM rubric automation. The arch-audit CDK-C19 version-triple check did not cover the README, so this drift slipped past the prior round; the local audit check has been extended to include it.
+- **`docs/operational-guide.md`** version header and footer synced to `1.30.0`.
+- **`docs/reviews/anthropic-spec-deviations.md`** last-reviewed date refreshed to 2026-06-10; current model tier (`claude-opus-4-8`, `claude-fable-5` GA) recorded.
+- **`README.md`** version stamps updated to `v1.30.0`.
 
 ---
 
