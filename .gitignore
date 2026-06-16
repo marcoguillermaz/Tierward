@@ -92,3 +92,6 @@ docs/adr/
 # claude-dev-kit
 .claude/context/
 CONTEXT_IMPORT.md
+
+# Local development scripts
+new-worktree.sh
