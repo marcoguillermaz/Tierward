@@ -189,7 +189,7 @@ Read-only tools exposed:
 | `cdk_package_meta`      | CDK package name, version, CLI path, cwd                                                                                                                         |
 | `cdk_pr_review`         | reads existing `/pr-review` skill comments on a GitHub PR (verdict, severity counts). Read-only — to generate a fresh review, invoke the `/pr-review` CDK skill. |
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.29.2.
+The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.30.0.
 
 ---
 
@@ -219,7 +219,7 @@ The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise 
 
 ```bash
 node packages/cli/test/integration/run.js    # 1132 integration checks
-node --test packages/cli/test/unit/*.test.js   # 554 unit tests
+node --test 'packages/cli/test/unit/**/*.test.js'   # 585 unit tests
 ```
 
 Covers: file structure per tier, Stop hook presence, pipeline gate counts, placeholder resolution, skill pruning, security variant selection, native stack adaptation, rubric scoring, cross-stack content invariants (10 stacks — the named stacks excluding the `other` fallback), golden-file assertions (Swift, Node-TS, Python), full CLI execution via `--answers` fixtures.
@@ -251,7 +251,7 @@ A separate **template-coverage** layer (under `packages/cli/test/template-covera
 
 See [GitHub Milestones](https://github.com/marcoguillermaz/claude-dev-kit/milestones) for the 12-month plan.
 
-**Current**: v1.29.2 lands the cross-LLM rubric automation for the Context Builder (shipped in v1.29.0, closing v1.1 P5): SHOULD-PASS scoring of `CONTEXT.md` now runs as a single maintainer command against the locked jury, with v1.29.1 fixing the npm-publish lockfile and v1.29.2 dropping the deprecated `temperature` param that 400'd on Opus. Carried forward: v1.28.0's skill-review pipeline P3 robustness (Phase 1→2 gate, behavioral-fixture coverage 6→11 skills, Phase 10 closure sweep), v1.27.0's Context Builder v1.1 cycle (schema-validated `CONTEXT.md` driving non-interactive scaffolding across all four tiers), v1.22.0's `/skill-dev` v2 hotspot step (churn × debt), v1.21.0's PreToolUse runtime enforcement, and v1.20.0's MCP-aware audit skills pinned to `mcp-nvd` and `package-registry-mcp`.
+**Current**: v1.30.0 ships the VS Code extension (P1–P3): governance tree view with skill and rule browsing, live health status bar with arch-audit staleness, and CDK doctor findings surfaced as Problems panel diagnostics. Also adds `/skill-security` (SkillSpector integration, tier S+), a 64-pattern vulnerability scanner for Claude Code skill files. Carried forward: v1.29.x cross-LLM rubric automation for Context Builder, v1.28.0's skill-review pipeline P3 robustness, v1.27.0's Context Builder v1.1 cycle, v1.22.0's `/skill-dev` v2 hotspot step, v1.21.0's PreToolUse runtime enforcement, and v1.20.0's MCP-aware audit skills.
 
 **Next**: `/arch-audit` MCP-aware once the upstream Anthropic spec MCP server lands. `/privacy-audit` re-eval (Issue #97 sub-track 3) when AST tracing matures or demand signal materializes. Q2 #3 VitePress docs site (ICE 432) stays on hold.
 
