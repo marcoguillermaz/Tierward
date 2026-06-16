@@ -48,6 +48,27 @@ export interface RuleInfo {
   path: string;
 }
 
+export interface ArchAuditStatus {
+  /** False when the `.claude/session/last-arch-audit` record is absent. */
+  everRan: boolean;
+  /** Unix epoch seconds of the last run, or null when absent/unparseable. */
+  lastRunUnix: number | null;
+  /** ISO timestamp of the last run, or null. */
+  lastRunIso: string | null;
+}
+
+/**
+ * One combined fetch of everything the health surfaces need, so the status bar
+ * and the Problems-panel diagnostics render from a single `doctor` invocation
+ * instead of each shelling out on their own. `report` is null when `doctor`
+ * could not run (CLI unresolved), in which case `error` carries the reason.
+ */
+export interface HealthSnapshot {
+  archAudit: ArchAuditStatus;
+  report: DoctorReport | null;
+  error: string | null;
+}
+
 export interface ExecResult {
   stdout: string;
   stderr: string;
@@ -181,6 +202,49 @@ export class CdkBackend {
       });
     }
     return rules.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Reads the timestamp of the last `arch-audit` skill run from
+   * `.claude/session/last-arch-audit` (a Unix epoch in seconds), mirroring the
+   * CDK MCP server's parser. Never throws — a missing or unreadable record
+   * reports `everRan: false` so the status bar can degrade gracefully.
+   */
+  async getArchAuditStatus(): Promise<ArchAuditStatus> {
+    const file = join(this.projectRoot, '.claude', 'session', 'last-arch-audit');
+    if (!existsSync(file)) {
+      return { everRan: false, lastRunUnix: null, lastRunIso: null };
+    }
+    try {
+      const raw = (await readFile(file, 'utf8')).trim();
+      const epoch = Number.parseInt(raw, 10);
+      if (!Number.isFinite(epoch)) {
+        return { everRan: true, lastRunUnix: null, lastRunIso: null };
+      }
+      return {
+        everRan: true,
+        lastRunUnix: epoch,
+        lastRunIso: new Date(epoch * 1000).toISOString(),
+      };
+    } catch {
+      return { everRan: false, lastRunUnix: null, lastRunIso: null };
+    }
+  }
+
+  /**
+   * Fetches the arch-audit status and the doctor report in one shot for the
+   * health surfaces. `doctor` failures are captured (not thrown) so a missing
+   * CLI degrades gracefully: `report` is null and `error` holds the reason.
+   */
+  async getHealthSnapshot(): Promise<HealthSnapshot> {
+    const archAudit = await this.getArchAuditStatus();
+    try {
+      const report = await this.getDoctorReport();
+      return { archAudit, report, error: null };
+    } catch (error) {
+      const message = error instanceof CdkBackendError ? error.message : String(error);
+      return { archAudit, report: null, error: message };
+    }
   }
 }
 

@@ -81,3 +81,26 @@ test('cliPath falls back to the default when blank', async () => {
   await backend.getDoctorReport();
   assert.equal(receivedCommand, 'claude-dev-kit');
 });
+
+test('getHealthSnapshot returns the report and arch-audit status on success', async () => {
+  const backend = new CdkBackend({
+    projectRoot: '/tmp/project',
+    exec: fakeExec(JSON.stringify(SAMPLE_REPORT)),
+  });
+  const snapshot = await backend.getHealthSnapshot();
+  assert.equal(snapshot.report.summary.failed, 1);
+  assert.equal(snapshot.error, null);
+  // No `.claude/session/last-arch-audit` under /tmp/project.
+  assert.equal(snapshot.archAudit.everRan, false);
+});
+
+test('getHealthSnapshot captures a doctor failure instead of throwing', async () => {
+  const backend = new CdkBackend({
+    projectRoot: '/tmp/project',
+    exec: fakeExec('command not found: claude-dev-kit', { fail: true }),
+  });
+  const snapshot = await backend.getHealthSnapshot();
+  assert.equal(snapshot.report, null);
+  assert.match(snapshot.error, /Failed to run/);
+  assert.equal(snapshot.archAudit.everRan, false);
+});
