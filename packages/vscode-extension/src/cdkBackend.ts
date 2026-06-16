@@ -48,6 +48,15 @@ export interface RuleInfo {
   path: string;
 }
 
+export interface ArchAuditStatus {
+  /** False when the `.claude/session/last-arch-audit` record is absent. */
+  everRan: boolean;
+  /** Unix epoch seconds of the last run, or null when absent/unparseable. */
+  lastRunUnix: number | null;
+  /** ISO timestamp of the last run, or null. */
+  lastRunIso: string | null;
+}
+
 export interface ExecResult {
   stdout: string;
   stderr: string;
@@ -181,6 +190,33 @@ export class CdkBackend {
       });
     }
     return rules.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Reads the timestamp of the last `arch-audit` skill run from
+   * `.claude/session/last-arch-audit` (a Unix epoch in seconds), mirroring the
+   * CDK MCP server's parser. Never throws — a missing or unreadable record
+   * reports `everRan: false` so the status bar can degrade gracefully.
+   */
+  async getArchAuditStatus(): Promise<ArchAuditStatus> {
+    const file = join(this.projectRoot, '.claude', 'session', 'last-arch-audit');
+    if (!existsSync(file)) {
+      return { everRan: false, lastRunUnix: null, lastRunIso: null };
+    }
+    try {
+      const raw = (await readFile(file, 'utf8')).trim();
+      const epoch = Number.parseInt(raw, 10);
+      if (!Number.isFinite(epoch)) {
+        return { everRan: true, lastRunUnix: null, lastRunIso: null };
+      }
+      return {
+        everRan: true,
+        lastRunUnix: epoch,
+        lastRunIso: new Date(epoch * 1000).toISOString(),
+      };
+    } catch {
+      return { everRan: false, lastRunUnix: null, lastRunIso: null };
+    }
   }
 }
 
