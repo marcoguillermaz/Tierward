@@ -1,25 +1,64 @@
 import * as vscode from 'vscode';
 import { CdkBackend, CdkBackendError } from './cdkBackend';
 import { GovernanceTreeProvider } from './governanceTree';
+import { CdkStatusBar } from './statusBar';
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Claude Dev Kit');
   context.subscriptions.push(output);
 
   const treeProvider = new GovernanceTreeProvider(() => createBackend());
+  const statusBar = new CdkStatusBar(() => createBackend());
+
+  // Coalesces a burst of file-watcher events (e.g. a git checkout touching
+  // many `.claude/` files) into a single refresh of both surfaces.
+  let debounce: ReturnType<typeof setTimeout> | undefined;
+  const refreshAll = (): void => {
+    if (debounce) {
+      clearTimeout(debounce);
+    }
+    debounce = setTimeout(() => {
+      treeProvider.refresh();
+      void statusBar.refresh();
+    }, 300);
+  };
+
+  // Watch only the inputs the tree and doctor actually consume. Deliberately
+  // NOT the whole `.claude/**` tree: `doctor` is read-only so there is no
+  // self-trigger loop, but `.claude/session/` churns constantly during active
+  // Claude Code use and would respawn `doctor` on every session write — so the
+  // arch-audit stamp is the only session file watched.
+  for (const glob of [
+    '**/.claude/skills/**',
+    '**/.claude/rules/**',
+    '**/.claude/settings.json',
+    '**/.claude/session/last-arch-audit',
+    '**/CLAUDE.md',
+  ]) {
+    const watcher = vscode.workspace.createFileSystemWatcher(glob);
+    watcher.onDidCreate(refreshAll);
+    watcher.onDidChange(refreshAll);
+    watcher.onDidDelete(refreshAll);
+    context.subscriptions.push(watcher);
+  }
+
   context.subscriptions.push(
     treeProvider,
+    statusBar,
     vscode.window.registerTreeDataProvider('cdk.governance', treeProvider),
-    vscode.commands.registerCommand('cdk.refreshGovernance', () => treeProvider.refresh()),
-    vscode.commands.registerCommand('cdk.showDoctorReport', () => runDoctorReport(output)),
+    vscode.commands.registerCommand('cdk.refreshGovernance', () => {
+      treeProvider.refresh();
+      void statusBar.refresh();
+    }),
+    vscode.commands.registerCommand('cdk.showDoctorReport', () => runDoctorReport(output, statusBar)),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      treeProvider.refresh();
+      void statusBar.refresh();
+    }),
+    { dispose: () => debounce && clearTimeout(debounce) },
   );
 
-  // Keep the tree in sync when skills or rules change on disk.
-  const watcher = vscode.workspace.createFileSystemWatcher('**/.claude/{skills,rules}/**');
-  watcher.onDidCreate(() => treeProvider.refresh());
-  watcher.onDidChange(() => treeProvider.refresh());
-  watcher.onDidDelete(() => treeProvider.refresh());
-  context.subscriptions.push(watcher);
+  void statusBar.refresh();
 }
 
 export function deactivate(): void {
@@ -36,7 +75,7 @@ function createBackend(): CdkBackend | undefined {
   return new CdkBackend({ projectRoot, cliPath });
 }
 
-async function runDoctorReport(output: vscode.OutputChannel): Promise<void> {
+async function runDoctorReport(output: vscode.OutputChannel, statusBar: CdkStatusBar): Promise<void> {
   const backend = createBackend();
   if (!backend) {
     void vscode.window.showWarningMessage('Claude Dev Kit: open a workspace folder first.');
@@ -64,6 +103,9 @@ async function runDoctorReport(output: vscode.OutputChannel): Promise<void> {
   } catch (error) {
     const message = error instanceof CdkBackendError ? error.message : String(error);
     void vscode.window.showErrorMessage(`Claude Dev Kit: ${message}`);
+  } finally {
+    // Reflect the freshly-run report (or a now-visible failure) in the bar.
+    void statusBar.refresh();
   }
 }
 

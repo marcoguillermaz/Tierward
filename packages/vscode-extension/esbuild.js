@@ -30,16 +30,25 @@ async function main() {
     outfile: 'dist/cdkBackend.js',
   });
 
+  // Pure health/display logic, also vscode-free and emitted standalone for tests.
+  const health = await esbuild.context({
+    ...baseOptions,
+    entryPoints: ['src/health.ts'],
+    outfile: 'dist/health.js',
+  });
+
   if (watch) {
-    await Promise.all([extension.watch(), backend.watch()]);
+    await Promise.all([extension.watch(), backend.watch(), health.watch()]);
     console.log('[esbuild] watching…');
     return;
   }
 
   await extension.rebuild();
   await backend.rebuild();
+  await health.rebuild();
   await extension.dispose();
   await backend.dispose();
+  await health.dispose();
   console.log('[esbuild] build complete');
 }
 
