@@ -1,0 +1,45 @@
+name: VS Code Extension
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'packages/vscode-extension/**'
+      - '.github/workflows/vscode-extension.yml'
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - 'packages/vscode-extension/**'
+      - '.github/workflows/vscode-extension.yml'
+
+concurrency:
+  group: vscode-extension-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package (vsce)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/vscode-extension
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Package (validate VSIX builds)
+        run: npm run package
