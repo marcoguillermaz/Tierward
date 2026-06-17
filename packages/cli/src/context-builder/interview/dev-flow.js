@@ -337,7 +337,7 @@ export async function runDevInterview(options = {}) {
 
   if (HARD_STOP_TIERS.includes(answers.tier)) {
     const err = new Error(
-      `Tier ${answers.tier.toUpperCase()} not supported in v1. Use \`npx mg-claude-dev-kit init\` (legacy wizard) instead.`,
+      `Tier ${answers.tier.toUpperCase()} not supported in v1. Use \`npx tierward init\` (legacy wizard) instead.`,
     );
     err.code = 'TIER_NOT_SUPPORTED_V1';
     throw err;

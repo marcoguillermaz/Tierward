@@ -1,4 +1,4 @@
-# claude-dev-kit - Operational Guide
+# tierward - Operational Guide
 
 **Version**: 1.30.0
 **Audience**: Builder PMs, tech leads, and senior developers using Claude Code - from first exploration to structured, reviewable delivery
@@ -36,7 +36,7 @@
 
 Claude Code is a powerful CLI assistant that can read, write, and reason about your entire codebase. Without shared process, it makes autonomous decisions that are hard to track and harder to review.
 
-`claude-dev-kit` scaffolds a structured, reviewable development process on top of Claude Code. It does not limit what Claude can do - it makes every meaningful action visible, auditable, and reversible.
+`tierward` scaffolds a structured, reviewable development process on top of Claude Code. It does not limit what Claude can do - it makes every meaningful action visible, auditable, and reversible.
 
 **What you get:**
 
@@ -72,7 +72,7 @@ What you get: three files, one hard constraint (tests must pass before Claude de
 When you're ready for more structure - usually after a few sessions, once Claude Code is part of the daily workflow:
 
 ```bash
-npx mg-claude-dev-kit upgrade --tier=s
+npx tierward upgrade --tier=s
 ```
 
 This adds the Fast Lane pipeline non-destructively. Your existing files are not overwritten.
@@ -128,14 +128,14 @@ npm install -g @anthropic-ai/claude-code
 Run this from any directory:
 
 ```bash
-npx mg-claude-dev-kit init
+npx tierward init
 ```
 
 The wizard asks about your project state first:
 
 ```
 ? What's the state of this project?
-  > Existing project - add CDK to a project that already has code
+  > Existing project - add Tierward to a project that already has code
     New project - starting from scratch, you'll fill in the details
     From existing docs - share your docs and Claude populates everything
 ```
@@ -147,11 +147,11 @@ Three init paths are available. All support `--dry-run` (preview without writing
 Run `context` before `init` to make the scaffold reproducible and reviewable:
 
 ```bash
-npx mg-claude-dev-kit context                       # produces CONTEXT.md
-npx mg-claude-dev-kit init                          # reads CONTEXT.md, scaffolds with no further prompts
-npx mg-claude-dev-kit context --all                 # one-shot: context then init
-npx mg-claude-dev-kit context --from-yaml file.md   # bypass: validate + copy an existing CONTEXT.md (v1.26.0+)
-npx mg-claude-dev-kit validate-context              # CI gate: exits 0 on pass, 1 on fail (v1.25.0+)
+npx tierward context                       # produces CONTEXT.md
+npx tierward init                          # reads CONTEXT.md, scaffolds with no further prompts
+npx tierward context --all                 # one-shot: context then init
+npx tierward context --from-yaml file.md   # bypass: validate + copy an existing CONTEXT.md (v1.26.0+)
+npx tierward validate-context              # CI gate: exits 0 on pass, 1 on fail (v1.25.0+)
 ```
 
 When `CONTEXT.md` is present in the cwd, `init` reads it and scaffolds without asking anything else. Pass `--ignore-context` to fall back to the prompt-based flow.
@@ -238,7 +238,7 @@ The CLI:
 3. Counts your source files to suggest an appropriate tier.
 4. Creates all governance files **without overwriting** `CLAUDE.md`, `MEMORY.md`, `.gitignore`, or `README.md` if they already exist.
 5. Generates `CONTEXT_IMPORT.md` pointing to the current directory.
-6. Appends claude-dev-kit entries to `.gitignore`.
+6. Appends tierward entries to `.gitignore`.
 7. Optionally runs `doctor` inline to validate the scaffold.
 8. Optionally installs pre-commit hooks inline.
 
@@ -277,7 +277,7 @@ On every Claude Code session, Claude reads this file first. If the status is `PE
 
 ## 6. The four pipeline tiers
 
-The pipeline is the sequence of phases Claude follows for every development task. You choose the tier when running `init`. Change it later with: `npx mg-claude-dev-kit upgrade --tier=m`.
+The pipeline is the sequence of phases Claude follows for every development task. You choose the tier when running `init`. Change it later with: `npx tierward upgrade --tier=m`.
 
 ### Tier 0 - Discovery
 
@@ -301,9 +301,9 @@ The pipeline is the sequence of phases Claude follows for every development task
 **Upgrading from Tier 0:**
 
 ```bash
-npx mg-claude-dev-kit upgrade --tier=s   # adds branch discipline + commit rules
-npx mg-claude-dev-kit upgrade --tier=m   # adds phased pipeline + review gates + docs
-npx mg-claude-dev-kit upgrade --tier=l   # adds full governance + audit skills
+npx tierward upgrade --tier=s   # adds branch discipline + commit rules
+npx tierward upgrade --tier=m   # adds phased pipeline + review gates + docs
+npx tierward upgrade --tier=l   # adds full governance + audit skills
 ```
 
 Upgrade is non-destructive - it adds new files without overwriting your existing `CLAUDE.md` or `settings.json`.
@@ -425,14 +425,14 @@ You can start at Tier 0 or S and escalate. Claude notifies you when scope expand
 
 ## 7. Incremental adoption
 
-You don't need a full scaffold to start using CDK components. Install individual skills or rules into any project that already has a `.claude/` directory.
+You don't need a full scaffold to start using Tierward components. Install individual skills or rules into any project that already has a `.claude/` directory.
 
 ### Adding a single skill
 
 ```bash
-npx mg-claude-dev-kit add skill security-audit
-npx mg-claude-dev-kit add skill perf-audit
-npx mg-claude-dev-kit add skill commit
+npx tierward add skill security-audit
+npx tierward add skill perf-audit
+npx tierward add skill commit
 ```
 
 This copies the SKILL.md file into `.claude/skills/<name>/` and appends it to the `## Active Skills` section in CLAUDE.md (if that section exists). No other files are modified.
@@ -447,10 +447,10 @@ Options:
 ### Adding a single rule
 
 ```bash
-npx mg-claude-dev-kit add rule git
-npx mg-claude-dev-kit add rule output-style
-npx mg-claude-dev-kit add rule security
-npx mg-claude-dev-kit add rule security --stack swift
+npx tierward add rule git
+npx tierward add rule output-style
+npx tierward add rule security
+npx tierward add rule security --stack swift
 ```
 
 Available rules: `git`, `output-style`, `security`.
@@ -469,7 +469,7 @@ Options: `--force`, `--dry-run` (same as `add skill`).
 ### 7c. Creating custom skills
 
 ```bash
-npx mg-claude-dev-kit new skill
+npx tierward new skill
 ```
 
 Interactive wizard that generates a complete custom skill:
@@ -486,15 +486,15 @@ Options:
 - `--dry-run` - preview what would be created
 - `--answers <json>` - bypass all prompts with JSON (for automation)
 
-### Minimum viable CDK
+### Minimum viable Tierward
 
-The smallest useful CDK setup - no full scaffold required:
+The smallest useful Tierward setup - no full scaffold required:
 
 ```bash
 mkdir -p .claude/skills .claude/rules
-npx mg-claude-dev-kit add rule git
-npx mg-claude-dev-kit add skill commit
-npx mg-claude-dev-kit add skill security-audit
+npx tierward add rule git
+npx tierward add skill commit
+npx tierward add skill security-audit
 ```
 
 This gives you: conventional commits, security auditing, and git discipline - without a pipeline, session files, or STOP gates. Add more components as needed.
@@ -668,7 +668,7 @@ Stack-aware security rules. The scaffold selects the appropriate variant based o
 
 Selection logic: Swift always gets native-apple, Kotlin always gets native-android. Rust/Go/.NET/Java get the systems variant when `hasApi=false`, otherwise the web variant. All other stacks get the web variant. The output file is always named `security.md` regardless of variant.
 
-You can also install a specific variant via `npx mg-claude-dev-kit add rule security --stack swift`.
+You can also install a specific variant via `npx tierward add rule security --stack swift`.
 
 ---
 
@@ -772,7 +772,7 @@ All skill applicability rules are managed by a central skill registry (`packages
 - Each skill runs in an isolated context fork (`context: fork`) - it does not pollute the main session window.
 - Each skill delegates grep-heavy scanning to a Haiku Explore subagent to protect the main context window.
 - Before first run: fill in the `## Configuration` placeholders at the top of each `SKILL.md`.
-- Skills not installed at init can be added later: `npx mg-claude-dev-kit add skill <name>`.
+- Skills not installed at init can be added later: `npx tierward add skill <name>`.
 
 ### Block-scoped audit in Phase 5d (Tier M/L)
 
@@ -786,8 +786,8 @@ After the smoke test and before the outcome checklist, three tracks can run:
 
 **Track C - Test + doc + infra audit** (runs for every block after Phase 3 is green):
 `/test-audit` - static analysis of coverage reports (lcov / Istanbul / Cobertura / go / tarpaulin / xcresult), pyramid shape (unit/integration/e2e ratio), and anti-patterns (`.only` leaks, skipped tests, empty bodies, no-assertion tests, hardcoded sleeps).
-`/doc-audit` - static doc-drift check: relative-link resolution, code-block syntax (json/yaml/toml), CDK placeholder residuals, slash-command name match, skill-count consistency, ADR freshness, and stack-specific doc sync (Next.js / Django / Swift).
-`/infra-audit` - static infrastructure-security check across five layers (GitHub Actions, Dockerfile, K8s manifests, Terraform, GitLab CI); each layer runs only if its markers are detected. Critical findings from any of the three skills (`.only` committed, 0% coverage on a changed file, CDK placeholder in README, pwn-request in workflow, secret logging in CI, privileged K8s container, IAM wildcard action, hardcoded secret in Terraform, no right-to-delete endpoint when PII is stored) block Phase 6.
+`/doc-audit` - static doc-drift check: relative-link resolution, code-block syntax (json/yaml/toml), Tierward placeholder residuals, slash-command name match, skill-count consistency, ADR freshness, and stack-specific doc sync (Next.js / Django / Swift).
+`/infra-audit` - static infrastructure-security check across five layers (GitHub Actions, Dockerfile, K8s manifests, Terraform, GitLab CI); each layer runs only if its markers are detected. Critical findings from any of the three skills (`.only` committed, 0% coverage on a changed file, Tierward placeholder in README, pwn-request in workflow, secret logging in CI, privileged K8s container, IAM wildcard action, hardcoded secret in Terraform, no right-to-delete endpoint when PII is stored) block Phase 6.
 
 ### Severity handling
 
@@ -916,9 +916,9 @@ Checks:
 
 - **D1 Relative-link resolution**: markdown links to local files (`[text](./path)`, `[text](../path)`) resolve to existing paths. `http(s)://`, `mailto:`, and anchor-only links skipped. Severity: Critical for broken links to user-visible flow docs (CONTRIBUTING, SECURITY, linked guides); High otherwise.
 - **D2 Code-block syntax**: fenced blocks tagged `json`, `yaml`, `toml` are parsed with a stack-appropriate tool (`node -e 'JSON.parse'`, `python -c 'yaml.safe_load'`, `python -c 'tomllib.loads'`). Blocks tagged `bash`, `sh`, `text`, unlabelled, or containing template markers (`<...>`, `{{...}}`) are skipped. Severity: High per unparseable block.
-- **D3 CDK placeholder residuals**: uses a pinned list of the ten scaffold tokens (`[TEST_COMMAND]`, `[FRAMEWORK_VALUE]`, `[LANGUAGE_VALUE]`, `[INSTALL_COMMAND]`, `[DEV_COMMAND]`, `[BUILD_COMMAND]`, `[TYPE_CHECK_COMMAND]`, `[E2E_COMMAND]`, `[ENUM_CASE_CONVENTION]`, `[MIGRATION_COMMAND]`). Every entry is verified against `packages/cli/templates/**` so only tokens the scaffold actually writes are included. Generic `[UPPERCASE]` regex is deliberately avoided to prevent false positives on legitimate user conventions (`[API_KEY]`, `[YOUR_DOMAIN]`, `[FEATURE_FLAG]`). Severity: Critical in `README.md`, High in other user-facing docs.
-- **D4 Slash-command name match**: every `/name` reference in docs is cross-checked against `.claude/skills/<name>/`. Allowlist covers CDK CLI verbs (`init`, `upgrade`, `doctor`, `add`, `new`). Severity: Medium per orphan.
-- **D5 Skill-count consistency**: numeric claims like "16 skills" in README / docs are cross-verified against `ls .claude/skills/ | grep -v '^custom-' | wc -l`. Severity: Medium if mismatch ≤ 2; High if > 2. Scope is intentionally narrow - doctor / test counts are source-specific to the CDK codebase and not in scope for user-project audits.
+- **D3 Tierward placeholder residuals**: uses a pinned list of the ten scaffold tokens (`[TEST_COMMAND]`, `[FRAMEWORK_VALUE]`, `[LANGUAGE_VALUE]`, `[INSTALL_COMMAND]`, `[DEV_COMMAND]`, `[BUILD_COMMAND]`, `[TYPE_CHECK_COMMAND]`, `[E2E_COMMAND]`, `[ENUM_CASE_CONVENTION]`, `[MIGRATION_COMMAND]`). Every entry is verified against `packages/cli/templates/**` so only tokens the scaffold actually writes are included. Generic `[UPPERCASE]` regex is deliberately avoided to prevent false positives on legitimate user conventions (`[API_KEY]`, `[YOUR_DOMAIN]`, `[FEATURE_FLAG]`). Severity: Critical in `README.md`, High in other user-facing docs.
+- **D4 Slash-command name match**: every `/name` reference in docs is cross-checked against `.claude/skills/<name>/`. Allowlist covers Tierward CLI verbs (`init`, `upgrade`, `doctor`, `add`, `new`). Severity: Medium per orphan.
+- **D5 Skill-count consistency**: numeric claims like "16 skills" in README / docs are cross-verified against `ls .claude/skills/ | grep -v '^custom-' | wc -l`. Severity: Medium if mismatch ≤ 2; High if > 2. Scope is intentionally narrow - doctor / test counts are source-specific to the Tierward codebase and not in scope for user-project audits.
 - **D6 ADR marker freshness**: if an ADR directory is configured, frontmatter `date:` / `updated:` fields older than 180 days without a terminal `status:` (`accepted`, `deprecated`, `superseded`, `rejected`) are flagged. Severity: Low.
 - **D7 Stack-specific doc sync**: runs only for `node-ts`, `python`, `swift` - other stacks skip D7 and run only D1-D6. Patterns live in a sibling `PATTERNS.md`:
   - **node-ts**: Next.js `app/` or `pages/` routes cross-referenced against `docs/sitemap.md` and README; `package.json` dependencies cross-referenced against README.
@@ -1054,11 +1054,11 @@ Handles checks C1-C3 of the context review (credential scan, placeholder scan, f
 
 ## 12. Custom skills
 
-You can create project-specific skills that CDK preserves across `upgrade` and `init` operations.
+You can create project-specific skills that Tierward preserves across `upgrade` and `init` operations.
 
 ### Convention
 
-Place custom skills in `.claude/skills/custom-<name>/SKILL.md`. The `custom-` prefix signals CDK to never overwrite, prune, or modify the skill during any CLI operation.
+Place custom skills in `.claude/skills/custom-<name>/SKILL.md`. The `custom-` prefix signals Tierward to never overwrite, prune, or modify the skill during any CLI operation.
 
 ```
 .claude/skills/custom-deploy/SKILL.md
@@ -1203,10 +1203,10 @@ Imperative mood, under 72 characters. Scope is optional but encouraged.
 ### Upgrading
 
 ```bash
-npx mg-claude-dev-kit upgrade
-npx mg-claude-dev-kit upgrade --tier=m            # promote to higher tier
-npx mg-claude-dev-kit upgrade --anthropic         # show diff for Anthropic-influenced files (dry-run)
-npx mg-claude-dev-kit upgrade --anthropic --apply # write the diff with .bak backup
+npx tierward upgrade
+npx tierward upgrade --tier=m            # promote to higher tier
+npx tierward upgrade --anthropic         # show diff for Anthropic-influenced files (dry-run)
+npx tierward upgrade --anthropic --apply # write the diff with .bak backup
 ```
 
 Non-destructive files are updated to the latest template version (rules, context-review, files-guide, PR template). Files containing your customizations (`CLAUDE.md`, `pipeline.md`, `settings.json`, `SKILL.md` files) are flagged for manual review.
@@ -1220,9 +1220,9 @@ Non-destructive files are updated to the latest template version (rules, context
 ### Checking setup health
 
 ```bash
-npx mg-claude-dev-kit doctor           # interactive report (default)
-npx mg-claude-dev-kit doctor --report  # JSON compliance output for CI pipelines
-npx mg-claude-dev-kit doctor --ci      # silent mode: exit 1 if any check fails
+npx tierward doctor           # interactive report (default)
+npx tierward doctor --report  # JSON compliance output for CI pipelines
+npx tierward doctor --ci      # silent mode: exit 1 if any check fails
 ```
 
 Runs 29 checks:
@@ -1252,7 +1252,7 @@ Runs 29 checks:
 23. `security.md` variant matches the detected stack (warn on drift)
 24. `.claude/rules/context-review.md` includes C12 (warn if not present - upgrade needed)
 25. Stop hook has `timeout` configured and ≤ 600s (warn if missing - prevents hanging test commands)
-26. Anthropic-influenced files match the installed CDK template — `arch-audit/advanced-checks.md` in v1.15.0 (warn on drift, suggest `upgrade --anthropic`)
+26. Anthropic-influenced files match the installed Tierward template — `arch-audit/advanced-checks.md` in v1.15.0 (warn on drift, suggest `upgrade --anthropic`)
 27. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
 28. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
 29. No duplicate entries in `permissions.deny` list (warn if duplicates found)
@@ -1261,13 +1261,13 @@ Checks 12-29 are skipped for Tier 0 projects.
 
 **`--report` output**: machine-readable JSON with timestamp, cwd, summary (passed/warned/failed/skipped), and per-check details. Consumed by CI systems or external audit tools.
 
-**CI integration**: `.github/workflows/claude-dev-kit-verify.yml` (scaffolded by `init`) runs doctor on every PR. Prevents merging when the scaffold is broken or bypassed.
+**CI integration**: `.github/workflows/tierward-verify.yml` (scaffolded by `init`) runs doctor on every PR. Prevents merging when the scaffold is broken or bypassed.
 
 ---
 
 ### Team-wide policy with `team-settings.json`
 
-For teams that want to enforce a baseline across every member's clone, drop a `.claude/team-settings.json` into the repo. The file is opt-in: when absent, CDK behaves as before. When present, the CLI applies the policy at every relevant entry point.
+For teams that want to enforce a baseline across every member's clone, drop a `.claude/team-settings.json` into the repo. The file is opt-in: when absent, Tierward behaves as before. When present, the CLI applies the policy at every relevant entry point.
 
 Schema (v1):
 
@@ -1283,9 +1283,9 @@ Schema (v1):
 Field semantics:
 
 - `minTier` — `s` | `m` | `l`. The lowest tier the project may scaffold to. `init` refuses lower tiers. `upgrade` refuses to run on a current scaffold below the floor and points the user at `init --tier=<min>` to promote.
-- `allowedSkills` — whitelist for `add skill`. Skills outside the list are rejected. `custom-*` skills bypass this list by design (custom skills aren't part of CDK governance).
+- `allowedSkills` — whitelist for `add skill`. Skills outside the list are rejected. `custom-*` skills bypass this list by design (custom skills aren't part of Tierward governance).
 - `blockedSkills` — denylist for `add skill` and the doctor compliance check. `custom-*` skills are NOT exempt from the blocklist (governance overrides the "custom skills preserved across upgrades" convention).
-- `requiredSkills` — must be installed in `.claude/skills/`. Doctor warns if any are missing; CDK does not auto-install on its own.
+- `requiredSkills` — must be installed in `.claude/skills/`. Doctor warns if any are missing; Tierward does not auto-install on its own.
 
 `allowedSkills ∩ blockedSkills` is rejected at parse time as a mutual-exclusion error.
 
@@ -1297,23 +1297,23 @@ v1.16.0 introduced CLI-side enforcement only; native `Skill()` permission rules 
 
 ### MCP server
 
-The `mg-claude-dev-kit` npm package ships two binaries: `claude-dev-kit` (the wizard CLI) and `claude-dev-kit-mcp` (a Model Context Protocol server). Version-locked, single install.
+The `tierward` npm package ships two binaries: `tierward` (the wizard CLI) and `tierward-mcp` (a Model Context Protocol server). Version-locked, single install.
 
-The MCP server exposes CDK governance state to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). Six read-only tools:
+The MCP server exposes Tierward governance state to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). Six read-only tools:
 
 - `cdk_doctor_report` — runs `doctor --report` and returns the JSON
 - `cdk_team_settings` — parsed `.claude/team-settings.json` contents
 - `cdk_arch_audit_status` — last arch-audit run timestamp + age in days
 - `cdk_skill_inventory` — installed skills with frontmatter snapshot
 - `cdk_package_meta` — package name, version, CLI path, project root
-- `cdk_pr_review` — reads existing `/pr-review` comments on a GitHub PR (verdict + severity counts). Read-only; to generate a fresh review, invoke the `/pr-review` CDK skill.
+- `cdk_pr_review` — reads existing `/pr-review` comments on a GitHub PR (verdict + severity counts). Read-only; to generate a fresh review, invoke the `/pr-review` Tierward skill.
 
 Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user-scoped):
 
 ```json
 {
   "mcpServers": {
-    "cdk": { "command": "claude-dev-kit-mcp" }
+    "cdk": { "command": "tierward-mcp" }
   }
 }
 ```
@@ -1343,11 +1343,11 @@ Do not edit scaffolded rule files directly if you want upgrade compatibility. In
 
 ## 15b. Anthropic drift tracking
 
-CDK features risk being absorbed as Anthropic ships native Claude Code capabilities. The drift tracker monitors this automatically.
+Tierward features risk being absorbed as Anthropic ships native Claude Code capabilities. The drift tracker monitors this automatically.
 
 **How it works**: Every Monday at 9 AM UTC, a GitHub Action fetches the Anthropic Claude Code changelog, matches content against a feature manifest (`.github/drift-tracker/features.json`), and opens issues for any overlap detected.
 
-**Feature manifest**: Each entry in `features.json` defines a CDK feature with keywords, risk level (high/medium/low), and affected CDK files. To add a new feature to track, add a JSON object to the `features` array.
+**Feature manifest**: Each entry in `features.json` defines a Tierward feature with keywords, risk level (high/medium/low), and affected Tierward files. To add a new feature to track, add a JSON object to the `features` array.
 
 **Manual scan**: Go to Actions > "Anthropic drift tracker" > Run workflow. Enable "Dry run" to see results without creating issues. Adjust the lookback window with the "days" input.
 
@@ -1359,7 +1359,7 @@ CDK features risk being absorbed as Anthropic ships native Claude Code capabilit
 
 ## 15c. Template coverage tests (maintainer-only)
 
-CDK ships normative prose inside `pipeline.md` per tier and inside per-tier `CLAUDE.md` templates. Drift between tiers, broken gate clauses, and undocumented placeholders quietly degrade what customers receive. The template-coverage layer catches these regressions before the templates reach `npm`.
+Tierward ships normative prose inside `pipeline.md` per tier and inside per-tier `CLAUDE.md` templates. Drift between tiers, broken gate clauses, and undocumented placeholders quietly degrade what customers receive. The template-coverage layer catches these regressions before the templates reach `npm`.
 
 Three standalone scripts under `packages/cli/test/template-coverage/`:
 
@@ -1392,7 +1392,7 @@ Output: `report.json` (machine-readable), `report.md` (human-readable table), an
 
 The locked jury is `claude-opus-4-7` + `claude-sonnet-4-6` + `gemini-2.5-pro`. PASS requires all medians ≥ 2 **and** ≥ 80 % of criteria with median ≥ 2. The script hard-fails (exit 2) if `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` is missing, and hard-fails at runtime (exit 1) on any provider network error; a model that responds with malformed JSON is penalised in scoring rather than crashing the run.
 
-This is a maintainer gate: run it before any release that touches `packages/cli/src/context-builder/**`, the schema, or prompt templates. End users do not run it; they get the deterministic MUST PASS via `npx mg-claude-dev-kit validate-context`.
+This is a maintainer gate: run it before any release that touches `packages/cli/src/context-builder/**`, the schema, or prompt templates. End users do not run it; they get the deterministic MUST PASS via `npx tierward validate-context`.
 
 Full reference: `packages/cli/test/cross-llm-rubric/README.md`. Locked design in `memory/project_context_builder_rubric_v1.md`.
 
@@ -1400,7 +1400,7 @@ Full reference: `packages/cli/test/cross-llm-rubric/README.md`. Locked design in
 
 ## 16. Frequently asked questions
 
-**Q: Do I need to run `npx mg-claude-dev-kit init` every time I start a session?**
+**Q: Do I need to run `npx tierward init` every time I start a session?**
 
 No. You run it once to scaffold the governance layer. After that, open Claude Code (`claude`) from the project root. The governance files load automatically.
 
@@ -1408,7 +1408,7 @@ No. You run it once to scaffold the governance layer. After that, open Claude Co
 
 **Q: What happens if Claude ignores the pipeline?**
 
-The Stop hook is a mechanical enforcement: it does not rely on Claude following instructions. Even if Claude tries to declare a task complete without running tests, the hook blocks it. The STOP gates rely on Claude respecting the instructions in `pipeline.md`. If you observe Claude skipping a gate, check that `pipeline.md` is being loaded (run `npx mg-claude-dev-kit doctor`).
+The Stop hook is a mechanical enforcement: it does not rely on Claude following instructions. Even if Claude tries to declare a task complete without running tests, the hook blocks it. The STOP gates rely on Claude respecting the instructions in `pipeline.md`. If you observe Claude skipping a gate, check that `pipeline.md` is being loaded (run `npx tierward doctor`).
 
 ---
 
@@ -1424,15 +1424,15 @@ No. In-place mode uses safe scaffold: files that already exist are never overwri
 
 ---
 
-**Q: Can I add CDK components without running the full init?**
+**Q: Can I add Tierward components without running the full init?**
 
-Yes. Use `npx mg-claude-dev-kit add skill <name>` or `add rule <name>` to install individual components. See [section 7](#7-incremental-adoption).
+Yes. Use `npx tierward add skill <name>` or `add rule <name>` to install individual components. See [section 7](#7-incremental-adoption).
 
 ---
 
 **Q: How do I create my own audit skill?**
 
-Create `.claude/skills/custom-<name>/SKILL.md` with YAML frontmatter and step-by-step instructions. The `custom-` prefix ensures CDK never touches it during upgrade or init. See [section 12](#12-custom-skills) and [Custom Skills Guide](custom-skills.md).
+Create `.claude/skills/custom-<name>/SKILL.md` with YAML frontmatter and step-by-step instructions. The `custom-` prefix ensures Tierward never touches it during upgrade or init. See [section 12](#12-custom-skills) and [Custom Skills Guide](custom-skills.md).
 
 ---
 
@@ -1456,7 +1456,7 @@ Rules: each worktree has its own branch. Merge to `staging` sequentially - smoke
 
 **Q: Can I switch tiers on an existing project?**
 
-Yes. Run `npx mg-claude-dev-kit upgrade --tier=m` to promote non-destructively. Or edit `.claude/rules/pipeline.md` directly if you need fine-grained control.
+Yes. Run `npx tierward upgrade --tier=m` to promote non-destructively. Or edit `.claude/rules/pipeline.md` directly if you need fine-grained control.
 
 ---
 
@@ -1484,7 +1484,7 @@ Edit `CLAUDE.md` Key Commands section. Replace `# not configured` with your actu
 Yes. All init commands accept `--answers <path>` that bypasses every wizard prompt:
 
 ```bash
-npx mg-claude-dev-kit init --answers ./answers.json
+npx tierward init --answers ./answers.json
 ```
 
 Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy one as a starting point.

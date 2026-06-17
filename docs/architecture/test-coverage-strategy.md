@@ -5,13 +5,13 @@
 **Roadmap**: Q3 #12 / issue #138
 **Owner**: maintainer
 
-This document defines what CDK's test infrastructure does and does NOT cover for the templates shipped by the scaffolder (`packages/cli/templates/**`), the gaps surfaced by issue #138, and the chosen approach for each gap.
+This document defines what Tierward's test infrastructure does and does NOT cover for the templates shipped by the scaffolder (`packages/cli/templates/**`), the gaps surfaced by issue #138, and the chosen approach for each gap.
 
 ---
 
 ## 1. Surface under test
 
-CDK ships three kinds of artifacts that reach the user's project after `npx claude-dev-kit init`:
+Tierward ships three kinds of artifacts that reach the user's project after `npx tierward init`:
 
 1. **Pipeline rules** — `tier-{s,m,l}/.claude/rules/pipeline.md`. Normative prose that Claude Code reads each session to drive phase progression, gate behavior, and stop semantics.
 2. **CLAUDE.md templates** — per-tier project context with wizard-filled placeholders.
@@ -76,13 +76,13 @@ The issue proposes seven approaches A–G tiered by ease. Mapping:
 
 **C — Placeholder enumeration (build now).** For every `[PLACEHOLDER]` referenced in `pipeline.md` template bodies, verify it is (1) in the wizard-managed list, (2) documented in `CLAUDE.md` template, or (3) explicitly listed as user-fill (role names, state names). Complement to issue #134 placeholder meta-rule. Distinct from `assertNoUnfilledWizardPlaceholders` (which operates on post-wizard output).
 
-**D — Snapshot tests per representative stack (roadmap).** Fixture project per stack target (web, backend Python, Go CLI, Swift iOS, Rust crate). Scaffold CDK in each, snapshot the output, diff on PR. Captures cross-tier divergence and post-scaffold behavior at file level. Cost: ~1 week initial + recurring per new stack. To file as a separate issue once A+B+C are in production for at least one release cycle.
+**D — Snapshot tests per representative stack (roadmap).** Fixture project per stack target (web, backend Python, Go CLI, Swift iOS, Rust crate). Scaffold Tierward in each, snapshot the output, diff on PR. Captures cross-tier divergence and post-scaffold behavior at file level. Cost: ~1 week initial + recurring per new stack. To file as a separate issue once A+B+C are in production for at least one release cycle.
 
 **E — Gate matrix completeness (roadmap).** Builds on B. For each gate, verify matrix completeness across stack targets. Detects gates that leave legitimate stacks uncovered. Requires explicit enumeration of target stacks. To file as a separate issue after B has surfaced any concrete completeness questions.
 
 **F — LLM-based prose semantic eval (defer).** Rationale: (1) cost — would run per-PR touching templates, not on-demand; (2) non-determinism — same prose can score differently across runs; (3) Phase 6 cross-LLM of the skill-review pipeline already exercises this pattern on-demand for the same surface. The marginal value of converting it to a per-PR gate is unclear until B/E reveal what semantic checks are actually missed by mechanical lint. Re-evaluate when A/B/C have been in production for two release cycles and a recurring class of drift escapes them.
 
-**G — Behavioral fixture testing (defer).** Rationale: weeks of setup, recurring per new stack/skill, non-trivial runtime cost. Conceptually the strongest test but the failure mode it catches (Claude interprets prose differently across runs) is also the hardest to assert against. Re-evaluate when CDK has paying customers whose deployments depend on phase semantics.
+**G — Behavioral fixture testing (defer).** Rationale: weeks of setup, recurring per new stack/skill, non-trivial runtime cost. Conceptually the strongest test but the failure mode it catches (Claude interprets prose differently across runs) is also the hardest to assert against. Re-evaluate when Tierward has paying customers whose deployments depend on phase semantics.
 
 ---
 

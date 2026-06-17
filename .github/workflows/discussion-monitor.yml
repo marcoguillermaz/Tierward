@@ -20,12 +20,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue list \
-            --repo marcoguillermaz/claude-dev-kit \
+            --repo marcoguillermaz/tierward \
             --label "discussions" \
             --state open \
             --json number -q '.[].number' | while read num; do
             gh issue close "$num" \
-              --repo marcoguillermaz/claude-dev-kit \
+              --repo marcoguillermaz/tierward \
               --comment "Superseded by new weekly scan."
           done
 
@@ -38,7 +38,7 @@ jobs:
 
           # Look up Q&A category ID dynamically
           QA_ID=$(gh api graphql -f query='
-            { repository(owner:"marcoguillermaz", name:"claude-dev-kit") {
+            { repository(owner:"marcoguillermaz", name:"tierward") {
               discussionCategories(first:10) {
                 nodes { id slug }
               }
@@ -52,7 +52,7 @@ jobs:
 
           RESULT=$(gh api graphql -f query='
             query($categoryId: ID!) {
-              repository(owner:"marcoguillermaz", name:"claude-dev-kit") {
+              repository(owner:"marcoguillermaz", name:"tierward") {
                 discussions(
                   first: 50
                   categoryId: $categoryId
@@ -101,7 +101,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue create \
-            --repo marcoguillermaz/claude-dev-kit \
+            --repo marcoguillermaz/tierward \
             --title "Unanswered Q&A discussions — $(date -u '+%Y-%m-%d')" \
             --body "${{ steps.query.outputs.body }}" \
             --label "discussions"

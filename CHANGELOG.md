@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to claude-dev-kit are documented here.
+All notable changes to tierward (formerly claude-dev-kit) are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,6 +8,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
 
 ## [Unreleased]
+
+### Changed
+
+- **Renamed `claude-dev-kit` → `tierward`.** The npm package, CLI binary, and MCP server now ship as `tierward` (and `tierward-mcp`). The old `claude-dev-kit` and `claude-dev-kit-mcp` binaries stay working as aliases through the deprecation window, the `mg-claude-dev-kit` npm package is deprecated in favour of `tierward`, and existing clones keep pulling via GitHub's repository redirect. (Release announcement prose is humanized at cutover per R2.)
 
 ---
 

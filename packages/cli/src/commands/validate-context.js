@@ -10,7 +10,7 @@
  *   --json  — machine-readable JSON ({ valid, errors, data, body })
  *
  * Use cases (v1.1):
- *   - CI gating: `npx mg-claude-dev-kit validate-context && build`
+ *   - CI gating: `npx tierward validate-context && build`
  *   - Hand-edited CONTEXT.md verified before commit
  *   - Reproducing the same MUST PASS check that `context` runs after write
  */

@@ -33,7 +33,7 @@ ${config.typeCheckCommand ? config.typeCheckCommand + '   # type check' : ''}
 
 ## AI-Assisted Development
 
-This project uses [Claude Code](https://claude.ai/code) with a governance scaffold provided by [claude-dev-kit](https://github.com/marcoguillermaz/claude-dev-kit).
+This project uses [Claude Code](https://claude.ai/code) with a governance scaffold provided by [tierward](https://github.com/marcoguillermaz/tierward).
 
 **Pipeline**: ${tierDesc}
 

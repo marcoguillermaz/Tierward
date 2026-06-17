@@ -227,8 +227,7 @@ export async function contextCommand(options = {}) {
 
   console.log();
   console.log(
-    chalk.bold('claude-dev-kit context') +
-      chalk.dim(' — generate CONTEXT.md from interview/inference'),
+    chalk.bold('tierward context') + chalk.dim(' — generate CONTEXT.md from interview/inference'),
   );
   console.log();
 

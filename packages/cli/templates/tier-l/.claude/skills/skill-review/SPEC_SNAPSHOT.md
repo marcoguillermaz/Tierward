@@ -28,7 +28,7 @@ Every field below is **documented by Anthropic**. Fields outside this list are f
 
 | Field | Type | Purpose / valid values |
 |---|---|---|
-| `allowed-tools` | string OR list | Subset of tools the skill can invoke. Space-separated string or YAML list. CDK convention: space-separated string. |
+| `allowed-tools` | string OR list | Subset of tools the skill can invoke. Space-separated string or YAML list. Tierward convention: space-separated string. |
 | `model` | string | Model identifier: `sonnet`, `haiku`, `opus`. |
 | `context` | string | Only documented value: `fork`. |
 | `agent` | string | Subagent type: `Explore`, `Plan`, `general-purpose`. |
@@ -36,7 +36,7 @@ Every field below is **documented by Anthropic**. Fields outside this list are f
 | `paths` | list | YAML list of glob patterns restricting where the skill activates. |
 | `user-invocable` | boolean | Whether user can invoke via `/skill-name`. |
 | `disable-model-invocation` | boolean | Whether Claude may auto-invoke the skill. |
-| `hooks` | object | Lifecycle hook registration (no CDK skill currently uses this). |
+| `hooks` | object | Lifecycle hook registration (no Tierward skill currently uses this). |
 | `shell` | string | `bash` or `powershell`. |
 | `argument-hint` | string | Free text, hint for argument structure. |
 | `version` | string | Informal version string. |
@@ -49,7 +49,7 @@ Every field below is **documented by Anthropic**. Fields outside this list are f
 
 Any frontmatter key outside the required + optional set above is a spec violation.
 
-**Known non-documented fields present in CDK at snapshot date**:
+**Known non-documented fields present in Tierward at snapshot date**:
 - `effort` - on 6 files: `arch-audit` (S, M, L) and `security-audit` (S, M, L). To be removed during the review cycle.
 
 ---
@@ -114,17 +114,17 @@ If Anthropic publishes spec changes between this snapshot date and the end of th
 2. **Decision gate**: evaluate impact. Two outcomes:
    - **Non-breaking** (new optional field, non-mandatory constraint relaxation): log in `MID_CYCLE_DELTA.md`, complete the cycle against this snapshot, integrate in next snapshot version.
    - **Breaking** (field renamed, new required field, mandatory constraint tightened): bump this snapshot to v1.1, re-run P1 checklist on every already-reviewed skill. Count this as a framework-level event triggering retroactive re-application per `review-framework.md`.
-3. **Either way**: document the decision with the publication date of the Anthropic change + the CDK review date + rationale for non-breaking-vs-breaking classification.
+3. **Either way**: document the decision with the publication date of the Anthropic change + the Tierward review date + rationale for non-breaking-vs-breaking classification.
 
 ---
 
 ## 9. Known ambiguities (flagged at snapshot date)
 
-| Topic | Ambiguity | CDK resolution |
+| Topic | Ambiguity | Tierward resolution |
 |---|---|---|
-| `allowed-tools` separator | Both space-separated and YAML list documented as valid | CDK standard: space-separated string |
-| `hooks` object schema | Documented but no schema reference at canonical URLs | Not used in any CDK skill; no validation enforced until first use |
-| `shell` default | Unclear whether `bash` is implicit when field is absent | CDK behavior: absent field means no shell restriction |
+| `allowed-tools` separator | Both space-separated and YAML list documented as valid | Tierward standard: space-separated string |
+| `hooks` object schema | Documented but no schema reference at canonical URLs | Not used in any Tierward skill; no validation enforced until first use |
+| `shell` default | Unclear whether `bash` is implicit when field is absent | Tierward behavior: absent field means no shell restriction |
 | Combined compaction budget | 25,000 tokens combined, but behavior when exceeded is unspecified | Treat as hard fail; run tokenizer check in P1 C5 |
 
 ---

@@ -5,7 +5,7 @@ export const AUDIT_MODELS = [
 
 /**
  * Maximum length of a SKILL.md `description:` frontmatter value.
- * Enforced by new-skill wizard + validateSkillMd (CDK convention).
+ * Enforced by new-skill wizard + validateSkillMd (Tierward convention).
  */
 export const SKILL_DESC_MAX_CHARS = 250;
 

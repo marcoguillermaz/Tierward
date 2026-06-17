@@ -128,7 +128,7 @@ At the scope gate, Claude also declares whether **Phase 4 E2E** and **Phase 5d q
 | `/responsive-audit` | Breakpoint correctness (375px / 768px / 1024px) |
 | `/perf-audit` | Rendering boundaries, bundle size, N+1 patterns |
 | `/compact` | Frees context window (run at Phase 8.5) |
-| `npx mg-claude-dev-kit doctor` | Checks your scaffold setup |
+| `npx tierward doctor` | Checks your scaffold setup |
 
 ---
 

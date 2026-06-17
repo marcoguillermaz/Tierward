@@ -1,6 +1,6 @@
 ---
 name: external-review
-description: Run a fresh-context review of CDK before a release. --mode=quick spawns a Claude general-purpose subagent with no project memory and an auto-bundled snapshot. --mode=full fans out the same bundle to GPT-4.1, Gemini 2.5 Pro, Mistral Large, and Perplexity Sonar Pro for cross-LLM coverage. Maintainer-only; not shipped to user projects.
+description: Run a fresh-context review of Tierward before a release. --mode=quick spawns a Claude general-purpose subagent with no project memory and an auto-bundled snapshot. --mode=full fans out the same bundle to GPT-4.1, Gemini 2.5 Pro, Mistral Large, and Perplexity Sonar Pro for cross-LLM coverage. Maintainer-only; not shipped to user projects.
 user-invocable: true
 model: sonnet
 context: fork
@@ -10,7 +10,7 @@ argument-hint: --mode=quick|full [--focus=<area>]
 
 # external-review
 
-Pre-release sanity pass for CDK. Two modes:
+Pre-release sanity pass for Tierward. Two modes:
 
 - `--mode=quick` (default) — single fresh-context Claude review. Cost: ~$0.10, ~60 seconds. Use on every release.
 - `--mode=full` — cross-LLM (GPT-4.1 / Gemini 2.5 Pro / Mistral Large / Perplexity Sonar Pro) via `scripts/external-review.mjs`. Cost: ~$0.50–2, ~5 minutes. Use at milestones (v2.0, every 4–6 minor releases, before strategic pivots).
@@ -21,7 +21,7 @@ Cross-LLM catches two distinct blind-spot classes: (a) memory-isolation / fresh-
 
 ## Configuration
 
-- Prompt source: `docs/reviews/external-review-prompt.md` (single living file, frontmatter `version:` synced to current CDK release)
+- Prompt source: `docs/reviews/external-review-prompt.md` (single living file, frontmatter `version:` synced to current Tierward release)
 - Bundle script: `scripts/external-review-bundle.mjs` (auto-curated: README + CHANGELOG slice + 1 SKILL sample + Tier-M pipeline + roadmap-status)
 - Cross-LLM script: `scripts/external-review.mjs` (existing, providers via env keys)
 - Output base: `docs/reviews/<YYYY-MM-DD>-<mode>/` (committed; cite in PRs and roadmap entries)
@@ -38,7 +38,7 @@ Compute `RUN_DIR=docs/reviews/$(date -u +%Y-%m-%d)-<mode>/`. If it already exist
 
 ### Step 2 — Verify prompt freshness
 
-Read frontmatter of `docs/reviews/external-review-prompt.md`. If `version` does not match the current CDK release (read from `packages/cli/package.json`), STOP and print: "Prompt is stale (prompt={X}, CDK={Y}). Update docs/reviews/external-review-prompt.md frontmatter and content before running." Do NOT auto-update — the prompt body has CDK-state numbers that need a human review.
+Read frontmatter of `docs/reviews/external-review-prompt.md`. If `version` does not match the current Tierward release (read from `packages/cli/package.json`), STOP and print: "Prompt is stale (prompt={X}, Tierward={Y}). Update docs/reviews/external-review-prompt.md frontmatter and content before running." Do NOT auto-update — the prompt body has Tierward-state numbers that need a human review.
 
 ### Step 3 — Auto-bundle
 
@@ -46,14 +46,14 @@ Run `node scripts/external-review-bundle.mjs --out RUN_DIR/bundle/`. Verify exit
 
 ### Step 4 — Materialize the prompt
 
-Read `docs/reviews/external-review-prompt.md`, substitute `{VERSION}` → current CDK version (from `package.json`) and `{FOCUS_AREA}` → the resolved focus token. Write to `RUN_DIR/prompt.md`.
+Read `docs/reviews/external-review-prompt.md`, substitute `{VERSION}` → current Tierward version (from `package.json`) and `{FOCUS_AREA}` → the resolved focus token. Write to `RUN_DIR/prompt.md`.
 
 ### Step 5a — Quick mode (default)
 
 Use the Agent tool with `subagent_type=general-purpose`. Compose the agent prompt as:
 
 ```
-You have NO prior memory of the claude-dev-kit project. The only context you have is the bundle below. Treat any claim not grounded in the bundle as unverified.
+You have NO prior memory of the tierward project. The only context you have is the bundle below. Treat any claim not grounded in the bundle as unverified.
 
 [contents of RUN_DIR/prompt.md]
 
@@ -77,7 +77,7 @@ BUNDLE FILES (each is a separate file in the same review snapshot):
 [contents]
 ```
 
-Inline the bundle contents (read from `RUN_DIR/bundle/`). Spawn a single agent. Capture its response. Write to `RUN_DIR/responses/claude-fresh.md` with a header line: `## Claude (general-purpose, fresh context) — CDK <VERSION> — Focus: <FOCUS_AREA> — <ISO date>`.
+Inline the bundle contents (read from `RUN_DIR/bundle/`). Spawn a single agent. Capture its response. Write to `RUN_DIR/responses/claude-fresh.md` with a header line: `## Claude (general-purpose, fresh context) — Tierward <VERSION> — Focus: <FOCUS_AREA> — <ISO date>`.
 
 ### Step 5b — Full mode
 
@@ -97,7 +97,7 @@ Verify the script's preflight: 0 providers = abort with the printed instruction.
 Read every file in `RUN_DIR/responses/`. Produce `RUN_DIR/synthesis.md` with this structure:
 
 ```
-# CDK <VERSION> — External Review Synthesis
+# Tierward <VERSION> — External Review Synthesis
 Date: <ISO>
 Mode: <mode>
 Focus: <focus>
@@ -137,4 +137,4 @@ Print the path to `RUN_DIR/`, list every file produced, and the suggested `git a
 
 ## Output
 
-A populated `docs/reviews/<YYYY-MM-DD>-<mode>/` directory and a printed summary. No git commit, no version bump, no modification to other CDK files.
+A populated `docs/reviews/<YYYY-MM-DD>-<mode>/` directory and a printed summary. No git commit, no version bump, no modification to other Tierward files.

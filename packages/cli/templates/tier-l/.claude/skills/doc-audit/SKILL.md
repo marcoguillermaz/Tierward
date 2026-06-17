@@ -1,6 +1,6 @@
 ---
 name: doc-audit
-description: Static documentation drift audit - relative-link resolution, code-block syntax, CDK placeholder residuals, slash-command name match, skill-count consistency, ADR marker freshness, stack-specific doc sync (Next.js / Django / Swift).
+description: Static documentation drift audit - relative-link resolution, code-block syntax, Tierward placeholder residuals, slash-command name match, skill-count consistency, ADR marker freshness, stack-specific doc sync (Next.js / Django / Swift).
 user-invocable: true
 model: sonnet
 context: fork
@@ -108,11 +108,11 @@ Skip `bash`, `sh`, `shell`, `text`, `console`, `diff`, and any unlabelled fence.
 
 Report: each failing block with `FILE:LINE - lang=<tag> - <parser error excerpt>`.
 
-### D3 - CDK placeholder residuals
+### D3 - Tierward placeholder residuals
 
 **High per occurrence in user-facing docs; Critical if found in `README.md`.** Placeholders shipped unfilled indicate an incomplete scaffold adoption.
 
-The CDK scaffold emits a **fixed set** of `[UPPERCASE]` tokens that the user is expected to resolve. Generic `[UPPERCASE]` regex would produce false positives on legitimate user conventions (`[API_KEY]`, `[YOUR_DOMAIN]`, `[FEATURE_FLAG_NAME]`). Use the pinned list from `PATTERNS.md` (agnostic section, `D3 CDK placeholder list`):
+The Tierward scaffold emits a **fixed set** of `[UPPERCASE]` tokens that the user is expected to resolve. Generic `[UPPERCASE]` regex would produce false positives on legitimate user conventions (`[API_KEY]`, `[YOUR_DOMAIN]`, `[FEATURE_FLAG_NAME]`). Use the pinned list from `PATTERNS.md` (agnostic section, `D3 Tierward placeholder list`):
 
 ```
 [TEST_COMMAND] [FRAMEWORK_VALUE] [LANGUAGE_VALUE] [INSTALL_COMMAND]
@@ -120,7 +120,7 @@ The CDK scaffold emits a **fixed set** of `[UPPERCASE]` tokens that the user is 
 [ENUM_CASE_CONVENTION] [MIGRATION_COMMAND]
 ```
 
-Grep each doc for any exact token from the list. Exclude files under `packages/cli/templates/**` (the CDK template source itself - placeholders are intentional there).
+Grep each doc for any exact token from the list. Exclude files under `packages/cli/templates/**` (the Tierward template source itself - placeholders are intentional there).
 
 Report: each match with `FILE:LINE - <token> - replace with concrete value`.
 
@@ -128,7 +128,7 @@ Report: each match with `FILE:LINE - <token> - replace with concrete value`.
 
 **Medium per orphan reference.** Readers click / copy a skill name that does not exist in `.claude/skills/`.
 
-Grep every doc for `/[a-z][a-z0-9-]+` occurrences inside prose (filter: must be preceded by whitespace or start-of-line and followed by a word boundary; ignore URL paths by excluding matches inside a `(...)` link target). For each unique command name, verify `.claude/skills/<name>/` exists. Allowlist CDK CLI verbs that are not skills: `init`, `upgrade`, `doctor`, `add`, `new` (these live in `packages/cli/src/commands/`, not in `.claude/skills/`).
+Grep every doc for `/[a-z][a-z0-9-]+` occurrences inside prose (filter: must be preceded by whitespace or start-of-line and followed by a word boundary; ignore URL paths by excluding matches inside a `(...)` link target). For each unique command name, verify `.claude/skills/<name>/` exists. Allowlist Tierward CLI verbs that are not skills: `init`, `upgrade`, `doctor`, `add`, `new` (these live in `packages/cli/src/commands/`, not in `.claude/skills/`).
 
 Report: each orphan with `FILE:LINE - /<name> - no matching skill directory`.
 
@@ -142,7 +142,7 @@ Grep README and `[DOC_PATH]` for numeric skill claims: `\b(\d+)\s+(audit\s+)?ski
 ls .claude/skills/ | grep -v '^custom-' | wc -l
 ```
 
-If the claimed count does not match the actual directory count, flag the mismatch. Note: this check intentionally scopes to **skill count only** - doctor/test counts are source-specific to the CDK codebase and are not in scope for user-project audits.
+If the claimed count does not match the actual directory count, flag the mismatch. Note: this check intentionally scopes to **skill count only** - doctor/test counts are source-specific to the Tierward codebase and are not in scope for user-project audits.
 
 Report: `FILE:LINE - claim "<N> skills" - actual <M> in .claude/skills/`.
 
@@ -189,7 +189,7 @@ If nothing Critical/High: state that explicitly ("No Critical or High findings -
 |---|---|---|
 | Link hygiene | strong / adequate / weak | [D1 broken link count] |
 | Code-block validity | strong / adequate / weak | [D2 unparseable blocks] |
-| Placeholder discipline | strong / adequate / weak | [D3 CDK tokens remaining] |
+| Placeholder discipline | strong / adequate / weak | [D3 Tierward tokens remaining] |
 | Skill coherence | strong / adequate / weak | [D4 orphans + D5 count mismatch] |
 | ADR freshness | strong / adequate / weak | [D6 stale count; N/A if ADR_PATH unset] |
 | Stack sync | strong / adequate / weak | [D7 orphans; N/A for non-top-3 stacks] |
@@ -200,7 +200,7 @@ If nothing Critical/High: state that explicitly ("No Critical or High findings -
 |---|---|---|---|
 | D1 | Relative-link resolution | ✅/⚠️ | [N broken] |
 | D2 | Code-block syntax | ✅/⚠️ | [N unparseable] |
-| D3 | CDK placeholder residuals | ✅/⚠️ | [N occurrences] |
+| D3 | Tierward placeholder residuals | ✅/⚠️ | [N occurrences] |
 | D4 | Slash-command name match | ✅/⚠️ | [N orphans] |
 | D5 | Skill-count consistency | ✅/⚠️ | [mismatch or OK] |
 | D6 | ADR marker freshness | ✅/⚠️ / N/A | [N stale; N/A if no ADR_PATH] |
@@ -242,8 +242,8 @@ Then write ONLY the approved entries to `docs/refactoring-backlog.md`:
 
 ### Severity guide
 
-- **Critical**: broken link to a user-visible flow doc (CONTRIBUTING, SECURITY, linked guide) (D1); CDK placeholder in `README.md` (D3)
-- **High**: unparseable `json` / `yaml` / `toml` code block (D2); CDK placeholder in any other user-facing doc (D3); skill-count mismatch > 2 (D5)
+- **Critical**: broken link to a user-visible flow doc (CONTRIBUTING, SECURITY, linked guide) (D1); Tierward placeholder in `README.md` (D3)
+- **High**: unparseable `json` / `yaml` / `toml` code block (D2); Tierward placeholder in any other user-facing doc (D3); skill-count mismatch > 2 (D5)
 - **Medium**: orphan `/skill-name` reference (D4); skill-count mismatch ≤ 2 (D5); stack-specific orphan surface (D7); broken link to non-critical asset (D1)
 - **Low**: stale ADR without terminal status (D6)
 
