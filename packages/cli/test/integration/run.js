@@ -3880,7 +3880,7 @@ async function scenarioMCPServer() {
     }
 
     const meta = parseToolReply(await client.callTool({ name: 'cdk_package_meta', arguments: {} }));
-    if (meta.name === 'mg-claude-dev-kit' && meta.cwd === dir) {
+    if (meta.name === 'tierward' && meta.cwd === dir) {
       pass('cdk_package_meta: name + cwd correct');
     } else {
       fail(`cdk_package_meta: ${JSON.stringify(meta)}`);

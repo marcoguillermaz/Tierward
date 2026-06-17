@@ -10,9 +10,17 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = resolve(__dirname, '..', 'index.js');
 
-function readPackageVersion() {
+function readPackageField(field) {
   const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', '..', 'package.json'), 'utf8'));
-  return pkg.version;
+  return pkg[field];
+}
+
+function readPackageVersion() {
+  return readPackageField('version');
+}
+
+function readPackageName() {
+  return readPackageField('name');
 }
 
 function getCwd() {
@@ -227,7 +235,7 @@ function readPrReviewState(prNumber) {
 
 function getPackageMeta() {
   return {
-    name: 'mg-claude-dev-kit',
+    name: readPackageName(),
     version: readPackageVersion(),
     cliPath: CLI_PATH,
     cwd: getCwd(),
@@ -236,7 +244,7 @@ function getPackageMeta() {
 
 export function buildServer() {
   const server = new McpServer({
-    name: 'mg-claude-dev-kit',
+    name: readPackageName(),
     version: readPackageVersion(),
   });
 

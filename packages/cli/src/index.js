@@ -14,7 +14,7 @@ import chalk from 'chalk';
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 program
-  .name('claude-dev-kit')
+  .name('tierward')
   .description('Scaffold for legible, reviewable AI-assisted development')
   .version(pkg.version);
 
