@@ -1,6 +1,6 @@
 # Skills Inventory (P3)
 
-> **EXPORT NOTE**: this file is bundled as an example. Replace the inventory below with your project's skills before running `/skill-review`. The structure (summary stats + main table + coverage check) is the template - the content is a placeholder from CDK's own review cycle.
+> **EXPORT NOTE**: this file is bundled as an example. Replace the inventory below with your project's skills before running `/skill-review`. The structure (summary stats + main table + coverage check) is the template - the content is a placeholder from Tierward's own review cycle.
 >
 > **How to adapt**:
 > 1. Run `find .claude/skills -name SKILL.md` to list your skills.

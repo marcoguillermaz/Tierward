@@ -1,13 +1,13 @@
 # Doc Audit - Patterns
 
-Reference file for `/doc-audit`. Contains the pinned CDK placeholder list (agnostic) and stack-specific grep patterns for D7 doc-sync checks.
+Reference file for `/doc-audit`. Contains the pinned Tierward placeholder list (agnostic) and stack-specific grep patterns for D7 doc-sync checks.
 The executing agent reads this file at the start of Step 3. For D3, use the placeholder list verbatim. For D7, select the section matching the detected stack; if the detected stack is not in the top 3 (`node-ts`, `python`, `swift`), skip D7 entirely.
 
 ---
 
-## D3 - CDK placeholder list (agnostic)
+## D3 - Tierward placeholder list (agnostic)
 
-The CDK scaffold emits these placeholder tokens. Readers are expected to replace each one with a concrete value. A token left in place after first-run configuration signals an incomplete adoption, not an intentional user convention.
+The Tierward scaffold emits these placeholder tokens. Readers are expected to replace each one with a concrete value. A token left in place after first-run configuration signals an incomplete adoption, not an intentional user convention.
 
 ```
 [TEST_COMMAND]
@@ -22,9 +22,9 @@ The CDK scaffold emits these placeholder tokens. Readers are expected to replace
 [MIGRATION_COMMAND]
 ```
 
-**Extension rule**: this list is grepped against the CDK template tree (`packages/cli/templates/**`) - only tokens that are actually emitted by the scaffold belong here. When a new CDK release adds a placeholder to any scaffold template, append it to this list and bump the skill's internal version note in the next release. Generic `[UPPERCASE]` regex is deliberately avoided - it produces false positives on legitimate user conventions (`[API_KEY]`, `[YOUR_DOMAIN]`, `[FEATURE_FLAG]`).
+**Extension rule**: this list is grepped against the Tierward template tree (`packages/cli/templates/**`) - only tokens that are actually emitted by the scaffold belong here. When a new Tierward release adds a placeholder to any scaffold template, append it to this list and bump the skill's internal version note in the next release. Generic `[UPPERCASE]` regex is deliberately avoided - it produces false positives on legitimate user conventions (`[API_KEY]`, `[YOUR_DOMAIN]`, `[FEATURE_FLAG]`).
 
-**Exclusion**: skip files under `packages/cli/templates/**` (the CDK template source itself - placeholders are intentional there). Apply this exclusion only when auditing the CDK repo itself; in user projects, the exclusion is a no-op.
+**Exclusion**: skip files under `packages/cli/templates/**` (the Tierward template source itself - placeholders are intentional there). Apply this exclusion only when auditing the Tierward repo itself; in user projects, the exclusion is a no-op.
 
 ---
 

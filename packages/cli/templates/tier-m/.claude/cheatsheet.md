@@ -49,7 +49,7 @@ Run these on demand. Each skill reads the codebase, produces a structured report
 | `/ux-audit` | Task completion paths, feedback clarity, cognitive load, error recovery | After adding user flows; before usability reviews |
 | `/ui-audit` | Design system token compliance, component adoption, empty/error/loading states | After UI changes; when design system is configured |
 | `/test-audit` | Coverage (lcov/Istanbul/Cobertura/go/tarpaulin/xcresult), pyramid shape, anti-patterns (`.only`, skipped, empty, no-assertion, sleeps) | After Phase 3 tests green; every block |
-| `/doc-audit` | Relative-link resolution, code-block syntax (json/yaml/toml), CDK placeholder residuals, slash-command name match, skill-count consistency, ADR freshness, stack-specific doc sync (Next.js / Django / Swift) | After doc changes; every block that touches README or `docs/` |
+| `/doc-audit` | Relative-link resolution, code-block syntax (json/yaml/toml), Tierward placeholder residuals, slash-command name match, skill-count consistency, ADR freshness, stack-specific doc sync (Next.js / Django / Swift) | After doc changes; every block that touches README or `docs/` |
 | `/api-contract-audit` | OpenAPI contract drift (endpoints, schemas, status codes), breaking-change detection vs previous spec, versioning consistency, security scheme alignment, Richardson Maturity L0-L3 scoring | After API changes; before releasing contract updates to external consumers |
 | `/infra-audit` | GitHub Actions (pwn-request, secret logging, pinning, permissions), Dockerfile (root user, latest tag, URL add), K8s (runAsNonRoot, privileged, hostNetwork), Terraform (IAM wildcards, state in git), GitLab CI | After pipeline or IaC changes; every block that touches `.github/workflows/`, `Dockerfile`, K8s manifests, or `*.tf` |
 | `/compliance-audit` | GDPR profile: data-subject rights (delete, export, rectify), consent capture, lawful basis, PII identification, encryption-at-rest on special-category, logging hygiene, retention, sub-processors. SOC 2 and HIPAA scaffolded for v1.15+ | Before EU-facing product launch; quarterly review |
@@ -88,5 +88,5 @@ Run these on demand. Each skill reads the codebase, produces a structured report
 cat ~/.claude/audit/[PROJECT_NAME].jsonl | tail -20 | jq .
 
 # Validate Claude setup
-npx mg-claude-dev-kit doctor
+npx tierward doctor
 ```

@@ -311,7 +311,7 @@ Copy and fill for each evaluation run.
 Project: _______________
 Date: _______________
 Evaluator: _______________
-Workspace tool: _______________ (CDK / manual / other)
+Workspace tool: _______________ (Tierward / manual / other)
 Tier (if applicable): _______________
 
 | Dim | Score (0-3) | Weight | Weighted | Key gaps | Attribution (T/U/D) |
@@ -352,4 +352,4 @@ When gaps are found, prioritize fixes in this order:
 
 ## Changelog
 
-- **v1.0** (2026-04-03): Initial version. 8 dimensions, weighted scoring, gap attribution model. Anchored to Anthropic official documentation (code.claude.com/docs), context engineering blog, CDK v1.6.1 template analysis, and cross-tool community patterns.
+- **v1.0** (2026-04-03): Initial version. 8 dimensions, weighted scoring, gap attribution model. Anchored to Anthropic official documentation (code.claude.com/docs), context engineering blog, Tierward v1.6.1 template analysis, and cross-tool community patterns.

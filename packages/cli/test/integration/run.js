@@ -1,5 +1,5 @@
 /**
- * claude-dev-kit - Integration test suite
+ * tierward - Integration test suite
  *
  * Tests the scaffold layer directly (bypasses Inquirer).
  * Validates file structure, placeholder resolution, and Stop hook presence
@@ -213,7 +213,7 @@ function assertNoUnfilledWizardPlaceholders(dir) {
     // for Claude to fill in pipeline.md - not actual unfilled wizard placeholders
     if (path.basename(f) === 'CONTEXT_IMPORT.md') continue;
 
-    // doc-audit's SKILL.md and PATTERNS.md enumerate the CDK placeholder tokens
+    // doc-audit's SKILL.md and PATTERNS.md enumerate the Tierward placeholder tokens
     // verbatim as part of the audit specification (D3 check). Not unfilled.
     const rel = path.relative(dir, f);
     if (rel.includes(path.join('skills', 'doc-audit'))) continue;
@@ -3819,7 +3819,7 @@ async function scenarioTeamSettings() {
 }
 
 async function scenarioMCPServer() {
-  section('CDK governance MCP server (v1.17.0): tool surface + read-only outputs');
+  section('Tierward governance MCP server (v1.17.0): tool surface + read-only outputs');
 
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
   const { StdioClientTransport } = await import('@modelcontextprotocol/sdk/client/stdio.js');
@@ -3983,7 +3983,7 @@ async function scenarioMCPServer() {
 
 async function main() {
   console.log();
-  console.log(c.bold('claude-dev-kit - Integration tests'));
+  console.log(c.bold('tierward - Integration tests'));
   console.log(c.dim(`Output: ${OUTPUT_DIR}`));
   console.log(c.dim(`Verbose: ${VERBOSE ? 'on' : 'off (use --verbose for full output)'}`));
 

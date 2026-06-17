@@ -252,7 +252,7 @@ async function patchSettingsPermissions(targetDir, config) {
     // is a subtle correctness failure. Surface the problem so the user
     // can fix the template or re-run with --force.
     console.warn(
-      `[claude-dev-kit] Warning: could not patch ${settingsPath} — ${err.message}. ` +
+      `[tierward] Warning: could not patch ${settingsPath} — ${err.message}. ` +
         `Stack-specific permissions for "${config.techStack}" were NOT applied; ` +
         `the file may be malformed JSON or read-only.`,
     );

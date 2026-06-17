@@ -5,7 +5,7 @@
 **Updated**: 2026-05-01 - P2 mechanical checks from 2026-04-29 cross-LLM meta-review: Phase 1 checks 7+8 (architectural/paradigm vocab scan + reference file coverage), Phase 2.A(e) test-runner idiom expansion.
 **Status**: Consolidated - ready for execution once pre-work artifacts P1-P5 are produced.
 
-**Purpose**: single source of truth for the quality review of all 18 CDK skills. Replaces any prior partial framework. Every check, decision point, and severity level lives here.
+**Purpose**: single source of truth for the quality review of all 18 Tierward skills. Replaces any prior partial framework. Every check, decision point, and severity level lives here.
 
 ---
 
@@ -14,7 +14,7 @@
 The review validates each SKILL.md in `packages/cli/templates/tier-*/.claude/skills/` against:
 
 1. **Anthropic spec compliance** - conforms to documented frontmatter and body structure.
-2. **CDK scope alignment** - stack-agnostic, registry-coherent, pipeline-integrated.
+2. **Tierward scope alignment** - stack-agnostic, registry-coherent, pipeline-integrated.
 3. **Internal quality** - checks are universal, severity calibrated, report template matches body.
 4. **Cross-skill coherence** - references accurate, boundaries don't overlap, boilerplate intentional.
 5. **Behavioral correctness** *(added v1.2)* - skills behave correctly when executed, not only when read. Validated via targeted behavioral fixtures on high-risk skills.
@@ -207,7 +207,7 @@ Grouped by gravity. 2.A/2.B/2.C autonomous; 2.D interactive; 2.E targeted on hig
 
 1. **Frontmatter↔body coherence**: argument-hint targets/modes match body handlers.
 2. **Project-agnosticity test - extended** *(D3 - 4 dimensions)*:
-   - **(a) Literal contamination**: no example, file path, entity name, API reference tied to a specific project. Every reference is a placeholder or universal concept. Universal = applies unchanged across ≥3 of 6 CDK-supported stacks.
+   - **(a) Literal contamination**: no example, file path, entity name, API reference tied to a specific project. Every reference is a placeholder or universal concept. Universal = applies unchanged across ≥3 of 6 Tierward-supported stacks.
    - **(b) Severity habits**: severity labels not inherited from pilot project's domain. E.g., "any hardcoded color = Critical" is a pilot-project habit; in non-UI projects, color is not Critical.
    - **(c) Remediation style**: fix suggestions not formatted/structured in pilot project's conventions. E.g., remediation always in "SwiftUI-like" declarative form.
    - **(d) Architectural assumptions**: no implicit assumption about routing, state management, persistence layer, auth pattern tied to pilot's architecture.
@@ -216,7 +216,7 @@ Grouped by gravity. 2.A/2.B/2.C autonomous; 2.D interactive; 2.E targeted on hig
    If a reader who doesn't know the origin project could ask "why this specific case?" on ANY of (a)-(e), it's an artifact.
 
 3. **Output template↔body coherence**: every report row matches body check name + severity.
-4. **Multi-stack + agnostic verification**: skill applies (or explicitly gates with `[web only]`/`[SSR only]`) across CDK-supported stacks.
+4. **Multi-stack + agnostic verification**: skill applies (or explicitly gates with `[web only]`/`[SSR only]`) across Tierward-supported stacks.
 
 #### 2.B - Coerenza strutturale (cross-skill + cross-tier)
 
@@ -243,7 +243,7 @@ Grouped by gravity. 2.A/2.B/2.C autonomous; 2.D interactive; 2.E targeted on hig
 
    Per opportunity: **apply now** / **register roadmap** / **ignore**.
 
-14. **Section-by-section walkthrough**: Claude explains purpose + CDK relevance; user flags issues.
+14. **Section-by-section walkthrough**: Claude explains purpose + Tierward relevance; user flags issues.
 
 15. **Cross-tier diff review (C6 STOP)**: if skill is multi-tier, user reviews cross-tier diff artifact (column-by-column comparison showing frontmatter, tool set, check list, severity labels, report template across variants). User approves propagation strategy.
 
@@ -479,7 +479,7 @@ Deferred to vNext (v1.3 or later):
 
 ## Changelog
 
-- **v1.3 (2026-05-01)**: P2 mechanical checks (CDK #131). Phase 1 check 7: architectural (layer/MVC/hexagonal/microservice/monolith/repository pattern/service boundary/bounded context) + paradigm (props/state management/virtual DOM/bundler/reactive/component tree/hydration) unguarded-match scan feeding Phase 2.A(d)+(e). Phase 1 check 8: reference file coverage check for stack-dependent skills (missing check ID = High). Phase 2.A(e): test-runner idiom detection extended to Rust (#[test]), Swift XCTest, JUnit (@Test).
+- **v1.3 (2026-05-01)**: P2 mechanical checks (Tierward #131). Phase 1 check 7: architectural (layer/MVC/hexagonal/microservice/monolith/repository pattern/service boundary/bounded context) + paradigm (props/state management/virtual DOM/bundler/reactive/component tree/hydration) unguarded-match scan feeding Phase 2.A(d)+(e). Phase 1 check 8: reference file coverage check for stack-dependent skills (missing check ID = High). Phase 2.A(e): test-runner idiom detection extended to Rust (#[test]), Swift XCTest, JUnit (@Test).
 - **v1.2 (2026-04-14)**: cross-model review integrated. Fixes C1-C7 convergent + T2.1 targeted (D1 behavioral fixtures on 6 skills) + T2.3 (D2 P5 calibration + Phase 9 midpoint drift check) + T2.4 (D3 4-dimensional project-agnosticity) + T2.5/T2.6 trivial. New pre-work P5. New Phase 2.E and Phase 9. Severity scale patched (C5). Retroactive re-application freezed (C3). 2 new STOP gates (C6 cross-tier + C7 Phase 3→4).
 - **v1.1 (2026-04-14)**: O1-O5 omissions fixed; P1/P2 potential codified; Phase 2 regrouped (2.A/B/C/D); severity mapping clarified.
 - **v1.0 (2026-04-14)**: initial consolidation.

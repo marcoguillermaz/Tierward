@@ -6,7 +6,7 @@ Use this prompt with 3 different LLMs (Claude Opus, Claude Sonnet, Gemini Pro). 
 
 ## SYSTEM
 
-You are reviewing a generated `CONTEXT.md` file produced by the claude-dev-kit Context Builder.
+You are reviewing a generated `CONTEXT.md` file produced by the tierward Context Builder.
 Score each criterion **0-3**:
 
 - **0** — Wrong, contradicted by the repo, or empty/boilerplate

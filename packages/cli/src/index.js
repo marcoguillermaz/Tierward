@@ -60,7 +60,7 @@ program
 
 program
   .command('upgrade')
-  .description('Update template files to the latest claude-dev-kit version')
+  .description('Update template files to the latest tierward version')
   .option('--dry-run', 'Show what would change without writing any files')
   .option(
     '--anthropic',
@@ -104,7 +104,7 @@ newCmd
 
 program.on('command:*', () => {
   console.error(chalk.red(`Unknown command: ${program.args.join(' ')}`));
-  console.log(`Run ${chalk.cyan('claude-dev-kit --help')} for available commands.`);
+  console.log(`Run ${chalk.cyan('tierward --help')} for available commands.`);
   process.exit(1);
 });
 

@@ -1,27 +1,27 @@
-# claude-dev-kit
+# tierward
 
-[![npm version](https://img.shields.io/npm/v/mg-claude-dev-kit.svg)](https://www.npmjs.com/package/mg-claude-dev-kit)
+[![npm version](https://img.shields.io/npm/v/tierward.svg)](https://www.npmjs.com/package/tierward)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js >= 22](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org)
-[![CI](https://github.com/marcoguillermaz/claude-dev-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoguillermaz/claude-dev-kit/actions/workflows/ci.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/marcoguillermaz/claude-dev-kit/badge)](https://securityscorecards.dev/viewer/?uri=github.com/marcoguillermaz/claude-dev-kit)
+[![CI](https://github.com/marcoguillermaz/tierward/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoguillermaz/tierward/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/marcoguillermaz/tierward/badge)](https://securityscorecards.dev/viewer/?uri=github.com/marcoguillermaz/tierward)
 
 > Scaffold for legible, reviewable AI-assisted development.
 > Claude generates. Your team decides.
-> MCP-native — read CDK governance state from Claude Desktop, ChatGPT, Cursor, VS Code.
+> MCP-native — read Tierward governance state from Claude Desktop, ChatGPT, Cursor, VS Code.
 
 Claude Code is a powerful CLI that reads, writes, and reasons about your entire codebase. Without shared process, it makes autonomous decisions that are hard to track and harder to review.
 
-**claude-dev-kit** scaffolds a structured, reviewable development process on top of Claude Code. It enforces one non-negotiable rule mechanically: Claude cannot declare a task complete until your tests pass. Everything else scales with your needs.
+**tierward** scaffolds a structured, reviewable development process on top of Claude Code. It enforces one non-negotiable rule mechanically: Claude cannot declare a task complete until your tests pass. Everything else scales with your needs.
 
-Since v1.17.0, CDK ships an MCP server alongside the CLI. Any MCP-aware client can read your project's doctor report, team-settings policy, last arch-audit, and skill inventory without anyone running the CDK CLI. See [MCP server](#mcp-server).
+Since v1.17.0, Tierward ships an MCP server alongside the CLI. Any MCP-aware client can read your project's doctor report, team-settings policy, last arch-audit, and skill inventory without anyone running the Tierward CLI. See [MCP server](#mcp-server).
 
 ---
 
 ## Quick Start
 
 ```bash
-npx mg-claude-dev-kit init
+npx tierward init
 ```
 
 The wizard detects your project state and guides you through setup. Three paths available:
@@ -39,11 +39,11 @@ After init, open Claude Code and start working. The scaffold is active immediate
 Run `context` before `init` if you want the scaffold to come out the same way every time, with a written record of what you asked for:
 
 ```bash
-npx mg-claude-dev-kit context                       # produces CONTEXT.md
-npx mg-claude-dev-kit init                          # reads CONTEXT.md, scaffolds with no further prompts
-npx mg-claude-dev-kit context --all                 # one-shot: context then init
-npx mg-claude-dev-kit context --from-yaml file.md   # bypass interview, validate + copy
-npx mg-claude-dev-kit validate-context              # CI gate: exit 0/1 on schema check
+npx tierward context                       # produces CONTEXT.md
+npx tierward init                          # reads CONTEXT.md, scaffolds with no further prompts
+npx tierward context --all                 # one-shot: context then init
+npx tierward context --from-yaml file.md   # bypass interview, validate + copy
+npx tierward validate-context              # CI gate: exit 0/1 on schema check
 ```
 
 `CONTEXT.md` is a schema-validated project context file. Greenfield runs a PM-friendly interview. Existing repos go through three-phase inference: algorithmic detection, LLM extraction, hybrid PM review. The first question routes you to a PM or developer flow. The developer flow reuses the technical questions from the legacy `init` wizards (projectName, stack, commands, scaffold options) and auto-derives `tier.rationale` from team size + work scope, so devs are not asked to write PM rationale prose.
@@ -63,7 +63,7 @@ As of v1.27.0, the schema covers all four pipeline tiers: tier 0 (Discovery) and
 | **M - Standard**  | 8 phases, 2 STOP gates  | Feature blocks, 1-2 collaborators     |
 | **L - Full**      | 14 phases, 4 STOP gates | Team projects, complex domain changes |
 
-Start at Tier 0. Move up when you need more structure: `npx mg-claude-dev-kit upgrade --tier=m`
+Start at Tier 0. Move up when you need more structure: `npx tierward upgrade --tier=m`
 
 ### 24 audit skills
 
@@ -86,7 +86,7 @@ Executable multi-step programs that run inside Claude Code. Not prompt instructi
 | `/ui-audit`            | M L   | Design token compliance, component adoption, empty states.                                                                                                                                                                                                                                                                                                                                                                                     |
 | `/accessibility-audit` | M L   | axe-core WCAG 2.2, APCA contrast, static a11y (aria, tabindex, focus, labels).                                                                                                                                                                                                                                                                                                                                                                 |
 | `/test-audit`          | M L   | Coverage (lcov/Istanbul/Cobertura/go/tarpaulin/xcresult), pyramid shape, anti-patterns (`.only`, skipped, empty, no-assertion, sleeps).                                                                                                                                                                                                                                                                                                        |
-| `/doc-audit`           | M L   | Doc drift: link resolution, code-block syntax (json/yaml/toml), CDK placeholder residuals, slash-command name match, skill-count consistency, ADR freshness, stack-sync (Next.js/Django/Swift).                                                                                                                                                                                                                                                |
+| `/doc-audit`           | M L   | Doc drift: link resolution, code-block syntax (json/yaml/toml), Tierward placeholder residuals, slash-command name match, skill-count consistency, ADR freshness, stack-sync (Next.js/Django/Swift).                                                                                                                                                                                                                                                |
 | `/api-contract-audit`  | M L   | OpenAPI contract drift (endpoints, schemas, status), breaking-change detection vs previous spec, versioning consistency, security scheme alignment, Richardson Maturity L0-L3 scoring. Auto-gen for FastAPI / NestJS / Express+swagger-jsdoc / Next.js route handlers / Django REST.                                                                                                                                                           |
 | `/infra-audit`         | M L   | Infrastructure security across GitHub Actions (pwn-request, secret logging, pinning, permissions), Dockerfile (root, latest tag, URL add), K8s (runAsNonRoot, privileged, hostNetwork), Terraform (IAM wildcards, state in git), GitLab CI. Stack-agnostic.                                                                                                                                                                                    |
 | `/compliance-audit`    | M L   | GDPR profile: data-subject rights (delete, export, rectify), consent, lawful basis, PII identification, encryption-at-rest on special-category, logging hygiene, retention, sub-processors. SOC 2 / HIPAA scaffolded for v1.15+.                                                                                                                                                                                                               |
@@ -104,16 +104,16 @@ Node.js/TS, Node.js/JS, Python, Go, Swift, Kotlin, Rust, .NET, Ruby, Java - plus
 
 ### MCP server (v1.17.0+)
 
-The `mg-claude-dev-kit` package ships an MCP server (`claude-dev-kit-mcp` binary) alongside the CLI, version-locked, single `npm install -g`. Any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio) can query CDK governance state without the CDK CLI running. Six read-only tools cover doctor report, team-settings, last arch-audit, skill inventory, package metadata, and `/pr-review` comments. Full reference in the [MCP server](#mcp-server) section below.
+The `tierward` package ships an MCP server (`tierward-mcp` binary) alongside the CLI, version-locked, single `npm install -g`. Any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio) can query Tierward governance state without the Tierward CLI running. Six read-only tools cover doctor report, team-settings, last arch-audit, skill inventory, package metadata, and `/pr-review` comments. Full reference in the [MCP server](#mcp-server) section below.
 
 ### Incremental adoption
 
 Install individual components without a full scaffold:
 
 ```bash
-npx mg-claude-dev-kit add skill security-audit   # install one skill
-npx mg-claude-dev-kit add rule git                # install one rule
-npx mg-claude-dev-kit add rule security --stack swift  # stack-specific variant
+npx tierward add skill security-audit   # install one skill
+npx tierward add rule git                # install one rule
+npx tierward add rule security --stack swift  # stack-specific variant
 ```
 
 Custom skills (`custom-*` prefix) are preserved across upgrades. See [Custom Skills Guide](docs/custom-skills.md).
@@ -135,7 +135,7 @@ your-project/
 │   │   └── output-style.md      # Communication rules
 │   ├── skills/                  # Audit skills (conditional per project)
 │   ├── session/                 # Session recovery (gitignored)
-│   └── .mcp.json                # Wire claude-dev-kit-mcp into MCP-aware clients (v1.17+)
+│   └── .mcp.json                # Wire tierward-mcp into MCP-aware clients (v1.17+)
 ├── docs/                        # Requirements, specs, backlog (M/L)
 ├── .github/                     # PR template, CODEOWNERS
 └── .pre-commit-config.yaml      # Secret scanning
@@ -148,32 +148,32 @@ The Stop hook in `settings.json` is the core enforcement mechanism. It blocks Cl
 ## CLI Commands
 
 ```bash
-npx mg-claude-dev-kit init                    # scaffold wizard
-npx mg-claude-dev-kit init --dry-run          # preview without writing
-npx mg-claude-dev-kit init --answers file.json  # skip prompts (CI/automation)
-npx mg-claude-dev-kit doctor                  # validate setup (29 checks)
-npx mg-claude-dev-kit doctor --report         # JSON output for CI
-npx mg-claude-dev-kit doctor --ci             # silent, exit 1 on failure
-npx mg-claude-dev-kit upgrade                 # update template files
-npx mg-claude-dev-kit upgrade --tier=m        # promote to higher tier
-npx mg-claude-dev-kit upgrade --anthropic     # show diff for Anthropic-influenced files (dry-run)
-npx mg-claude-dev-kit upgrade --anthropic --apply  # write the diff (with .bak backup)
-npx mg-claude-dev-kit add skill <name>        # install one skill
-npx mg-claude-dev-kit add rule <name>         # install one rule
-npx mg-claude-dev-kit new skill               # create a custom skill (wizard)
-claude-dev-kit-mcp                            # MCP server (stdio); wire from .mcp.json
+npx tierward init                    # scaffold wizard
+npx tierward init --dry-run          # preview without writing
+npx tierward init --answers file.json  # skip prompts (CI/automation)
+npx tierward doctor                  # validate setup (29 checks)
+npx tierward doctor --report         # JSON output for CI
+npx tierward doctor --ci             # silent, exit 1 on failure
+npx tierward upgrade                 # update template files
+npx tierward upgrade --tier=m        # promote to higher tier
+npx tierward upgrade --anthropic     # show diff for Anthropic-influenced files (dry-run)
+npx tierward upgrade --anthropic --apply  # write the diff (with .bak backup)
+npx tierward add skill <name>        # install one skill
+npx tierward add rule <name>         # install one rule
+npx tierward new skill               # create a custom skill (wizard)
+tierward-mcp                            # MCP server (stdio); wire from .mcp.json
 ```
 
 ## MCP server
 
-`claude-dev-kit-mcp` is a Model Context Protocol server that exposes CDK governance signals to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). The CLI and MCP server ship in the same npm package, version-locked.
+`tierward-mcp` is a Model Context Protocol server that exposes Tierward governance signals to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). The CLI and MCP server ship in the same npm package, version-locked.
 
 Wire it up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user-scoped):
 
 ```json
 {
   "mcpServers": {
-    "cdk": { "command": "claude-dev-kit-mcp" }
+    "cdk": { "command": "tierward-mcp" }
   }
 }
 ```
@@ -186,8 +186,8 @@ Read-only tools exposed:
 | `cdk_team_settings`     | parsed `.claude/team-settings.json`                                                                                                                              |
 | `cdk_arch_audit_status` | last `arch-audit` run timestamp + age                                                                                                                            |
 | `cdk_skill_inventory`   | installed skills + frontmatter snapshot                                                                                                                          |
-| `cdk_package_meta`      | CDK package name, version, CLI path, cwd                                                                                                                         |
-| `cdk_pr_review`         | reads existing `/pr-review` skill comments on a GitHub PR (verdict, severity counts). Read-only — to generate a fresh review, invoke the `/pr-review` CDK skill. |
+| `cdk_package_meta`      | Tierward package name, version, CLI path, cwd                                                                                                                         |
+| `cdk_pr_review`         | reads existing `/pr-review` skill comments on a GitHub PR (verdict, severity counts). Read-only — to generate a fresh review, invoke the `/pr-review` Tierward skill. |
 
 The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.30.0.
 
@@ -240,8 +240,8 @@ A separate **template-coverage** layer (under `packages/cli/test/template-covera
 
 | Document                                           | Audience                    | Content                                                        |
 | -------------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
-| [Operational Guide](docs/operational-guide.md)     | Teams adopting CDK          | Full reference: installation, tiers, workflow, governance, FAQ |
-| [Custom Skills Guide](docs/custom-skills.md)       | Developers extending CDK    | SKILL.md format, frontmatter schema, authoring patterns        |
+| [Operational Guide](docs/operational-guide.md)     | Teams adopting Tierward          | Full reference: installation, tiers, workflow, governance, FAQ |
+| [Custom Skills Guide](docs/custom-skills.md)       | Developers extending Tierward    | SKILL.md format, frontmatter schema, authoring patterns        |
 | [Product Brief](docs/product-brief.md)             | Stakeholders                | Strategic positioning, target users, scope                     |
 | [Quality Rubric](docs/workspace-quality-rubric.md) | Teams evaluating workspaces | 8-dimension scoring (D1-D8, 0-100%)                            |
 
@@ -249,9 +249,9 @@ A separate **template-coverage** layer (under `packages/cli/test/template-covera
 
 ## Roadmap
 
-See [GitHub Milestones](https://github.com/marcoguillermaz/claude-dev-kit/milestones) for the 12-month plan.
+See [GitHub Milestones](https://github.com/marcoguillermaz/tierward/milestones) for the 12-month plan.
 
-**Current**: v1.30.0 ships the VS Code extension (P1–P3): governance tree view with skill and rule browsing, live health status bar with arch-audit staleness, and CDK doctor findings surfaced as Problems panel diagnostics. Also adds `/skill-security` (SkillSpector integration, tier S+), a 64-pattern vulnerability scanner for Claude Code skill files. Carried forward: v1.29.x cross-LLM rubric automation for Context Builder, v1.28.0's skill-review pipeline P3 robustness, v1.27.0's Context Builder v1.1 cycle, v1.22.0's `/skill-dev` v2 hotspot step, v1.21.0's PreToolUse runtime enforcement, and v1.20.0's MCP-aware audit skills.
+**Current**: v1.30.0 ships the VS Code extension (P1–P3): governance tree view with skill and rule browsing, live health status bar with arch-audit staleness, and Tierward doctor findings surfaced as Problems panel diagnostics. Also adds `/skill-security` (SkillSpector integration, tier S+), a 64-pattern vulnerability scanner for Claude Code skill files. Carried forward: v1.29.x cross-LLM rubric automation for Context Builder, v1.28.0's skill-review pipeline P3 robustness, v1.27.0's Context Builder v1.1 cycle, v1.22.0's `/skill-dev` v2 hotspot step, v1.21.0's PreToolUse runtime enforcement, and v1.20.0's MCP-aware audit skills.
 
 **Next**: `/arch-audit` MCP-aware once the upstream Anthropic spec MCP server lands. `/privacy-audit` re-eval (Issue #97 sub-track 3) when AST tracing matures or demand signal materializes. Q2 #3 VitePress docs site (ICE 432) stays on hold.
 
@@ -269,4 +269,4 @@ To report a security issue, see [SECURITY.md](SECURITY.md).
 
 ---
 
-Built and maintained by [Marco Guillermaz](https://github.com/marcoguillermaz). Distributed on npm as [`mg-claude-dev-kit`](https://www.npmjs.com/package/mg-claude-dev-kit). Discussions and questions: [GitHub Discussions](https://github.com/marcoguillermaz/claude-dev-kit/discussions).
+Built and maintained by [Marco Guillermaz](https://github.com/marcoguillermaz). Distributed on npm as [`tierward`](https://www.npmjs.com/package/tierward). Discussions and questions: [GitHub Discussions](https://github.com/marcoguillermaz/tierward/discussions).

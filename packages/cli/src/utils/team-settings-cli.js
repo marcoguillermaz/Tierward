@@ -19,7 +19,7 @@ export function enforceTeamSettingsTier(cwd, tier, { suggestUpgrade = false } = 
   );
   if (suggestUpgrade) {
     console.error(
-      `  Promote first: ${chalk.cyan(`claude-dev-kit upgrade --tier=${required}`)}, then retry.`,
+      `  Promote first: ${chalk.cyan(`tierward upgrade --tier=${required}`)}, then retry.`,
     );
   } else {
     console.error(`  Choose tier ${required} or higher, or edit .claude/team-settings.json.`);

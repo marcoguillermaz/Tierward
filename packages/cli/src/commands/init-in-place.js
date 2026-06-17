@@ -112,7 +112,7 @@ export async function initInPlace(options) {
       {
         type: 'input',
         name: 'testCommand',
-        message: "Test command (reference only - CDK won't run it):",
+        message: "Test command (reference only - Tierward won't run it):",
         default: (a) => {
           if (a.techStack === 'other') return '';
           if (detected.testCommand) return detected.testCommand;
@@ -460,7 +460,7 @@ export async function initInPlace(options) {
   console.log(chalk.bold('Next steps:'));
   printNextSteps(config, { ranDoctor, ranPreCommit });
   console.log();
-  console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/claude-dev-kit'));
+  console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/tierward'));
 }
 
 async function detectConflicts(dir, _config) {
@@ -484,7 +484,7 @@ async function appendIfMissing(dir, entries) {
 
   const toAdd = entries.filter((e) => !content.includes(e));
   if (toAdd.length > 0) {
-    const section = '\n# claude-dev-kit\n' + toAdd.join('\n') + '\n';
+    const section = '\n# tierward\n' + toAdd.join('\n') + '\n';
     await fs.appendFile(gitignorePath, section);
   }
 }

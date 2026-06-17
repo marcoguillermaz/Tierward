@@ -25,7 +25,7 @@ body:
       options:
         - label: Builder PM
         - label: Tech lead / staff engineer
-        - label: Developer on team using claude-dev-kit
+        - label: Developer on team using tierward
         - label: All users
 
   - type: checkboxes

@@ -1,6 +1,6 @@
-# Contributing to claude-dev-kit
+# Contributing to tierward
 
-Thanks for considering a contribution. claude-dev-kit (CDK) is a scaffold for legible, reviewable AI-assisted development on top of Claude Code. Its core differentiation is mechanical enforcement: a Stop hook that blocks task completion until tests pass, and audit skills that run static checks rather than judgment-heavy probes. Every contribution should preserve that principle. When in doubt, prefer a check that grep can execute over one that needs an LLM to reason about.
+Thanks for considering a contribution. tierward (Tierward) is a scaffold for legible, reviewable AI-assisted development on top of Claude Code. Its core differentiation is mechanical enforcement: a Stop hook that blocks task completion until tests pass, and audit skills that run static checks rather than judgment-heavy probes. Every contribution should preserve that principle. When in doubt, prefer a check that grep can execute over one that needs an LLM to reason about.
 
 This guide covers what you need to ship a PR: local setup, the conventions we follow, how PRs are reviewed, and what we expect from skill authors. Read the section that matches your contribution and skim the rest. The "For maintainers" section at the end is for repo administrators handling release cycles.
 
@@ -21,8 +21,8 @@ This guide covers what you need to ship a PR: local setup, the conventions we fo
 **Requirements**: Node.js >= 22, Git, a working `gh` CLI if you plan to open a PR from the terminal.
 
 ```bash
-git clone https://github.com/marcoguillermaz/claude-dev-kit.git
-cd claude-dev-kit
+git clone https://github.com/marcoguillermaz/tierward.git
+cd tierward
 cd packages/cli && npm install
 ```
 
@@ -61,10 +61,10 @@ CI runs prettier --check on every PR. A failure here blocks merge — apply `for
 ## 3. Project structure
 
 ```
-claude-dev-kit/
+tierward/
 ├── CHANGELOG.md, README.md, CONTRIBUTING.md, SECURITY.md
 ├── docs/
-│   ├── operational-guide.md         # Audience: teams adopting CDK (full reference)
+│   ├── operational-guide.md         # Audience: teams adopting Tierward (full reference)
 │   ├── custom-skills.md             # Audience: skill authors (frontmatter + body schema)
 │   ├── product-brief.md             # Strategic positioning
 │   ├── workspace-quality-rubric.md  # 8-dimension scoring
@@ -113,7 +113,7 @@ These principles drive review decisions. Internalize them before writing code or
 
 **Byte-identical Tier M and Tier L by default.** When a skill applies to both M and L, the two copies must be byte-identical. Use `cp` after writing the M version. If a skill genuinely needs different framing for L (rare), explain why in the PR description.
 
-**Body length budget**: 500 lines per `SKILL.md` body (frontmatter excluded). Doctor enforces this as `skill-md-size-budget` (warn). Integration test enforces it as a hard fail (CDK-internal). When you approach the limit, extract content into a sibling file (`PATTERNS.md`, `REPORT.md`, `PROFILES.md`, `advanced-checks.md`) — progressive disclosure per Anthropic spec.
+**Body length budget**: 500 lines per `SKILL.md` body (frontmatter excluded). Doctor enforces this as `skill-md-size-budget` (warn). Integration test enforces it as a hard fail (Tierward-internal). When you approach the limit, extract content into a sibling file (`PATTERNS.md`, `REPORT.md`, `PROFILES.md`, `advanced-checks.md`) — progressive disclosure per Anthropic spec.
 
 **Spec-compliant frontmatter.** `allowed-tools` must be space-separated (`Read Glob Grep Bash`), not comma-separated. The doctor check `skill-allowed-tools-syntax` warns on commas; integration tests fail on them.
 
@@ -123,7 +123,7 @@ These principles drive review decisions. Internalize them before writing code or
 
 These conventions are mandatory for every PR. We follow them ourselves on every release; we expect contributors to follow them too.
 
-**R1 — Every commit goes through `/commit`.** The CDK repo uses the `/commit` skill (defined in `.claude/skills/commit/SKILL.md`) to enforce Conventional Commits 1.0.0 with a fixed scope taxonomy: `cli`, `scaffold`, `wizard`, `templates`, `drift-tracker`, `arch-audit`, `docs`, `deps`, `release`, `ci`, `context`, `scripts`. No `git commit -m "..."` directly. If a pre-commit hook fails, fix the underlying issue and re-invoke `/commit` — never `--amend`, never `--no-verify`.
+**R1 — Every commit goes through `/commit`.** The Tierward repo uses the `/commit` skill (defined in `.claude/skills/commit/SKILL.md`) to enforce Conventional Commits 1.0.0 with a fixed scope taxonomy: `cli`, `scaffold`, `wizard`, `templates`, `drift-tracker`, `arch-audit`, `docs`, `deps`, `release`, `ci`, `context`, `scripts`. No `git commit -m "..."` directly. If a pre-commit hook fails, fix the underlying issue and re-invoke `/commit` — never `--amend`, never `--no-verify`.
 
 **R2 — Humanize prose for user-facing GitHub content.** Run the `/humanize` skill on README updates, CHANGELOG release-note paragraphs (the human prose, not the bullet list), CONTRIBUTING / SECURITY changes, GitHub Release descriptions, and PR bodies. The skill removes AI tells (mechanical scaffolding, hedging, em-dash overuse, "In conclusion" closers) without inventing facts. Domain hints: `announcement` for marketing copy, `generico` for technical sections.
 
@@ -269,7 +269,7 @@ Pick a short uppercase prefix for findings that the skill produces. Existing pre
 
 ## 7. Testing strategy
 
-CDK ships two test layers:
+Tierward ships two test layers:
 
 **Unit tests** (`packages/cli/test/unit/*.test.js`) cover pure functions: `skill-registry`, `doctor-cross-file`, `skill-frontmatter`, individual scaffold helpers. Use `node:test`. Run via `npm run --prefix packages/cli test:unit`. Total: 373 tests across 61 suites.
 
@@ -323,12 +323,12 @@ We respond to all PRs within a few working days. Drive-by typo fixes get fast-me
 ## 9. Reporting bugs and feature requests
 
 **Bug Report** template fields:
-- Command you ran (`npx mg-claude-dev-kit init`, `doctor`, etc.)
+- Command you ran (`npx tierward init`, `doctor`, etc.)
 - Expected vs actual behavior
 - Node.js version (`node --version`)
 - OS and shell
 
-**Feature Request** template asks for use case before feature description. We weigh feature requests against the active roadmap (see [GitHub Milestones](https://github.com/marcoguillermaz/claude-dev-kit/milestones) and the `roadmap-status.md` rolled into each release). Skill requests via the Skill Request template are evaluated against the existing portfolio — if the request overlaps with an existing skill, we'll suggest extending the existing one rather than creating a new one.
+**Feature Request** template asks for use case before feature description. We weigh feature requests against the active roadmap (see [GitHub Milestones](https://github.com/marcoguillermaz/tierward/milestones) and the `roadmap-status.md` rolled into each release). Skill requests via the Skill Request template are evaluated against the existing portfolio — if the request overlaps with an existing skill, we'll suggest extending the existing one rather than creating a new one.
 
 For security-relevant issues, use the SECURITY.md disclosure path, not a public GitHub issue.
 

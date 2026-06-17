@@ -49,9 +49,7 @@ export async function addSkill(name, options) {
   // Require .claude/ directory (signals an initialized project)
   if (!fs.existsSync(path.join(cwd, '.claude'))) {
     console.error(chalk.red('No .claude/ directory found.'));
-    console.log(
-      'Run ' + chalk.cyan('claude-dev-kit init') + ' first, or create .claude/ manually.',
-    );
+    console.log('Run ' + chalk.cyan('tierward init') + ' first, or create .claude/ manually.');
     process.exit(1);
   }
 

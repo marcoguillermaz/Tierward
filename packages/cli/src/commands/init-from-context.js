@@ -243,7 +243,7 @@ export async function initFromContext(options) {
     chalk.yellow.bold('Important:') +
       ' CONTEXT_IMPORT.md is added to .gitignore - it contains local paths.',
   );
-  console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/claude-dev-kit'));
+  console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/tierward'));
 }
 
 async function appendToGitignore(dir, entries) {
@@ -256,7 +256,7 @@ async function appendToGitignore(dir, entries) {
 
   const toAdd = entries.filter((e) => !content.includes(e));
   if (toAdd.length > 0) {
-    const additions = '\n# claude-dev-kit context import\n' + toAdd.join('\n') + '\n';
+    const additions = '\n# tierward context import\n' + toAdd.join('\n') + '\n';
     await fs.appendFile(gitignorePath, additions);
   }
 }

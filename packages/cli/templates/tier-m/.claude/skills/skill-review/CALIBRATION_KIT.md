@@ -18,7 +18,7 @@
 
 ## 1. Severity anchor catalog
 
-12 canonical examples, 3 per level. Two are abstract references from P2; one per level is a CDK-specific anchor tied to a known pilot-project or spec artifact.
+12 canonical examples, 3 per level. Two are abstract references from P2; one per level is a Tierward-specific anchor tied to a known pilot-project or spec artifact.
 
 ### Critical anchors (3)
 
@@ -56,7 +56,7 @@
 
 ## 2. Known traps (avoid these)
 
-Trap = a pattern that has historically caused mislabeling in CDK. Read once; do not re-evaluate at runtime - anchor on the rule.
+Trap = a pattern that has historically caused mislabeling in Tierward. Read once; do not re-evaluate at runtime - anchor on the rule.
 
 **T-1. Staff-manager literal contamination**
 Any reference to `Color.red`, SwiftUI-specific types, Vapor routes, or the pilot project's domain model (staff, shifts, invitations) in a scaffold skill is **Critical**. These artifacts survived extraction and produce false positives on every other stack.

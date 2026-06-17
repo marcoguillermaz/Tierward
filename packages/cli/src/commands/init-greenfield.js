@@ -394,9 +394,7 @@ export async function initGreenfield(options) {
     console.log(`  2. Run ${chalk.cyan('claude')} from this directory to start your first session`);
     console.log(`  3. Read ${chalk.cyan('GETTING_STARTED.md')} - or share it with your team`);
     console.log();
-    console.log(
-      chalk.dim("When you're ready for more structure: npx mg-claude-dev-kit upgrade --tier=s"),
-    );
+    console.log(chalk.dim("When you're ready for more structure: npx tierward upgrade --tier=s"));
   } else {
     console.log(chalk.green.bold('✓ Greenfield scaffold complete'));
     console.log();
@@ -407,5 +405,5 @@ export async function initGreenfield(options) {
   }
 
   console.log();
-  console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/claude-dev-kit'));
+  console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/tierward'));
 }

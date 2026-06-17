@@ -20,7 +20,7 @@
         "packages/cli/src/generators/claude-md.js",
         "packages/cli/templates/"
       ],
-      "notes": "Anthropic's /init already generates CLAUDE.md. Watch for richer templates that overlap with CDK's tiered scaffolding."
+      "notes": "Anthropic's /init already generates CLAUDE.md. Watch for richer templates that overlap with Tierward's tiered scaffolding."
     },
     {
       "id": "settings-json-config",
@@ -39,7 +39,7 @@
         "packages/cli/templates/tier-m/.claude/settings.json",
         "packages/cli/templates/tier-l/.claude/settings.json"
       ],
-      "notes": "Anthropic has a managed settings scope. If they ship a configuration wizard or admin console, CDK's scaffolded settings.json loses unique value."
+      "notes": "Anthropic has a managed settings scope. If they ship a configuration wizard or admin console, Tierward's scaffolded settings.json loses unique value."
     },
     {
       "id": "generic-hooks",
@@ -58,7 +58,7 @@
         "packages/cli/templates/tier-m/.claude/settings.json",
         "packages/cli/src/commands/doctor.js"
       ],
-      "notes": "CDK wires Stop, SessionStart, PostToolUse hooks. If Anthropic ships pre-configured hook templates, this becomes redundant."
+      "notes": "Tierward wires Stop, SessionStart, PostToolUse hooks. If Anthropic ships pre-configured hook templates, this becomes redundant."
     },
     {
       "id": "shallow-skills",
@@ -76,7 +76,7 @@
         "packages/cli/templates/common/skills/commit/",
         "packages/cli/templates/common/skills/simplify/"
       ],
-      "notes": "CDK ships /commit and /simplify as shallow skills. If Anthropic bundles equivalent skills natively, these lose value."
+      "notes": "Tierward ships /commit and /simplify as shallow skills. If Anthropic bundles equivalent skills natively, these lose value."
     },
     {
       "id": "stack-detection",
@@ -94,7 +94,7 @@
         "packages/cli/src/utils/detect-stack.js",
         "packages/cli/src/scaffold/skill-registry.js"
       ],
-      "notes": "CDK detects 11 tech stacks to adapt security rules, skills, and permissions. Native stack detection would reduce this advantage."
+      "notes": "Tierward detects 11 tech stacks to adapt security rules, skills, and permissions. Native stack detection would reduce this advantage."
     },
     {
       "id": "multi-tier-scaffolding",
@@ -114,7 +114,7 @@
         "packages/cli/templates/tier-m/",
         "packages/cli/templates/tier-l/"
       ],
-      "notes": "CDK's four tiers (Discovery/Fast Lane/Standard/Full) are its primary structural differentiator."
+      "notes": "Tierward's four tiers (Discovery/Fast Lane/Standard/Full) are its primary structural differentiator."
     },
     {
       "id": "rules-markdown",
@@ -131,7 +131,7 @@
       "cdkFiles": [
         "packages/cli/templates/common/rules/"
       ],
-      "notes": "CDK scaffolds pipeline.md, security.md, git.md as rules. If Anthropic ships starter rule templates, this overlap grows."
+      "notes": "Tierward scaffolds pipeline.md, security.md, git.md as rules. If Anthropic ships starter rule templates, this overlap grows."
     },
     {
       "id": "pipeline-stop-gates",
@@ -149,7 +149,7 @@
         "packages/cli/templates/tier-m/rules/pipeline.md",
         "packages/cli/templates/tier-l/rules/pipeline.md"
       ],
-      "notes": "CDK's multi-phase pipeline with STOP gates is deep and opinionated. Low absorption risk but monitor for native workflow features."
+      "notes": "Tierward's multi-phase pipeline with STOP gates is deep and opinionated. Low absorption risk but monitor for native workflow features."
     },
     {
       "id": "team-settings",
@@ -164,7 +164,7 @@
       ],
       "keywordMode": "any",
       "cdkFiles": [],
-      "notes": "CDK plans team-settings.json for org enforcement. Anthropic has server-managed settings via admin console - watch for expansion."
+      "notes": "Tierward plans team-settings.json for org enforcement. Anthropic has server-managed settings via admin console - watch for expansion."
     },
     {
       "id": "cross-project-analytics",
@@ -178,7 +178,7 @@
       ],
       "keywordMode": "any",
       "cdkFiles": [],
-      "notes": "CDK's SaaS layer (Q2) aggregates doctor reports across projects. No current Anthropic equivalent."
+      "notes": "Tierward's SaaS layer (Q2) aggregates doctor reports across projects. No current Anthropic equivalent."
     },
     {
       "id": "deep-audit-skills",
@@ -195,7 +195,7 @@
       "cdkFiles": [
         "packages/cli/templates/common/skills/"
       ],
-      "notes": "CDK ships 12 deep audit skills with model routing. Single-skill native equivalents are possible but full suite is unlikely."
+      "notes": "Tierward ships 12 deep audit skills with model routing. Single-skill native equivalents are possible but full suite is unlikely."
     },
     {
       "id": "skill-marketplace",
@@ -212,7 +212,7 @@
       "cdkFiles": [
         "packages/cli/src/scaffold/skill-registry.js"
       ],
-      "notes": "CDK plans a public skill registry (Q4). If Anthropic ships a native skill marketplace, this becomes redundant."
+      "notes": "Tierward plans a public skill registry (Q4). If Anthropic ships a native skill marketplace, this becomes redundant."
     }
   ]
 }

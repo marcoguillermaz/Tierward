@@ -164,7 +164,7 @@ function getPreCommitInstallCmd() {
 function getDoctorCmd() {
   const argv1 = process.argv[1] || '';
   const isLocal = argv1.endsWith('index.js') && !argv1.includes('node_modules');
-  return isLocal ? `node ${argv1} doctor` : 'npx mg-claude-dev-kit doctor';
+  return isLocal ? `node ${argv1} doctor` : 'npx tierward doctor';
 }
 
 /**
