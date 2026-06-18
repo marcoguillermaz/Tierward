@@ -1,20 +1,19 @@
 {
-  "name": "claude-dev-kit-vscode",
-  "displayName": "Claude Dev Kit",
-  "description": "Editor-native governance surfaces for claude-dev-kit: doctor health, skill/rule registry, and audit findings inside VS Code.",
+  "name": "tierward-vscode",
+  "displayName": "Tierward",
+  "description": "Editor-native governance surfaces for Tierward: doctor health, skill/rule registry, and audit findings inside VS Code.",
   "version": "0.0.1",
   "publisher": "marcoguillermaz",
   "license": "MIT",
-  "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/marcoguillermaz/claude-dev-kit.git",
+    "url": "https://github.com/marcoguillermaz/tierward.git",
     "directory": "packages/vscode-extension"
   },
   "bugs": {
-    "url": "https://github.com/marcoguillermaz/claude-dev-kit/issues"
+    "url": "https://github.com/marcoguillermaz/tierward/issues"
   },
-  "homepage": "https://github.com/marcoguillermaz/claude-dev-kit/tree/main/packages/vscode-extension#readme",
+  "homepage": "https://github.com/marcoguillermaz/tierward/tree/main/packages/vscode-extension#readme",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -26,7 +25,7 @@
     "claude",
     "claude code",
     "governance",
-    "claude-dev-kit"
+    "tierward"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -38,7 +37,7 @@
       "activitybar": [
         {
           "id": "cdk-governance",
-          "title": "Claude Dev Kit",
+          "title": "Tierward",
           "icon": "resources/cdk.svg"
         }
       ]
@@ -54,20 +53,20 @@
     "commands": [
       {
         "command": "cdk.showDoctorReport",
-        "title": "Claude Dev Kit: Run Doctor Report"
+        "title": "Tierward: Run Doctor Report"
       },
       {
         "command": "cdk.refreshGovernance",
-        "title": "Claude Dev Kit: Refresh Governance",
+        "title": "Tierward: Refresh Governance",
         "icon": "$(refresh)"
       },
       {
         "command": "cdk.runSkill",
-        "title": "Claude Dev Kit: Run Skill in Claude Code"
+        "title": "Tierward: Run Skill in Claude Code"
       },
       {
         "command": "cdk.runSkillByName",
-        "title": "Claude Dev Kit: Run Skill (by name)"
+        "title": "Tierward: Run Skill (by name)"
       },
       {
         "command": "cdk.runSkillInCc",
@@ -107,12 +106,12 @@
       ]
     },
     "configuration": {
-      "title": "Claude Dev Kit",
+      "title": "Tierward",
       "properties": {
         "cdk.cliPath": {
           "type": "string",
-          "default": "claude-dev-kit",
-          "description": "Command used to invoke the claude-dev-kit CLI. Override with an absolute path if the CLI is not on PATH."
+          "default": "tierward",
+          "description": "Command used to invoke the Tierward CLI. Override with an absolute path if the CLI is not on PATH."
         }
       }
     }
