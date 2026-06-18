@@ -325,8 +325,10 @@ For each AUTO-FIX from Step 3, Step 3b, and Step H1: apply the change, note the 
 
 ## Step 5 - Update timestamp
 
+Only run if the directory already exists (CDK-scaffolded projects):
+
 ```bash
-date +%s > "$CLAUDE_PROJECT_DIR/.claude/session/last-arch-audit"
+[ -d "$CLAUDE_PROJECT_DIR/.claude/session" ] && date +%s > "$CLAUDE_PROJECT_DIR/.claude/session/last-arch-audit"
 ```
 
 ## Step 6 - Produce audit report
