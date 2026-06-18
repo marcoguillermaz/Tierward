@@ -1,0 +1,38 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "tierward",
+  "description": "Tierward governance skills for Claude Code — commit enforcement, audits, code quality.",
+  "owner": {
+    "name": "Marco Guillermaz",
+    "url": "https://github.com/marcoguillermaz"
+  },
+  "plugins": [
+    {
+      "name": "tierward",
+      "displayName": "Tierward",
+      "description": "Governance skills for AI-assisted development: /tierward:commit (Conventional Commits), /tierward:arch-audit, /tierward:security-audit, /tierward:perf-audit, /tierward:simplify, /tierward:skill-dev, /tierward:skill-security, /tierward:humanize. Includes a soft session bootstrap reminder.",
+      "author": {
+        "name": "Marco Guillermaz",
+        "url": "https://github.com/marcoguillermaz"
+      },
+      "homepage": "https://github.com/marcoguillermaz/tierward",
+      "repository": "https://github.com/marcoguillermaz/tierward",
+      "license": "MIT",
+      "keywords": [
+        "claude",
+        "claude-code",
+        "governance",
+        "commits",
+        "audit",
+        "tierward"
+      ],
+      "category": "development",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/marcoguillermaz/tierward.git",
+        "ref": "main",
+        "sha": "12e4ef704c0ac600cf1158ac8350f517cb579925"
+      }
+    }
+  ]
+}
