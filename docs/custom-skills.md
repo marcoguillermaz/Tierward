@@ -1,10 +1,10 @@
 # Custom Skills Guide
 
-Create project-specific skills that CDK preserves across `upgrade` and `init` operations.
+Create project-specific skills that Tierward preserves across `upgrade` and `init` operations.
 
 ## Convention
 
-Place custom skills in `.claude/skills/custom-<name>/SKILL.md`. The `custom-` prefix signals CDK to never overwrite, prune, or modify the skill during any operation.
+Place custom skills in `.claude/skills/custom-<name>/SKILL.md`. The `custom-` prefix signals Tierward to never overwrite, prune, or modify the skill during any operation.
 
 Examples:
 ```
@@ -140,4 +140,4 @@ After creating a custom skill, add it to the `## Active Skills` section in CLAUD
 - `/custom-check-deps` - check for outdated dependencies
 ```
 
-Or use the CLI: `npx mg-claude-dev-kit add skill` does not support custom skills (it installs CDK-managed skills only). Custom skill registration in CLAUDE.md is manual.
+Or use the CLI: `npx tierward add skill` does not support custom skills (it installs Tierward-managed skills only). Custom skill registration in CLAUDE.md is manual.

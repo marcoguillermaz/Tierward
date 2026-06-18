@@ -10,9 +10,17 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = resolve(__dirname, '..', 'index.js');
 
-function readPackageVersion() {
+function readPackageField(field) {
   const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', '..', 'package.json'), 'utf8'));
-  return pkg.version;
+  return pkg[field];
+}
+
+function readPackageVersion() {
+  return readPackageField('version');
+}
+
+function readPackageName() {
+  return readPackageField('name');
 }
 
 function getCwd() {
@@ -217,17 +225,17 @@ function readPrReviewState(prNumber) {
     },
     skillReviewComments: skillReviews,
     skillReviewCount: skillReviews.length,
-    cliInvocation: `claude-dev-kit /pr-review ${prNumber}`,
+    cliInvocation: `tierward /pr-review ${prNumber}`,
     note:
       skillReviews.length === 0
-        ? `No /pr-review skill comment found on this PR yet. Run \`claude-dev-kit /pr-review ${prNumber}\` (or invoke the skill from Claude Code) to generate one.`
+        ? `No /pr-review skill comment found on this PR yet. Run \`tierward /pr-review ${prNumber}\` (or invoke the skill from Claude Code) to generate one.`
         : `${skillReviews.length} /pr-review skill comment(s) found. Latest verdict: ${skillReviews[skillReviews.length - 1].verdict || 'unknown'}.`,
   };
 }
 
 function getPackageMeta() {
   return {
-    name: 'mg-claude-dev-kit',
+    name: readPackageName(),
     version: readPackageVersion(),
     cliPath: CLI_PATH,
     cwd: getCwd(),
@@ -236,16 +244,16 @@ function getPackageMeta() {
 
 export function buildServer() {
   const server = new McpServer({
-    name: 'mg-claude-dev-kit',
+    name: readPackageName(),
     version: readPackageVersion(),
   });
 
   server.registerTool(
     'cdk_doctor_report',
     {
-      title: 'CDK doctor report',
+      title: 'Tierward doctor report',
       description:
-        'Runs `claude-dev-kit doctor --report` against the current project and returns the JSON compliance summary (28 checks: governance files, hooks, skill spec, security variant, drift markers).',
+        'Runs `tierward doctor --report` against the current project and returns the JSON compliance summary (28 checks: governance files, hooks, skill spec, security variant, drift markers).',
       inputSchema: {},
     },
     async () => buildToolReply(runDoctorReport(getCwd())),
@@ -254,9 +262,9 @@ export function buildServer() {
   server.registerTool(
     'cdk_team_settings',
     {
-      title: 'CDK team-settings.json contents',
+      title: 'Tierward team-settings.json contents',
       description:
-        'Returns the parsed `.claude/team-settings.json` for the current project. The `present` flag indicates whether the file exists; when absent, the project is unrestricted by CDK governance.',
+        'Returns the parsed `.claude/team-settings.json` for the current project. The `present` flag indicates whether the file exists; when absent, the project is unrestricted by Tierward governance.',
       inputSchema: {},
     },
     async () => buildToolReply(readTeamSettings(getCwd())),
@@ -289,7 +297,7 @@ export function buildServer() {
     {
       title: 'Read /pr-review skill state on a PR',
       description:
-        "Reads the audit trail of `/pr-review` skill comments on a GitHub PR (verdict, severity counts, body preview). Read-only: this tool does not run a fresh review. To generate a new review, invoke the `/pr-review` CDK skill via the CLI (the tool returns the exact invocation in `cliInvocation`). Requires the `gh` CLI to be authenticated against the project's GitHub repo.",
+        "Reads the audit trail of `/pr-review` skill comments on a GitHub PR (verdict, severity counts, body preview). Read-only: this tool does not run a fresh review. To generate a new review, invoke the `/pr-review` Tierward skill via the CLI (the tool returns the exact invocation in `cliInvocation`). Requires the `gh` CLI to be authenticated against the project's GitHub repo.",
       inputSchema: {
         prNumber: z.number().int().positive().describe('GitHub PR number to inspect'),
       },
@@ -300,9 +308,9 @@ export function buildServer() {
   server.registerTool(
     'cdk_package_meta',
     {
-      title: 'CDK package metadata',
+      title: 'Tierward package metadata',
       description:
-        'Returns the CDK package name, installed version, CLI path, and resolved project root. Useful for clients to verify which CDK CLI is wired up to this MCP server.',
+        'Returns the Tierward package name, installed version, CLI path, and resolved project root. Useful for clients to verify which Tierward CLI is wired up to this MCP server.',
       inputSchema: {},
     },
     async () => buildToolReply(getPackageMeta()),
@@ -320,7 +328,7 @@ export async function startStdio() {
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
   startStdio().catch((err) => {
-    process.stderr.write(`mg-claude-dev-kit-mcp fatal: ${err.message}\n`);
+    process.stderr.write(`tierward-mcp fatal: ${err.message}\n`);
     process.exit(1);
   });
 }

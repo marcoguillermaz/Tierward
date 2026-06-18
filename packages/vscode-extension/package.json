@@ -1,11 +1,20 @@
 {
-  "name": "claude-dev-kit-vscode",
-  "displayName": "Claude Dev Kit",
-  "description": "Editor-native governance surfaces for claude-dev-kit: doctor health, skill/rule registry, and audit findings inside VS Code.",
+  "name": "tierward-vscode",
+  "displayName": "Tierward",
+  "description": "Editor-native governance surfaces for Tierward: doctor health, skill/rule registry, and audit findings inside VS Code.",
   "version": "0.0.1",
   "publisher": "marcoguillermaz",
+  "icon": "resources/icon.png",
   "license": "MIT",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marcoguillermaz/tierward.git",
+    "directory": "packages/vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/marcoguillermaz/tierward/issues"
+  },
+  "homepage": "https://github.com/marcoguillermaz/tierward/tree/main/packages/vscode-extension#readme",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -17,7 +26,7 @@
     "claude",
     "claude code",
     "governance",
-    "claude-dev-kit"
+    "tierward"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -29,7 +38,7 @@
       "activitybar": [
         {
           "id": "cdk-governance",
-          "title": "Claude Dev Kit",
+          "title": "Tierward",
           "icon": "resources/cdk.svg"
         }
       ]
@@ -45,12 +54,25 @@
     "commands": [
       {
         "command": "cdk.showDoctorReport",
-        "title": "Claude Dev Kit: Run Doctor Report"
+        "title": "Tierward: Run Doctor Report"
       },
       {
         "command": "cdk.refreshGovernance",
-        "title": "Claude Dev Kit: Refresh Governance",
+        "title": "Tierward: Refresh Governance",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "cdk.runSkill",
+        "title": "Tierward: Run Skill in Claude Code"
+      },
+      {
+        "command": "cdk.runSkillByName",
+        "title": "Tierward: Run Skill (by name)"
+      },
+      {
+        "command": "cdk.runSkillInCc",
+        "title": "Run in Claude Code",
+        "icon": "$(play)"
       }
     ],
     "menus": {
@@ -60,15 +82,37 @@
           "when": "view == cdk.governance",
           "group": "navigation"
         }
+      ],
+      "view/item/context": [
+        {
+          "command": "cdk.runSkillInCc",
+          "when": "view == cdk.governance && viewItem == cdk.skill.invocable",
+          "group": "inline"
+        },
+        {
+          "command": "cdk.runSkillInCc",
+          "when": "view == cdk.governance && viewItem == cdk.skill.invocable",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "cdk.runSkillByName",
+          "when": "false"
+        },
+        {
+          "command": "cdk.runSkillInCc",
+          "when": "false"
+        }
       ]
     },
     "configuration": {
-      "title": "Claude Dev Kit",
+      "title": "Tierward",
       "properties": {
         "cdk.cliPath": {
           "type": "string",
-          "default": "claude-dev-kit",
-          "description": "Command used to invoke the claude-dev-kit CLI. Override with an absolute path if the CLI is not on PATH."
+          "default": "tierward",
+          "description": "Command used to invoke the Tierward CLI. Override with an absolute path if the CLI is not on PATH."
         }
       }
     }
@@ -78,11 +122,15 @@
     "watch": "node esbuild.js --watch",
     "typecheck": "tsc --noEmit",
     "pretest": "node esbuild.js",
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "vscode:prepublish": "node esbuild.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.1",
     "typescript": "^5.6.0"
   }

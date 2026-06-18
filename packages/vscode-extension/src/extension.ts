@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import { CdkBackend } from './cdkBackend';
-import { GovernanceTreeProvider } from './governanceTree';
+import { GovernanceTreeProvider, type GovernanceNode } from './governanceTree';
 import { CdkStatusBar } from './statusBar';
 import { CdkDiagnostics } from './diagnosticsProvider';
+import { SkillCodeLensProvider } from './skillCodeLens';
+import { buildCcUri, skillPrompt } from './ccBridge';
 
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Claude Dev Kit');
@@ -63,10 +65,25 @@ export function activate(context: vscode.ExtensionContext): void {
     statusBar,
     diagnostics,
     vscode.window.registerTreeDataProvider('cdk.governance', treeProvider),
+    vscode.languages.registerCodeLensProvider(
+      { pattern: '**/.claude/skills/**/SKILL.md' },
+      new SkillCodeLensProvider(),
+    ),
     vscode.commands.registerCommand('cdk.refreshGovernance', () => void refreshSurfaces()),
     vscode.commands.registerCommand('cdk.showDoctorReport', () =>
       runDoctorReport(output, statusBar, diagnostics),
     ),
+    vscode.commands.registerCommand('cdk.runSkill', () => pickAndRunSkill()),
+    vscode.commands.registerCommand('cdk.runSkillByName', (name: unknown) => {
+      if (typeof name === 'string') {
+        invokeSkill(name);
+      }
+    }),
+    vscode.commands.registerCommand('cdk.runSkillInCc', (node?: GovernanceNode) => {
+      if (node && node.kind === 'skill') {
+        invokeSkill(node.skill.name);
+      }
+    }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => void refreshSurfaces()),
     { dispose: () => debounce && clearTimeout(debounce) },
   );
@@ -125,6 +142,36 @@ async function runDoctorReport(
     void vscode.window.showWarningMessage(message);
   } else {
     void vscode.window.showInformationMessage(message);
+  }
+}
+
+/** Opens a Claude Code tab with the skill's slash command pre-filled (not auto-run). */
+function invokeSkill(name: string): void {
+  void vscode.env.openExternal(vscode.Uri.parse(buildCcUri(skillPrompt(name))));
+}
+
+/** Palette entry: pick a user-invocable skill and bridge it to Claude Code. */
+async function pickAndRunSkill(): Promise<void> {
+  const backend = resolveBackend();
+  if (!backend) {
+    void vscode.window.showWarningMessage('Claude Dev Kit: open a workspace folder first.');
+    return;
+  }
+  const skills = (await backend.getSkillInventory()).filter((s) => s.userInvocable === true);
+  if (skills.length === 0) {
+    void vscode.window.showInformationMessage('Claude Dev Kit: no user-invocable skills found.');
+    return;
+  }
+  const picked = await vscode.window.showQuickPick(
+    skills.map((s) => ({
+      label: `$(play) /${s.name}`,
+      description: s.description ?? undefined,
+      name: s.name,
+    })),
+    { placeHolder: 'Run a skill in Claude Code' },
+  );
+  if (picked) {
+    invokeSkill(picked.name);
   }
 }
 

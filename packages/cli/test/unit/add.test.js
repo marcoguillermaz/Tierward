@@ -198,13 +198,13 @@ describe('upgrade - custom skill preservation', () => {
 
   before(async () => {
     await fs.remove(UPGRADE_TMP);
-    // Simulate a CDK project with a custom skill
+    // Simulate a Tierward project with a custom skill
     await fs.ensureDir(path.join(UPGRADE_TMP, '.claude', 'skills', 'custom-deploy'));
     fs.writeFileSync(
       path.join(UPGRADE_TMP, '.claude', 'skills', 'custom-deploy', 'SKILL.md'),
       '---\nname: custom-deploy\n---\nMy custom skill',
     );
-    // Also add a CDK-managed rule so upgrade has something to check
+    // Also add a Tierward-managed rule so upgrade has something to check
     await fs.ensureDir(path.join(UPGRADE_TMP, '.claude', 'rules'));
     fs.writeFileSync(path.join(UPGRADE_TMP, '.claude', 'rules', 'git.md'), 'old content');
   });

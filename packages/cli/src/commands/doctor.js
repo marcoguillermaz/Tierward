@@ -55,7 +55,7 @@ const checks = [
       const exists = fs.existsSync(path.join(cwd, 'CLAUDE.md'));
       return {
         pass: exists,
-        fix: 'Run `claude-dev-kit init` to scaffold CLAUDE.md',
+        fix: 'Run `tierward init` to scaffold CLAUDE.md',
       };
     },
   },
@@ -80,7 +80,7 @@ const checks = [
       const exists = fs.existsSync(path.join(cwd, '.claude', 'settings.json'));
       return {
         pass: exists,
-        fix: 'Run `claude-dev-kit init` or copy from the template.',
+        fix: 'Run `tierward init` or copy from the template.',
       };
     },
   },
@@ -91,7 +91,7 @@ const checks = [
       const exists = fs.existsSync(path.join(cwd, '.claude', 'rules', 'pipeline.md'));
       return {
         pass: exists,
-        fix: 'Run `claude-dev-kit init` to scaffold the pipeline.',
+        fix: 'Run `tierward init` to scaffold the pipeline.',
       };
     },
   },
@@ -103,7 +103,7 @@ const checks = [
       return {
         pass: exists,
         warn: true,
-        fix: 'Copy security.md from the claude-dev-kit template.',
+        fix: 'Copy security.md from the tierward template.',
       };
     },
   },
@@ -222,7 +222,7 @@ const checks = [
       return {
         pass: exists,
         warn: true,
-        fix: 'Run `claude-dev-kit upgrade` to add output-style.md, or copy from the template.',
+        fix: 'Run `tierward upgrade` to add output-style.md, or copy from the template.',
       };
     },
   },
@@ -236,7 +236,7 @@ const checks = [
       return {
         pass: exists,
         warn: true,
-        fix: 'Run `claude-dev-kit upgrade` to add docs/claudemd-standards.md, or copy from the template.',
+        fix: 'Run `tierward upgrade` to add docs/claudemd-standards.md, or copy from the template.',
       };
     },
   },
@@ -250,7 +250,7 @@ const checks = [
       return {
         pass: exists,
         warn: true,
-        fix: 'Run `claude-dev-kit upgrade` to add docs/pipeline-standards.md, or copy from the template.',
+        fix: 'Run `tierward upgrade` to add docs/pipeline-standards.md, or copy from the template.',
       };
     },
   },
@@ -264,7 +264,7 @@ const checks = [
       return {
         pass: exists,
         warn: true,
-        fix: 'Run `claude-dev-kit upgrade` to add the commit skill, or copy from the template.',
+        fix: 'Run `tierward upgrade` to add the commit skill, or copy from the template.',
       };
     },
   },
@@ -444,7 +444,7 @@ const checks = [
           pass: false,
           warn: true,
           info: 'pipeline.md H1 does not declare a tier (Fast Lane / Tier M / Tier L)',
-          fix: 'Restore the canonical H1 from the CDK template (Fast Lane Pipeline, Standard Development Pipeline - Tier M, or Full Development Pipeline - Tier L).',
+          fix: 'Restore the canonical H1 from the Tierward template (Fast Lane Pipeline, Standard Development Pipeline - Tier M, or Full Development Pipeline - Tier L).',
         };
       }
       const bodyTier = detectPhaseCountTier(content);
@@ -455,7 +455,7 @@ const checks = [
         info: pass
           ? undefined
           : `H1 declares Tier ${declaredTier.toUpperCase()} but phase markers look like Tier ${bodyTier.toUpperCase()}`,
-        fix: 'Reconcile pipeline.md: H1 and phase sections must agree on tier. Reinstall via `claude-dev-kit upgrade --tier=<tier>` if in doubt.',
+        fix: 'Reconcile pipeline.md: H1 and phase sections must agree on tier. Reinstall via `tierward upgrade --tier=<tier>` if in doubt.',
       };
     },
   },
@@ -474,7 +474,7 @@ const checks = [
           pass: false,
           warn: true,
           info: 'security.md variant could not be identified (H1 and content markers absent)',
-          fix: 'Reinstall security.md via `claude-dev-kit upgrade` so the correct variant is written.',
+          fix: 'Reinstall security.md via `tierward upgrade` so the correct variant is written.',
         };
       }
       const hasApi = fs.existsSync(path.join(cwd, 'CLAUDE.md'))
@@ -488,7 +488,7 @@ const checks = [
         info: pass
           ? undefined
           : `stack "${stack}" expects "${expected}" variant, found "${actual}"`,
-        fix: `Reinstall security.md for stack "${stack}" via \`claude-dev-kit upgrade\` — expected variant "${expected}".`,
+        fix: `Reinstall security.md for stack "${stack}" via \`tierward upgrade\` — expected variant "${expected}".`,
       };
     },
   },
@@ -502,7 +502,7 @@ const checks = [
       return {
         pass: content.includes('C12'),
         warn: true,
-        fix: 'Run `claude-dev-kit upgrade` to update context-review.md to include C12 (canonical docs currency check).',
+        fix: 'Run `tierward upgrade` to update context-review.md to include C12 (canonical docs currency check).',
       };
     },
   },
@@ -538,7 +538,7 @@ const checks = [
   {
     id: 'anthropic-files-current',
     label:
-      'Anthropic-influenced files (arch-audit, claudemd-standards, pipeline-standards) match the installed CDK template',
+      'Anthropic-influenced files (arch-audit, claudemd-standards, pipeline-standards) match the installed Tierward template',
     check: (cwd) => {
       const tier = detectScaffoldedTier(cwd);
       if (!tier) return { pass: true, skip: true };
@@ -560,7 +560,7 @@ const checks = [
         pass: drifted.length === 0,
         warn: true,
         info: drifted.length > 0 ? `drift: ${drifted.join(', ')}` : undefined,
-        fix: `Run \`claude-dev-kit upgrade --anthropic\` to view diff, then \`--anthropic --apply\` to refresh${drifted.length > 0 ? ` (${drifted.length} file${drifted.length === 1 ? '' : 's'})` : ''}.`,
+        fix: `Run \`tierward upgrade --anthropic\` to view diff, then \`--anthropic --apply\` to refresh${drifted.length > 0 ? ` (${drifted.length} file${drifted.length === 1 ? '' : 's'})` : ''}.`,
       };
     },
   },
@@ -615,7 +615,7 @@ const checks = [
         info: violations.length > 0 ? violations.join('; ') : undefined,
         fix:
           violations.length > 0
-            ? 'Resolve each violation: re-init at the higher tier, remove blocked skills with `rm -rf .claude/skills/<name>`, add required skills with `claude-dev-kit add skill <name>`.'
+            ? 'Resolve each violation: re-init at the higher tier, remove blocked skills with `rm -rf .claude/skills/<name>`, add required skills with `tierward add skill <name>`.'
             : undefined,
       };
     },
@@ -634,7 +634,7 @@ const checks = [
           pass: false,
           warn: true,
           info: 'team-settings.json present but `.claude/hooks/team-settings-enforcement.mjs` missing — runtime enforcement disabled (CLI-side enforcement only).',
-          fix: 'Run `claude-dev-kit upgrade` to refresh the hook script, or copy it manually from the CDK template.',
+          fix: 'Run `tierward upgrade` to refresh the hook script, or copy it manually from the Tierward template.',
         };
       }
 
@@ -644,7 +644,7 @@ const checks = [
           pass: false,
           warn: true,
           info: 'team-settings.json + hook script present, but `.claude/settings.json` missing — hook will not fire.',
-          fix: 'Run `claude-dev-kit init` to scaffold settings.json, or restore from the CDK template.',
+          fix: 'Run `tierward init` to scaffold settings.json, or restore from the Tierward template.',
         };
       }
 
@@ -769,7 +769,7 @@ export async function doctor(options = {}) {
 
   // interactive mode (default)
   console.log();
-  console.log(chalk.bold('claude-dev-kit doctor') + chalk.dim(` - ${cwd}`));
+  console.log(chalk.bold('tierward doctor') + chalk.dim(` - ${cwd}`));
   console.log();
 
   for (const r of results) {

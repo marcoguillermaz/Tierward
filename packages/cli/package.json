@@ -1,9 +1,11 @@
 {
-  "name": "mg-claude-dev-kit",
-  "version": "1.30.0",
+  "name": "tierward",
+  "version": "1.31.0",
   "description": "Scaffold for legible, reviewable AI-assisted development",
   "type": "module",
   "bin": {
+    "tierward": "src/index.js",
+    "tierward-mcp": "src/mcp/server.js",
     "claude-dev-kit": "src/index.js",
     "claude-dev-kit-mcp": "src/mcp/server.js"
   },
@@ -55,11 +57,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/marcoguillermaz/claude-dev-kit.git"
+    "url": "git+https://github.com/marcoguillermaz/tierward.git"
   },
-  "homepage": "https://github.com/marcoguillermaz/claude-dev-kit#readme",
+  "homepage": "https://github.com/marcoguillermaz/tierward#readme",
   "bugs": {
-    "url": "https://github.com/marcoguillermaz/claude-dev-kit/issues"
+    "url": "https://github.com/marcoguillermaz/tierward/issues"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

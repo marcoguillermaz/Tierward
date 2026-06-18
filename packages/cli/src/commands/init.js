@@ -12,7 +12,7 @@ const CONTEXT_FILENAME = 'CONTEXT.md';
 export async function init(options) {
   console.log();
   console.log(
-    chalk.bold('claude-dev-kit') +
+    chalk.bold('tierward') +
       chalk.dim(' - rules, workflows, and pipeline templates for Claude Code'),
   );
   console.log();
@@ -52,7 +52,7 @@ export async function init(options) {
         message: "What's the state of this project?",
         choices: [
           {
-            name: 'Existing project - add CDK to a project that already has code',
+            name: 'Existing project - add Tierward to a project that already has code',
             value: 'in-place',
           },
           {

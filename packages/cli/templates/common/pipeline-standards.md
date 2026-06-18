@@ -154,7 +154,7 @@ Rules derived from Conventional Commits 1.0.0:
   1. Commit 1 - code (after Phase 3 green build)
   2. Commit 2 - docs (Phase 8: requirements, contracts, changelogs, schema/route maps — only what changed)
   3. Commit 3 - context files (CLAUDE.md and project-specific context files — only if updated) *(Source: project pipeline)*
-- **CLAUDE.md is a committed project file**: include it in version control — it is shared team context. Personal local overrides (e.g., `CLAUDE.local.md`) should be gitignored. *(Source: CDK pattern)*
+- **CLAUDE.md is a committed project file**: include it in version control — it is shared team context. Personal local overrides (e.g., `CLAUDE.local.md`) should be gitignored. *(Source: Tierward pattern)*
 - **Never commit directly to protected branches** (`main`, `staging`, or project-equivalent): functional blocks use worktrees; fixes use `fix/` branches. Promotion is via merge commands only. *(Source: project HARD RULES)*
 - **Intermediate commit at Phase 3**: commit after green build + tests, before UAT. Creates a known-good checkpoint. *(Source: 2)*
 

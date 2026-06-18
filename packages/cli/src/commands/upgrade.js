@@ -102,7 +102,7 @@ function resolveTemplatePath(entry, tier) {
 export async function upgrade(options) {
   const cwd = process.cwd();
   console.log();
-  console.log(chalk.bold('claude-dev-kit upgrade'));
+  console.log(chalk.bold('tierward upgrade'));
   console.log();
 
   const settings = loadTeamSettingsOrExit(cwd);
@@ -116,7 +116,7 @@ export async function upgrade(options) {
         ),
       );
       console.error(
-        `  Re-run ${chalk.cyan(`claude-dev-kit init --tier=${required}`)} to promote, or edit .claude/team-settings.json.`,
+        `  Re-run ${chalk.cyan(`tierward init --tier=${required}`)} to promote, or edit .claude/team-settings.json.`,
       );
       process.exit(1);
     }
@@ -126,7 +126,7 @@ export async function upgrade(options) {
 
   if (options.anthropic) {
     console.log();
-    console.log(chalk.bold('claude-dev-kit upgrade --anthropic'));
+    console.log(chalk.bold('tierward upgrade --anthropic'));
     console.log();
     await runAnthropicUpgrade(cwd, options);
   }

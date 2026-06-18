@@ -1,5 +1,5 @@
 name: Skill request
-description: Request a new audit skill for claude-dev-kit
+description: Request a new audit skill for tierward
 labels: ["skill-request"]
 body:
   - type: input

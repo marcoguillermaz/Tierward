@@ -11,7 +11,7 @@
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-To report a security issue, use [GitHub's private vulnerability reporting](https://github.com/marcoguillermaz/claude-dev-kit/security/advisories/new).
+To report a security issue, use [GitHub's private vulnerability reporting](https://github.com/marcoguillermaz/tierward/security/advisories/new).
 
 Include:
 - Description of the vulnerability
