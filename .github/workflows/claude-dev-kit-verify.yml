@@ -1,9 +1,9 @@
-# claude-dev-kit — CI verification workflow
+# tierward — CI verification workflow
 #
-# Verifies that the claude-dev-kit scaffold is present and not bypassed.
+# Verifies that the Tierward scaffold is present and not bypassed.
 # Add this to your project's .github/workflows/ to enforce governance at PR time.
 #
-# What it checks (mirrors `npx mg-claude-dev-kit doctor`):
+# What it checks (mirrors `npx tierward doctor`):
 #   - .claude/settings.json exists
 #   - Stop hook is configured and contains no unfilled [TEST_COMMAND] placeholder
 #   - CLAUDE.md is present
@@ -25,8 +25,8 @@ jobs:
   verify:
     name: Verify claude-dev-kit scaffold
     runs-on: ubuntu-latest
-    # Skip in the claude-dev-kit source repository — this workflow is for user projects
-    if: ${{ github.repository != 'marcoguillermaz/claude-dev-kit' }}
+    # Skip in the tierward source repository — this workflow is for user projects
+    if: ${{ github.repository != 'marcoguillermaz/tierward' }}
 
     steps:
       - name: Checkout
@@ -37,8 +37,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Run claude-dev-kit doctor
-        run: npx mg-claude-dev-kit@latest doctor --report
+      - name: Run tierward doctor
+        run: npx tierward@latest doctor --report
         # --report: outputs JSON compliance report + exits 1 if any check fails
         # Use --ci for silent mode (no output, just exit code)
 
@@ -50,7 +50,7 @@ jobs:
           fi
           if grep -q '\[TEST_COMMAND\]' .claude/settings.json; then
             echo "ERROR: Stop hook contains unfilled [TEST_COMMAND] placeholder"
-            echo "Run: npx mg-claude-dev-kit doctor to see all issues"
+            echo "Run: npx tierward doctor to see all issues"
             exit 1
           fi
           echo "OK: Stop hook is configured"
