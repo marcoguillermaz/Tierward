@@ -4,6 +4,7 @@
   "description": "Editor-native governance surfaces for Tierward: doctor health, skill/rule registry, and audit findings inside VS Code.",
   "version": "0.0.1",
   "publisher": "marcoguillermaz",
+  "icon": "resources/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
