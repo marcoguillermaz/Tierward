@@ -11,24 +11,6 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [1.32.0] — 2026-06-18
-
-### Added
-
-- **Tierward plugin for Claude Code marketplace.** The project now ships as a Claude Code plugin alongside the npm CLI. Install in any project: `claude plugin marketplace add marcoguillermaz/tierward`, then `claude plugin install tierward@tierward`. Eight governance skills load straight away, namespaced as `/tierward:commit`, `/tierward:arch-audit`, `/tierward:security-audit`, `/tierward:perf-audit`, `/tierward:simplify`, `/tierward:skill-dev`, `/tierward:skill-security`, and `/tierward:humanize`. No `npx tierward init` needed. (#216)
-- **Bootstrap soft hook.** A `UserPromptSubmit` hook adds a one-line reminder of available `/tierward:*` skills to each session's system context. Never blocks; keeps the skill list in view without prompting anything.
-- **Private marketplace registry (`marketplace.json`).** A marketplace manifest at the repository root lets the plugin install through the standard Claude Code marketplace API. Teams building their own plugin registries can use it as a reference.
-
----
-
-## [1.31.1] — 2026-06-18
-
-### Fixed
-
-- **`claude-dev-kit-verify.yml` workflow** — updated skip condition from `marcoguillermaz/claude-dev-kit` to `marcoguillermaz/tierward` (the job was running instead of skipping on own-repo PRs after the repo rename) and replaced `npx mg-claude-dev-kit@latest` with `npx tierward@latest`. (#214)
-
----
-
 ## [1.31.0] — 2026-06-18
 
 ### Added

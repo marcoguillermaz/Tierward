@@ -20,17 +20,6 @@ Since v1.17.0, Tierward ships an MCP server alongside the CLI. Any MCP-aware cli
 
 ## Quick Start
 
-**Via plugin (no setup required):**
-
-```bash
-claude plugin marketplace add marcoguillermaz/Tierward
-claude plugin install tierward@tierward
-```
-
-Eight governance skills are available immediately, namespaced as `/tierward:commit`, `/tierward:arch-audit`, and so on. No `npx tierward init` needed. See [Claude Code Plugin](#claude-code-plugin).
-
-**Via CLI (full scaffold):**
-
 ```bash
 npx tierward init
 ```
@@ -60,40 +49,6 @@ npx tierward validate-context              # CI gate: exit 0/1 on schema check
 `CONTEXT.md` is a schema-validated project context file. Greenfield runs a PM-friendly interview. Existing repos go through three-phase inference: algorithmic detection, LLM extraction, hybrid PM review. The first question routes you to a PM or developer flow. The developer flow reuses the technical questions from the legacy `init` wizards (projectName, stack, commands, scaffold options) and auto-derives `tier.rationale` from team size + work scope, so devs are not asked to write PM rationale prose.
 
 As of v1.27.0, the schema covers all four pipeline tiers: tier 0 (Discovery) and tier S (Fast Lane) for solo or bugfix work, tier M (Standard) for feature-block work with feature flags (`has_api`, `has_database`, `has_frontend`, `has_design_system`, `has_prd`), and tier L (Full) for complex domain projects.
-
----
-
-## Claude Code Plugin
-
-Tierward ships as a Claude Code plugin alongside the npm CLI. The plugin installs eight governance skills into any session without touching the project's `.claude/` directory. Skills are namespaced and auto-discovered.
-
-### Install
-
-```bash
-claude plugin marketplace add marcoguillermaz/Tierward
-claude plugin install tierward@tierward
-```
-
-### Skills
-
-| Skill                      | Purpose                                                        |
-| -------------------------- | -------------------------------------------------------------- |
-| `/tierward:commit`         | Conventional Commits enforcer — stage changes, then invoke     |
-| `/tierward:arch-audit`     | Claude Code architecture compliance audit                      |
-| `/tierward:security-audit` | Auth, input validation, secrets, HTTP headers                  |
-| `/tierward:perf-audit`     | Bundle size, caching, N+1 queries, image optimization          |
-| `/tierward:simplify`       | Complexity and duplication scan on changed files               |
-| `/tierward:skill-dev`      | Code quality audit — coupling, dead exports, antipatterns      |
-| `/tierward:skill-security` | SkillSpector vulnerability scan for Claude Code skill files    |
-| `/tierward:humanize`       | Remove AI writing patterns from prose (EN + IT)                |
-
-### Bootstrap hook
-
-A `UserPromptSubmit` hook adds a compact reminder of available `/tierward:*` skills to each session's system context. Non-blocking; always exits 0.
-
-### Private marketplace registry
-
-A `marketplace.json` at the repository root lets the plugin install through the standard Claude Code marketplace API. Teams building their own plugin registries can use it as a reference.
 
 ---
 
@@ -234,7 +189,7 @@ Read-only tools exposed:
 | `cdk_package_meta`      | Tierward package name, version, CLI path, cwd                                                                                                                         |
 | `cdk_pr_review`         | reads existing `/pr-review` skill comments on a GitHub PR (verdict, severity counts). Read-only — to generate a fresh review, invoke the `/pr-review` Tierward skill. |
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.32.0.
+The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.30.0.
 
 ---
 
@@ -296,7 +251,7 @@ A separate **template-coverage** layer (under `packages/cli/test/template-covera
 
 See [GitHub Milestones](https://github.com/marcoguillermaz/tierward/milestones) for the 12-month plan.
 
-**Current**: v1.32.0 ships the Tierward Claude Code plugin and private marketplace registry. Eight governance skills (`/tierward:commit`, `/tierward:arch-audit`, `/tierward:security-audit`, `/tierward:perf-audit`, `/tierward:simplify`, `/tierward:skill-dev`, `/tierward:skill-security`, `/tierward:humanize`) are now installable directly via `claude plugin install` — no `npx tierward init` required. A `UserPromptSubmit` bootstrap hook keeps the skill list visible in every session. v1.31.x (VS Code extension P1–P3): governance tree view, live health status bar, doctor findings in the Problems panel. v1.30.0: `/skill-security` SkillSpector integration (tier S+).
+**Current**: v1.30.0 ships the VS Code extension (P1–P3): governance tree view with skill and rule browsing, live health status bar with arch-audit staleness, and Tierward doctor findings surfaced as Problems panel diagnostics. Also adds `/skill-security` (SkillSpector integration, tier S+), a 64-pattern vulnerability scanner for Claude Code skill files. Carried forward: v1.29.x cross-LLM rubric automation for Context Builder, v1.28.0's skill-review pipeline P3 robustness, v1.27.0's Context Builder v1.1 cycle, v1.22.0's `/skill-dev` v2 hotspot step, v1.21.0's PreToolUse runtime enforcement, and v1.20.0's MCP-aware audit skills.
 
 **Next**: `/arch-audit` MCP-aware once the upstream Anthropic spec MCP server lands. `/privacy-audit` re-eval (Issue #97 sub-track 3) when AST tracing matures or demand signal materializes. Q2 #3 VitePress docs site (ICE 432) stays on hold.
 
