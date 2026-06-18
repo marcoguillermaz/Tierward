@@ -182,3 +182,16 @@ Mode: full | preflight-only | fixtures-only
 - **Severity labels are rubric-anchored**, never intuitive. Re-read `SEVERITY_SCALE.md` decision tree when uncertain.
 - **FP-rate cap rule**: Critical requires < 10% FP evidence.
 - **Upgrade trigger**: if portfolio exceeds 5 skills mid-cycle, pause and switch to Tier L full-mode variant - Phase 4 + Phase 9 become mandatory.
+
+---
+
+## Red flags
+
+The most common ways discipline is silently abandoned here:
+
+| Temptation | Why it fails |
+|---|---|
+| Applying a fix before the Phase 3 STOP confirmation | Phase 3 STOP is a hard gate; "obviously safe" fixes are not exceptions |
+| Downgrading a Critical to clear the false-positive cap | The cap is a quality floor; downgrade requires documented evidence, not cap pressure |
+| Declaring PASS when findings were deferred rather than resolved | PASS means all Phase checks closed; deferred findings are open findings |
+| Skipping 2.B cross-tier review when only one tier is modified | Cross-tier coherence is mandatory regardless of declared scope |

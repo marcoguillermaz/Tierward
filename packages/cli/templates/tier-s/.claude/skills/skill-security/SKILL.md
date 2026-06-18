@@ -229,3 +229,16 @@ If `risk_recommendation` is `SAFE`:
 ✅ This skill passed the security scan. Safe to install.
    Tip: run with --llm for semantic analysis if the skill includes executable code.
 ```
+
+---
+
+## Red flags
+
+The most common ways discipline is silently abandoned here:
+
+| Temptation | Why it fails |
+|---|---|
+| Proceeding when SkillSpector is unavailable "because the skill looks clean" | Step 0 defines a hard stop on scanner unavailability; visual inspection is not equivalent to static analysis |
+| Reclassifying a HIGH finding as MEDIUM to permit installation | Severity comes from the scanner's JSON output, not from a judgment call over it |
+| Presenting a CAUTION verdict as SAFE to the user | The verdict field in the JSON is authoritative; do not editorialize it |
+| Skipping the LLM analysis when `--llm` was explicitly passed | Only skip with a clear announcement that the API key is unavailable |
