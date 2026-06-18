@@ -11,6 +11,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.32.1] — 2026-06-18
+
+### Fixed
+
+- **Plugin skill companion files.** Seven companion files (`REPORT.md`, `PATTERNS.md`, `BATCH_COMMANDS.md`, `advanced-checks.md`) were missing from the plugin `skills/` directories — only `SKILL.md` files had been copied from the tier-s/tier-m templates. This caused `/tierward:arch-audit`, `/tierward:security-audit`, `/tierward:perf-audit`, and `/tierward:skill-dev` to reference files that did not exist. All companion files are now bundled with the plugin. (#222)
+- **`/tierward:arch-audit` non-invasive guard.** Step 5 (timestamp write) now runs conditionally — it only writes `.claude/session/last-arch-audit` when that directory already exists, preserving the plugin's non-invasive promise in projects without a CDK scaffold. (#222)
+
+---
+
 ## [1.32.0] — 2026-06-18
 
 ### Added
