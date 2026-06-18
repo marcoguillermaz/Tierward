@@ -11,6 +11,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.31.1] — 2026-06-18
+
+### Fixed
+
+- **`claude-dev-kit-verify.yml` workflow** — updated skip condition from `marcoguillermaz/claude-dev-kit` to `marcoguillermaz/tierward` (the job was running instead of skipping on own-repo PRs after the repo rename) and replaced `npx mg-claude-dev-kit@latest` with `npx tierward@latest`. (#214)
+
+---
+
 ## [1.31.0] — 2026-06-18
 
 ### Added
