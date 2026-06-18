@@ -9,9 +9,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [1.31.0] — 2026-06-18
+
+### Added
+
+- **VS Code extension — skill invocation bridge (P4).** CodeLens buttons appear directly on `SKILL.md` files to run any user-invocable skill in Claude Code with one click. The Command Palette gains a `Tierward: Run Skill` picker that filters to invocable skills and opens Claude Code via the official URI handler (`vscode://anthropic.claude-code/open`). The Governance tree view now shows a `Run in Claude Code` inline action on invocable skills only, keeping non-invocable entries clean. (#206)
+- **VS Code extension — CI packaging workflows (P5).** Two new GitHub Actions workflows: `vscode-extension.yml` runs typecheck and packaging on every push/PR touching the extension; `vscode-publish.yml` triggers on `vscode-v*` tags and publishes to the Marketplace when `VSCE_PAT` is configured. (#207)
+- **VS Code extension published to Marketplace.** `tierward-vscode@0.0.1` is live under publisher `MarcoGuillermaz`. Install with: `ext install MarcoGuillermaz.tierward-vscode`.
+
 ### Changed
 
-- **Renamed `claude-dev-kit` → `tierward`.** The npm package, CLI binary, and MCP server now ship as `tierward` (and `tierward-mcp`). The old `claude-dev-kit` and `claude-dev-kit-mcp` binaries stay working as aliases through the deprecation window, the `mg-claude-dev-kit` npm package is deprecated in favour of `tierward`, and existing clones keep pulling via GitHub's repository redirect. (Release announcement prose is humanized at cutover per R2.)
+- **Renamed `claude-dev-kit` → `tierward`.** The npm package, CLI binary, and MCP server now ship as `tierward` (and `tierward-mcp`). The `claude-dev-kit` and `claude-dev-kit-mcp` binaries remain as aliases through the deprecation window. The `mg-claude-dev-kit` npm package is deprecated in favour of `tierward`. Existing clones redirect automatically via GitHub's repository redirect. MCP tool names (`cdk_*`), the `"cdk"` config key, and env vars (`CDK_PROJECT_ROOT`, `CDK_CONTEXT_LLM_MODEL`) are unchanged; they are API contracts. (#208, #210)
+
+### Fixed
+
+- VS Code extension package metadata aligned to Tierward naming: `displayName`, command titles, activity bar title, configuration section, `cdk.cliPath` default updated to `tierward`. (#210)
 
 ---
 
@@ -59,7 +73,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Notes
 
-- The fresh lockfile carried 5 advisories (4 moderate, 1 high — `fast-uri`, `hono`, `ip-address`, `express-rate-limit`) flagged by GitHub dependency-review. `npm audit fix` resolved all of them by bumping the affected transitive deps. Final state: 0 vulnerabilities.
+- The fresh lockfile carried 5 advisories (4 moderate, 1 high: `fast-uri`, `hono`, `ip-address`, `express-rate-limit`) flagged by GitHub dependency-review. `npm audit fix` resolved all of them by bumping the affected transitive deps. Final state: 0 vulnerabilities.
 
 ---
 
@@ -93,8 +107,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - **Skill-review pipeline P3 process robustness** (closes Q3 #10e, issue #132). Cross-LLM synthesis from `docs/reviews/2026-04-29-pipeline-meta/synthesis.md` identified three process-integrity gaps; this release closes all three.
-  - **P3.1 — Phase 1 → Phase 2 mechanical gate (CC5).** Before Phase 2 of `/skill-review` can begin, the reviewer must emit a PASS\|FAIL table covering all 8 Phase 1 preflight steps. Phase 2 entry requires 100% PASS — a FAIL row cannot be overridden by reviewer judgment. This closes the "Stage A → Stage B" gate that existed in the framework as a declaration but had no enforcement artifact behind it. Added to `REVIEW_FRAMEWORK.md` (tier-M and tier-L) and to the Interactive decision points list.
-  - **P3.2 — Behavioral fixture targets expanded from 6 to 11 stack-dependent skills (CC7).** The D1 fixture target set covered ui-audit, visual-audit, accessibility-audit, security-audit, api-design, and migration-audit; P3.2 adds perf-audit, responsive-audit, test-audit, ux-audit, and skill-db. Each added skill is stack-dependent — mode dispatch, dialect-specific output, parser auto-detection, browser-specific behavior — and textual review alone misses the defect classes the fixture pack is designed to catch. Updated `SKILLS_INVENTORY.md` (canonical list with rationale and D1\|P3.2 source tags), `REVIEW_FRAMEWORK.md` Phase 2.E header and Review closing criterion #8, and `SKILL.md` tier-L mode description and Phase 2.E anchor. Side-effect: a pre-existing disagreement between `REVIEW_FRAMEWORK.md` (which listed a different set of 6 skills) and `SKILLS_INVENTORY.md` is now resolved — the canonical list lives in the inventory and is referenced everywhere else.
+  - **P3.1 — Phase 1 → Phase 2 mechanical gate (CC5).** Before Phase 2 of `/skill-review` can begin, the reviewer must emit a PASS\|FAIL table covering all 8 Phase 1 preflight steps. Phase 2 entry requires 100% PASS — a FAIL row cannot be overridden by reviewer judgment. This closes the "Stage A → Stage B" gate that existed in the framework as a declaration with no enforcement artifact behind it. Added to `REVIEW_FRAMEWORK.md` (tier-M and tier-L) and to the Interactive decision points list.
+  - **P3.2 — Behavioral fixture targets expanded from 6 to 11 stack-dependent skills (CC7).** The D1 fixture target set covered ui-audit, visual-audit, accessibility-audit, security-audit, api-design, and migration-audit; P3.2 adds perf-audit, responsive-audit, test-audit, ux-audit, and skill-db. Each added skill is stack-dependent — mode dispatch, dialect-specific output, parser auto-detection, browser-specific behavior — and textual review alone misses the defect classes the fixture pack is designed to catch. Updated `SKILLS_INVENTORY.md` (canonical list with rationale and D1\|P3.2 source tags), `REVIEW_FRAMEWORK.md` Phase 2.E header and Review closing criterion #8, and `SKILL.md` tier-L mode description and Phase 2.E anchor. Side-effect: a pre-existing disagreement between `REVIEW_FRAMEWORK.md` (which listed a different set of 6 skills) and `SKILLS_INVENTORY.md` is now resolved; the canonical list lives in the inventory and is referenced everywhere else.
   - **P3.3 — Phase 10 final mechanical sweep at cycle closure (CC6).** New phase added to `REVIEW_FRAMEWORK.md` (tier-M and tier-L): after the Phase 6 GO on the last skill, re-run Phase 1 preflight against the final framework spec across all 17 reviewed skills. The sweep is mechanical only — no MITL, no LLM jury, no walkthrough. FAIL rows don't block closure but must be logged as follow-up items for the next cycle; the sweep itself cannot be silently skipped. This addresses drift from pipeline hardening that lands incrementally during a cycle, leaving early-reviewed skills calibrated to an earlier framework version. Tier-M lite mode skips Phase 10 alongside Phase 4 and Phase 9 (portfolios under 6 skills).
 - New "Phase 10" section in `SKILL.md` tier-L runbook; lite-mode skip statement in `SKILL.md` tier-M extended to cover Phase 10.
 
@@ -107,7 +121,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Notes
 
-- Vocabulary alignment: the synthesis used "Stage A / Stage B", "Phase 1b", "C1-C14", "MITL stop #1" from the meta-review prompt bundle. Shipped framework vocabulary (Phase 1 / Phase 2 / ... / Phase 9 / Phase 10, C1-C8) is preserved — the gate and fixture-set changes are mapped to the shipped names. No double-vocabulary debt added.
+- Vocabulary alignment: the synthesis used "Stage A / Stage B", "Phase 1b", "C1-C14", "MITL stop #1" from the meta-review prompt bundle. Shipped framework vocabulary (Phase 1 / Phase 2 / ... / Phase 9 / Phase 10, C1-C8) is preserved; the gate and fixture-set changes are mapped to the shipped names. No double-vocabulary debt added.
 - Files touched: 6 (4 framework/inventory mirrors + 2 SKILL.md runbooks). Strict parity between tier-M and tier-L for `REVIEW_FRAMEWORK.md` and `SKILLS_INVENTORY.md`.
 
 ---
@@ -130,7 +144,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- `HARD_STOP_TIERS` export in both `pm-flow.js` and `dev-flow.js` is now an empty array — kept for source-compat with any plugin that imports it. Legacy callers stop seeing the `TIER_NOT_SUPPORTED_V1` throw.
+- `HARD_STOP_TIERS` export in both `pm-flow.js` and `dev-flow.js` is now an empty array, kept for source-compat with any plugin that imports it. Legacy callers stop seeing the `TIER_NOT_SUPPORTED_V1` throw.
 
 ### Notes
 
@@ -172,7 +186,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Notes
 
 - 539/539 unit tests pass (+12 from the new CLI command).
-- The validator function itself is unchanged from v1.23.0 — this is a CLI surface, not a logic change.
+- The validator function itself is unchanged from v1.23.0; this is a CLI surface, not a logic change.
 - Closes v1.1 P1 from the reopened roadmap. P2 (`--from-yaml`) and P3 (tier M/L) remain ahead.
 
 ---
@@ -224,7 +238,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Tier M and L are out of scope for the v1 schema. Picking them in the PM flow raises `TIER_NOT_SUPPORTED_V1` and redirects to the legacy wizard.
 - The legacy `init-greenfield`, `init-in-place`, and `init-from-context` modules still work. The v1 → v2 deprecation path lives in `memory/project_context_builder_implementation_v1.md`.
-- `docs/reviews/context-builder-pilot-v1.md` is gitignored — that report stays local to the maintainer.
+- `docs/reviews/context-builder-pilot-v1.md` is gitignored; that report stays local to the maintainer.
 
 ---
 
@@ -260,7 +274,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Notes
 
-- v1.22.0 is intentionally minimal in scope. The cross-LLM verdict on 2026-04-28 said the differentiation between `/debt-triage` and `/skill-dev` was the churn-axis prioritization — nothing else. This release adds exactly that, no more. `/debt-triage` stays closed.
+- v1.22.0 is intentionally minimal in scope. The cross-LLM verdict on 2026-04-28 said the differentiation between `/debt-triage` and `/skill-dev` was the churn-axis prioritization, nothing else. This release adds exactly that, no more. `/debt-triage` stays closed.
 - The 6-month churn window is hard-coded for v1.22. A configurable window via `CLAUDE.md` comment is documented in the skill body as a future iteration; the maintainer's bias is to ship the simple version first and add configurability only if a real project surfaces a need.
 - Hotspot priority does NOT gate the backlog. Every finding above Low severity still goes through Step 4's debt-density escalation + regression-risk downgrade unchanged. The hotspot section re-orders backlog work by leverage; it does not add or remove findings.
 - This release closes the work item created by the 2026-04-28 cross-LLM verdict. Issue #97 sub-track 3 (`/privacy-audit`) remains deferred per the criteria pinned in that comment.
@@ -283,10 +297,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Notes
 
-- The hook is intentionally fail-open. Any error (malformed stdin, missing project root, JSON parse failure, unexpected exception) results in exit 0 with no output — i.e., skill invocation is allowed. Rationale: the hook is a value-add, not a critical path; a bug in the hook itself should never lock a user out of all skills. The doctor `team-settings-compliance` check surfaces parse errors in interactive runs.
+- The hook is intentionally fail-open. Any error (malformed stdin, missing project root, JSON parse failure, unexpected exception) results in exit 0 with no output (skill invocation is allowed). Rationale: the hook is a value-add, not a critical path; a bug in the hook itself should never lock a user out of all skills. The doctor `team-settings-compliance` check surfaces parse errors in interactive runs.
 - Custom skills (`custom-*` prefix) bypass the `allowedSkills` whitelist (matches v1.16 CLI semantics) but NOT the `blockedSkills` denylist (governance overrides the "custom skills preserved across upgrades" convention). The hook implements both rules consistently with the CLI side.
 - The hook script is self-contained (no CDK package dependency at hook-execution time) so user projects don't need to keep `node_modules` for it. It uses only Node built-ins (`node:fs`, `node:path`).
-- Hook timeout is 5 seconds. The hook script does I/O on a small JSON file and exits — well under the budget. If the hook ever exceeds 5s, treat it as a CDK bug, not a user-config issue.
+- Hook timeout is 5 seconds. The hook script does I/O on a small JSON file and exits, well under the budget. If the hook ever exceeds 5s, treat it as a CDK bug, not a user-config issue.
 - This release closes the architectural feedback loop opened by the 2026-04-26 smoke-test review on v1.16.
 
 ---
@@ -309,9 +323,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Notes
 
-- This release intentionally does NOT generate a mock MCP server fixture for integration testing. The skill instrumentation is content-level (frontmatter + body); the actual MCP invocation happens at Claude Code session time, outside CI scope. A mock fixture would only be useful for testing CDK CLI code that itself invokes MCP — which v1.20.0 does not add. Future v1.20.x releases that add MCP-invoking CLI code (e.g., `cdk_pr_review_run` write tool) will need the fixture.
+- This release intentionally does NOT generate a mock MCP server fixture for integration testing. The skill instrumentation is content-level (frontmatter + body); the actual MCP invocation happens at Claude Code session time, outside CI scope. A mock fixture would only be useful for testing CDK CLI code that itself invokes MCP, which v1.20.0 does not add. Future v1.20.x releases that add MCP-invoking CLI code (e.g., `cdk_pr_review_run` write tool) will need the fixture.
 - The fallback path in both skills is intentionally adoption-friendly: MCP-aware is a value addition, not a requirement. Projects without MCP wiring see the warning and continue with the prior static logic. Audit coverage never regresses.
-- The third skill choice (`/dependency-audit` over `/infra-audit` and `/test-audit`) was decided on the basis of staff-manager `/deps-audit` having just been ported in v1.18.0 — the changelog/registry path was already familiar, lowering implementation risk. `/infra-audit` MCP-aware (Terraform Cloud / AWS MCP servers) is a future candidate.
+- The third skill choice (`/dependency-audit` over `/infra-audit` and `/test-audit`) was decided on the basis of staff-manager `/deps-audit` having just been ported in v1.18.0; the changelog/registry path was already familiar, lowering implementation risk. `/infra-audit` MCP-aware (Terraform Cloud / AWS MCP servers) is a future candidate.
 
 ---
 
@@ -322,7 +336,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`/pr-review` skill** (Q3 #4d, Issue #122, ICE 267 cross-LLM): autonomous local PR review via `gh` CLI. Spawns a review subagent on the diff with universal + stack-specific severity criteria, posts the review as a PR comment for audit trail, surfaces a merge decision. Read-only: never modifies code, never auto-merges. Stack-aware via sibling PATTERNS.md (node-ts, python, swift in v1; agnostic fallback for the rest). `--deep` flag escalates to opus for sensitive changes. `--with-context` is opt-in for project-context-aware review.
 - **`prReviewSeverity` extension** to `team-settings.json` schema (Option β): an optional object with `critical` / `major` / `minor` glob arrays that override + extend the universal defaults. Validation rejects non-array level fields and non-string entries.
 - **`getPrReviewSeverity()` helper** in `team-settings.js`: returns the parsed override (mutation-safe copies) or `null` when absent.
-- **`cdk_pr_review` MCP tool** on the v1.17.0 governance MCP server (Mistral's cross-LLM recommendation): reads the audit trail of `/pr-review` skill comments on a GitHub PR — repo, PR metadata, list of skill review comments with verdict + severity counts + body preview, plus the exact CLI invocation needed to generate a fresh review. Read-only — does not run a fresh review itself; that requires the CDK CLI (orchestration too involved to expose as a single MCP call in v1).
+- **`cdk_pr_review` MCP tool** on the v1.17.0 governance MCP server (Mistral's cross-LLM recommendation): reads the audit trail of `/pr-review` skill comments on a GitHub PR — repo, PR metadata, list of skill review comments with verdict + severity counts + body preview, plus the exact CLI invocation needed to generate a fresh review. Read-only: does not run a fresh review itself; that requires the CDK CLI (orchestration too involved to expose as a single MCP call in v1).
 - **`zod` (^4.3.6)** added as direct dependency (was transitive via `@modelcontextprotocol/sdk`). Used to define the `cdk_pr_review` MCP tool input schema.
 - **Integration scenario `scenarioPrReviewPresent`** in `test/integration/run.js`: tier presence + pruning, PATTERNS.md top-3-stack coverage, read-only invariant (hard rules in body), cheatsheet row, Phase 8 pipeline.md invocation, valid + invalid `prReviewSeverity` validation through `doctor --report`.
 - **Pipeline.md Phase 8 step 9** in tier-m + tier-l: optional `/pr-review` invocation after CI green, before promotion to production.
@@ -355,13 +369,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Skill registry length: 22 → 23 (`dependency-audit` added; existing `dependency-scan` is unchanged — separate skill, internal Phase 1 entity-dependency tracker).
+- Skill registry length: 22 → 23 (`dependency-audit` added; existing `dependency-scan` is unchanged, a separate skill used as an internal Phase 1 entity-dependency tracker).
 - README skill count: 20 → 21 (table row added).
 - Integration test count: 1009 → 1046 (+37: 9 from new scenario, 28 from existing parameterized scenarios picking up the new skill via the registry).
 
 ### Notes
 
-- The cross-LLM evaluation (GPT-4.1, Gemini 2.5 Pro, Mistral Large, Perplexity Sonar Pro) returned unanimous SHIP with ICE re-scores 216/294/336/336 (avg 281). All four reviewers raised the maintainer's preliminary 252. Mistral specifically pushed back on indefinite deferral of mutating mode — Q4 commitment is now explicit in the skill body's "Out of scope" section.
+- The cross-LLM evaluation (GPT-4.1, Gemini 2.5 Pro, Mistral Large, Perplexity Sonar Pro) returned unanimous SHIP with ICE re-scores 216/294/336/336 (avg 281). All four reviewers raised the maintainer's preliminary 252. Mistral specifically pushed back on indefinite deferral of mutating mode; Q4 commitment is now explicit in the skill body's "Out of scope" section.
 - Parent Issue #97 originally bundled three skills (`/dependency-audit`, `/debt-triage`, `/privacy-audit`); this release narrows to the first. The other two remain in the same Issue as separate sub-tracks for future re-scoring.
 - The skill is agnostic to package manager (npm / pnpm / pip / uv / poetry / SPM / Cargo / Maven / Gradle / dotnet / bundler). Stack detection picks the right inventory command at Step 0.
 
@@ -436,7 +450,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Notes
 
-- The v1.15.0 `--anthropic` scope is intentionally narrow. It establishes the contract — flag, dry-run, backup, doctor wiring — on a single file that the scaffold copies 1:1 from the template. Expanding the registry to files that go through `interpolate()` or section stripping requires a transformation-aware compare (likely re-running the scaffold pipeline against the user's current config), tracked for v1.16+.
+- The v1.15.0 `--anthropic` scope is intentionally narrow. It establishes the contract (flag, dry-run, backup, doctor wiring) on a single file that the scaffold copies 1:1 from the template. Expanding the registry to files that go through `interpolate()` or section stripping requires a transformation-aware compare (likely re-running the scaffold pipeline against the user's current config), tracked for v1.16+.
 
 ### Documentation
 
@@ -569,9 +583,9 @@ Rolled in from PR #114 (originally merged docs-only without version bump):
 
 ### Fixed
 
-- CLI `--version` now reads from `package.json` at runtime (was hard-coded `1.6.1` — 4 releases of drift vs actual 1.10.3). Identified by `skill-dev` audit (J4).
+- CLI `--version` now reads from `package.json` at runtime (was hard-coded `1.6.1`, 4 releases of drift vs actual 1.10.3). Identified by `skill-dev` audit (J4).
 - Wizard `AUDIT_MODELS` option list no longer offers `claude-opus-4-6` (Legacy per Anthropic models page); replaced with `claude-opus-4-7`. Fixes the root cause for the `operational-guide.md:166` doc drift below.
-- `scaffold/index.js` `patchSettingsPermissions` no longer silently swallows malformed settings.json during stack-permission patching — now logs a `console.warn` that names the file, the target stack, and the underlying error. Prevents scaffolds from shipping default JS/Node permissions on native stacks with no user-visible signal. Two new unit tests assert the warning is emitted and the file content is left unchanged.
+- `scaffold/index.js` `patchSettingsPermissions` no longer silently swallows malformed settings.json during stack-permission patching; it now logs a `console.warn` that names the file, the target stack, and the underlying error. Prevents scaffolds from shipping default JS/Node permissions on native stacks with no user-visible signal. Two new unit tests assert the warning is emitted and the file content is left unchanged.
 
 ### Changed
 
@@ -579,14 +593,14 @@ Rolled in from PR #114 (originally merged docs-only without version bump):
 - `docs/operational-guide.md:166` wizard recommendation for deep-analysis model updated from `claude-opus-4-6` (Legacy per Anthropic models page) to `claude-opus-4-7`.
 - `docs/operational-guide.md:43` + `:403` audit skill count aligned to 16 (was 15); added missing `skill-review` to the available-skills enumeration (added in v1.10.0, #58).
 - Extracted three policy limits to named constants in `utils/constants.js`: `SKILL_DESC_MAX_CHARS` (250), `CLAUDE_MD_MAX_LINES` (200), `STOP_HOOK_MAX_TIMEOUT_SEC` (600). Removes magic numbers from `new-skill.js` and `doctor.js`.
-- Consolidated `NATIVE_STACKS` usage — 7 inline literal arrays in `init-greenfield.js`, `init-in-place.js`, `scaffold/index.js` replaced with the canonical import from `skill-registry.js`. Added `WEB_STACKS` export in the same module and replaced 3 `webStacks` locals.
+- Consolidated `NATIVE_STACKS` usage: 7 inline literal arrays in `init-greenfield.js`, `init-in-place.js`, `scaffold/index.js` replaced with the canonical import from `skill-registry.js`. Added `WEB_STACKS` export in the same module and replaced 3 `webStacks` locals.
 - Unified `STACK_CMD_DEFAULTS` (claude-md.js) and `stackCommandDefaults` (scaffold/index.js) into a single `STACK_COMMANDS` table in the new `utils/stack-commands.js` module. Install/dev/build/test values were byte-identical; `typeCheck` has two consumer-specific shapes (`typeCheck` for the CLAUDE.md commands block, `typeCheckPlaceholder` for `[TYPE_CHECK_COMMAND]` template interpolation).
 - Extracted tier-suggestion thresholds into `utils/tier-suggestion.js`: 3 calibrated brackets (nodeWeb 100/30, medium 80/20, compact 60/15) plus `suggestTier(fileCount, thresholds)` helper. `detect-stack.js` 11 inline ternaries now delegate to the helper; values unchanged, single source of truth.
 
 ### Removed
 
-- Unused `AUDIT_MODEL_DEFAULT` constant (0 consumers — confirmed via grep).
-- `export` keyword on `scaffoldTier0` — it is only called internally from `scaffoldTier` and not listed in `_testHelpers`, so the public surface shrinks with no external impact.
+- Unused `AUDIT_MODEL_DEFAULT` constant (0 consumers, confirmed via grep).
+- `export` keyword on `scaffoldTier0`: it is only called internally from `scaffoldTier` and not listed in `_testHelpers`, so the public surface shrinks with no external impact.
 
 ---
 
@@ -594,12 +608,12 @@ Rolled in from PR #114 (originally merged docs-only without version bump):
 
 ### Fixed
 
-- arch-audit H1a grep pattern missed 15 hook events (StopFailure, PostToolUseFailure, SubagentStart/Stop, TaskCreated, PermissionRequest/Denied, TeammateIdle, SessionEnd, FileChanged, CwdChanged, ConfigChange, UserPromptExpansion, Elicitation/Result) — would have falsely flagged StopFailure already in use.
-- arch-audit C17 regex false-positive on arch-audit itself (self-referential `mcp__` in grep pattern) — added skip-by-name + `^allowed-tools:` anchor.
-- tier-l cheatsheet out of sync with skills dir: 5 skills missing (arch-audit, commit, context-review, dependency-scan, skill-review) — restored to parity with tier-m + added context-review row (tier-l exclusive).
+- arch-audit H1a grep pattern missed 15 hook events (StopFailure, PostToolUseFailure, SubagentStart/Stop, TaskCreated, PermissionRequest/Denied, TeammateIdle, SessionEnd, FileChanged, CwdChanged, ConfigChange, UserPromptExpansion, Elicitation/Result); would have falsely flagged StopFailure already in use.
+- arch-audit C17 regex false-positive on arch-audit itself (self-referential `mcp__` in grep pattern); added skip-by-name + `^allowed-tools:` anchor.
+- tier-l cheatsheet out of sync with skills dir: 5 skills missing (arch-audit, commit, context-review, dependency-scan, skill-review); restored to parity with tier-m + added context-review row (tier-l exclusive).
 - tier-l settings.json hook `model: "claude-haiku-4-5"` undocumented short-form → alias `haiku` (matches 41 SKILL.md frontmatter convention).
-- tier-s settings.json deny missing `Bash(git push origin main*)` — baseline main protection restored.
-- tier-l settings.json deny missing `Bash(DROP TABLE*)`, `Bash(TRUNCATE*)` — regression vs tier-m.
+- tier-s settings.json deny missing `Bash(git push origin main*)`; baseline main protection restored.
+- tier-l settings.json deny missing `Bash(DROP TABLE*)`, `Bash(TRUNCATE*)`; regression vs tier-m.
 
 ### Updated
 
@@ -608,7 +622,7 @@ Rolled in from PR #114 (originally merged docs-only without version bump):
 
 ### Unchanged
 
-- No code changes in CLI source — template-only release. Integration 828/828, unit 270/270.
+- No code changes in CLI source; template-only release. Integration 828/828, unit 270/270.
 
 ---
 
@@ -643,14 +657,14 @@ Rolled in from PR #114 (originally merged docs-only without version bump):
 - Doctor command: timeout check at both outer and inner hook levels.
 - Cheatsheet gap: 4 skills (responsive/visual/ux/ui-audit) now listed in cheatsheet templates with conditional pruning via `cheatsheet: true` in skill-registry.
 - Tier-L template sync: 3 missing docs files (implementation-checklist, refactoring-backlog, requirements) copied from tier-M.
-- Dead code: 7 orphan `replace()` calls removed from `interpolate()` (HAS_API, HAS_DATABASE, HAS_FRONTEND, HAS_E2E, AUDIT_MODEL, DESIGN_SYSTEM_NAME, HAS_PRD) — no template contained these placeholders.
+- Dead code: 7 orphan `replace()` calls removed from `interpolate()` (HAS_API, HAS_DATABASE, HAS_FRONTEND, HAS_E2E, AUDIT_MODEL, DESIGN_SYSTEM_NAME, HAS_PRD); no template contained these placeholders.
 
 ### Added
 
 - `scripts/lint-templates.mjs` — static analysis: banned patterns, wizard placeholder coverage, tier M/L file sync. Zero warnings, zero false positives.
 - Content assertion tests for 3 golden-file stacks: Swift (20 checks), Node-TS (22 checks), Python (22 checks).
 - Cross-stack invariant tests: 10 stacks × 6 invariants = 60 assertions.
-- Integration checks: 828 (was 536). Unit tests: 267 (was 281 — 14 removed for dead code).
+- Integration checks: 828 (was 536). Unit tests: 267 (was 281, 14 removed for dead code).
 - 29 integration scenarios (was 27).
 
 ---
@@ -660,11 +674,11 @@ Rolled in from PR #114 (originally merged docs-only without version bump):
 ### Added
 
 - `/skill-review` skill (Tier M lite, Tier L full) — quality review pipeline for skill portfolios. Includes 5 supporting documents: REVIEW_FRAMEWORK.md, SEVERITY_SCALE.md, SPEC_SNAPSHOT.md, SKILLS_INVENTORY.md, CALIBRATION_KIT.md. Tier M skips Phase 4 (external LLM) and Phase 9 (midpoint drift). Tier L runs full pipeline.
-- 19 reference files across 15 skills: PATTERNS.md (10), CHECKS.md (2), REPORT.md (6), DIMENSIONS.md (1) — stack-scaffolded patterns separated from skill body logic.
+- 19 reference files across 15 skills: PATTERNS.md (10), CHECKS.md (2), REPORT.md (6), DIMENSIONS.md (1); stack-scaffolded patterns separated from skill body logic.
 
 ### Changed
 
-- Pipeline v2 body purity: all 17 SKILL.md files reworked — framework-specific patterns (grep commands, CSS utilities, Tailwind classes, SwiftUI literals) extracted from bodies into reference files. Bodies contain only universal principles. Net -2009 lines.
+- Pipeline v2 body purity: all 17 SKILL.md files reworked; framework-specific patterns (grep commands, CSS utilities, Tailwind classes, SwiftUI literals) extracted from bodies into reference files. Bodies contain only universal principles. Net -2009 lines.
 - Configuration sections added to security-audit (`[SITEMAP_OR_ROUTE_LIST]`), perf-audit (`[PERF_TOOL]`, `[PROFILER_COMMAND]`), skill-dev (`[LINT_COMMAND]`).
 - skill-dev: scope filter for stack-specific check exclusion, refactoring-backlog.md fallback for missing file, D8 native stack clarification.
 - Skill registry: 18 entries (added skill-review).
@@ -707,7 +721,7 @@ Rolled in from PR #114 (originally merged docs-only without version bump):
 - `/ui-audit` scope narrowed to design-system compliance only. Extracted to `/accessibility-audit`: CHECK 11 (icon-only aria-label), CHECK 13 (positive tabindex), CHECK 14 (outline-none), CHECK 16 (img alt), CHECK 17 (form labels), S4 (nav keyboard), S6 (focus ring), S7 (onClick non-interactive), and Step 4 (axe-core WCAG scan). `/ui-audit` is now static-only (no Playwright). Check numbering preserves gaps to avoid breaking external references (#60)
 - `/visual-audit` narrowed from 11 to 10 dimensions. V8 (Contrast & legibility) and APCA Lc anchors in V4 extracted to `/accessibility-audit` (C1-C3). Page score denominator changed from `/55` to `/50`; bucket thresholds recalibrated proportionally (Excellent ≥40 / Good 30-39 / Needs work 20-29 / Poor <20). Scoring rules updated: `Score 3 on V1/V3/V4/V9/V10 → Major` (V8 removed) (#60)
 - `/skill-db` scope narrowed to live SQL verification (schema quality S1-S6 + N+1 query patterns Q1-Q3). Migration file analysis extracted to `/migration-audit` - single source of truth for migration safety across all database stacks. Pipeline Phase 5d Track B splits migration audit (`/migration-audit`) from schema audit (`/skill-db`). Affects projects invoking `/skill-db` for migration checks (#59)
-- Agents converted to on-demand skills: `dependency-scanner` → `/dependency-scan`, `context-reviewer` → `/context-review` — eliminates `.claude/agents/` directory from all templates (#62)
+- Agents converted to on-demand skills: `dependency-scanner` → `/dependency-scan`, `context-reviewer` → `/context-review`; eliminates `.claude/agents/` directory from all templates (#62)
 - `pruneSkills()` rewritten from 37 to 5 lines (delegates to skill registry)
 - `pruneCheatsheet()` rewritten from 15 to 9 lines (delegates to skill registry)
 - `injectActiveSkills()` rewritten from 28 to 10 lines (delegates to skill registry)
@@ -746,7 +760,7 @@ Rolled in from PR #114 (originally merged docs-only without version bump):
 
 - Primary target redefined: Builder PM and tech lead (people with enough technical background to work end-to-end with Claude Code). Not a generic "Product Trio."
 - Tier boundaries reframed around blast radius and collaborator count, not file count or duration
-- "Governance layer" positioning removed throughout — replaced with "scaffold for legible, reviewable AI-assisted development"
+- "Governance layer" positioning removed throughout; replaced with "scaffold for legible, reviewable AI-assisted development"
 - CLI description, template files, pipeline criteria all updated to match
 
 ### Added — Enforcement layer
@@ -772,7 +786,7 @@ Rolled in from PR #114 (originally merged docs-only without version bump):
 
 ### Added
 
-- UAT scenario definition at scope gate: when Phase 4 E2E activates, the user must explicitly list numbered user journeys (1–5 scenarios) at Phase 1. Claude implements exactly those scenarios — it does not invent test cases.
+- UAT scenario definition at scope gate: when Phase 4 E2E activates, the user must explicitly list numbered user journeys (1–5 scenarios) at Phase 1. Claude implements exactly those scenarios; it does not invent test cases.
 - Phase 4 renamed "UAT / E2E tests" across Tier M/L pipelines.
 
 ---
