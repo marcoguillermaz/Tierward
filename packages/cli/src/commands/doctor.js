@@ -214,10 +214,13 @@ const checks = [
   },
   {
     id: 'output-style-rule',
-    label: '.claude/rules/output-style.md present (tier M/L)',
+    label: '.claude/rules/output-style.md present (all tiers)',
     check: (cwd) => {
-      const hasPipeline = fs.existsSync(path.join(cwd, '.claude', 'rules', 'pipeline.md'));
-      if (!hasPipeline) return { pass: true, skip: true };
+      // output-style.md ships in every tier (0/S/M/L), so gate on the scaffold
+      // signal (settings.json) rather than pipeline.md - tier 0 has no pipeline
+      // but does ship output-style.md.
+      const isScaffold = fs.existsSync(path.join(cwd, '.claude', 'settings.json'));
+      if (!isScaffold) return { pass: true, skip: true };
       const exists = fs.existsSync(path.join(cwd, '.claude', 'rules', 'output-style.md'));
       return {
         pass: exists,

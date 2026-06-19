@@ -1239,7 +1239,7 @@ Runs 29 checks:
 9. Stop hook is configured with a non-empty command
 10. Stop hook command has no unfilled `[TEST_COMMAND]` placeholder
 11. `.github/CODEOWNERS` covers `.claude/`
-12. `.claude/rules/output-style.md` present (Tier M/L - warn if missing)
+12. `.claude/rules/output-style.md` present (all tiers, including Tier 0 - warn if missing)
 13. `docs/claudemd-standards.md` present (Tier M/L - warn if missing)
 14. `docs/pipeline-standards.md` present (Tier M/L - warn if missing)
 15. `.claude/skills/commit/` present (Tier M/L - warn if missing)
@@ -1258,7 +1258,7 @@ Runs 29 checks:
 28. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
 29. No duplicate entries in `permissions.deny` list (warn if duplicates found)
 
-Checks 12-29 are skipped for Tier 0 projects.
+Checks 13-29 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier.
 
 **`--report` output**: machine-readable JSON with timestamp, cwd, summary (passed/warned/failed/skipped), and per-check details. Consumed by CI systems or external audit tools.
 
