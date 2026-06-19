@@ -2680,6 +2680,35 @@ async function scenarioDoctorCrossFileValidation() {
       fail(`Tier ${tier} corrupt-security: expected warn/fail, got ${secStatus}`);
     }
   }
+
+  // Tier 0: output-style.md now ships in tier 0 and doctor validates it
+  // (gated on settings.json, not pipeline.md). It must pass, not skip.
+  {
+    const config0 = {
+      ...BASE,
+      tier: '0',
+      isDiscovery: true,
+      includePreCommit: false,
+      includeGithub: false,
+    };
+    const dir0 = await scaffold('doctor-xfile-tier-0-output-style', '0', config0);
+    fillStopHookTestCmd(dir0);
+    const status0 = getCheckStatus(runDoctor(dir0), 'output-style-rule');
+    if (status0 === 'pass') {
+      pass('Tier 0: output-style-rule = pass (validated, not skipped)');
+    } else {
+      fail(`Tier 0: output-style-rule = ${status0} (expected pass)`);
+    }
+
+    // Negative: remove the rule -> warn (not skip)
+    fs.rmSync(path.join(dir0, '.claude/rules/output-style.md'));
+    const status0b = getCheckStatus(runDoctor(dir0), 'output-style-rule');
+    if (status0b === 'warn') {
+      pass('Tier 0: output-style-rule = warn when output-style.md removed');
+    } else {
+      fail(`Tier 0: output-style-rule = ${status0b} (expected warn)`);
+    }
+  }
 }
 
 async function scenarioDocAuditPresent() {
