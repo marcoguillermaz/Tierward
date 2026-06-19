@@ -30,6 +30,7 @@ A skip is a legitimate outcome. Silent degradation is not.
 - **Scope confirmation (compact)**: before writing any code, state the exact files to modify, the specific change in each, and flag any irreversible operation.
 
 ***** STOP - wait for an execution keyword (`Execute` · `Proceed` · `Confirmed` · `Go ahead`) before writing any code. *****
+- **Bugs encountered during the fix**: if a test failure or unexpected behavior surfaces while writing, invoke `/systematic-debugging` before proposing or applying any change.
 - Write the fix. No dependency scan (unless a shared utility is touched - then do a quick grep).
 - Run type check: `[TYPE_CHECK_COMMAND]`
 - Run tests: `[TEST_COMMAND]`
