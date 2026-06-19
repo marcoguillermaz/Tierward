@@ -11,12 +11,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.33.0] — 2026-06-19
+
+### Added
+
+- **`systematic-debugging` process skill (tier S, M, L).** New skill enforcing root-cause investigation before any fix. Tier S is a compact 3-phase version (Reproduce → Hypothesize → Fix). Tier M/L adds a Pattern Analysis phase and a Common Rationalizations table. All three tiers include an explicit STOP gate between hypothesis and implementation: the hypothesis must be written and verified against evidence before touching any code. Pipeline hooks in FL-1 (tier S) and Phase 2 (tier M/L) route bug encounters to the skill automatically. Adapted from the superpowers reference implementation; stack-agnostic — repro case can be a failing test, a script, or a manual recipe. (#229)
+
+### Changed
+
+- **Skill methodology — Red Flags anti-rationalization.** Six discipline-enforcing skills (`skill-review`, `commit`, `simplify`, `skill-security`, and the new `systematic-debugging`) now carry a Red Flags table pairing each common rationalization with the concrete failure mode it produces. Covers the most frequent ways practitioners justify skipping a skill's core discipline under time pressure. (#228)
+- **`skill-review` pipeline v2 — eval before/after delta.** When `2.E` behavioral fixtures run before a fix session, the pipeline now records a before-state pass-rate (`2.E before: N/N pass`), re-runs after Phase 3, and reports the delta in Phase 6 (`2.E eval delta: before → after`). Skip is explicit when no fix session follows. Applies to both tier M (lite mode) and tier L (full mode). (#228)
+
+---
+
 ## [1.32.1] — 2026-06-18
 
 ### Fixed
 
-- **Plugin skill companion files.** Seven companion files (`REPORT.md`, `PATTERNS.md`, `BATCH_COMMANDS.md`, `advanced-checks.md`) were missing from the plugin `skills/` directories — only `SKILL.md` files had been copied from the tier-s/tier-m templates. This caused `/tierward:arch-audit`, `/tierward:security-audit`, `/tierward:perf-audit`, and `/tierward:skill-dev` to reference files that did not exist. All companion files are now bundled with the plugin. (#222)
-- **`/tierward:arch-audit` non-invasive guard.** Step 5 (timestamp write) now runs conditionally — it only writes `.claude/session/last-arch-audit` when that directory already exists, preserving the plugin's non-invasive promise in projects without a CDK scaffold. (#222)
+- **Plugin skill companion files.** Seven companion files (`REPORT.md`, `PATTERNS.md`, `BATCH_COMMANDS.md`, `advanced-checks.md`) were missing from the plugin skills directories, causing `/tierward:arch-audit`, `/tierward:security-audit`, `/tierward:perf-audit`, and `/tierward:skill-dev` to reference files that did not exist in standalone (non-CDK) projects. All four skills now work correctly. (#222)
+- **`/tierward:arch-audit` non-invasive guard.** The Step 5 timestamp write is now conditional on the `.claude/session/` directory already existing, keeping the plugin non-invasive in projects that have not run `npx tierward init`. (#222)
 
 ---
 
@@ -24,17 +37,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **Tierward plugin for Claude Code marketplace.** The project now ships as a Claude Code plugin alongside the npm CLI. Install in any project: `claude plugin marketplace add marcoguillermaz/tierward`, then `claude plugin install tierward@tierward`. Eight governance skills load straight away, namespaced as `/tierward:commit`, `/tierward:arch-audit`, `/tierward:security-audit`, `/tierward:perf-audit`, `/tierward:simplify`, `/tierward:skill-dev`, `/tierward:skill-security`, and `/tierward:humanize`. No `npx tierward init` needed. (#216)
-- **Bootstrap soft hook.** A `UserPromptSubmit` hook adds a one-line reminder of available `/tierward:*` skills to each session's system context. Never blocks; keeps the skill list in view without prompting anything.
-- **Private marketplace registry (`marketplace.json`).** A marketplace manifest at the repository root lets the plugin install through the standard Claude Code marketplace API. Teams building their own plugin registries can use it as a reference.
-
----
-
-## [1.31.1] — 2026-06-18
-
-### Fixed
-
-- **`claude-dev-kit-verify.yml` workflow** — updated skip condition from `marcoguillermaz/claude-dev-kit` to `marcoguillermaz/tierward` (the job was running instead of skipping on own-repo PRs after the repo rename) and replaced `npx mg-claude-dev-kit@latest` with `npx tierward@latest`. (#214)
+- **Tierward plugin for Claude Code marketplace.** Tierward now ships as a Claude Code plugin alongside the npm CLI. `claude plugin marketplace add marcoguillermaz/tierward` installs eight governance skills namespaced as `/tierward:commit`, `/tierward:arch-audit`, `/tierward:security-audit`, `/tierward:perf-audit`, `/tierward:simplify`, `/tierward:skill-dev`, `/tierward:skill-security`, and `/tierward:humanize`. No `npx tierward init` required. (#218, #219)
+- **Bootstrap soft hook.** A `UserPromptSubmit` hook adds a one-line reminder of available `/tierward:*` skills to each session's system context — never prompts, never auto-executes. (#218)
+- **Private marketplace registry.** A `marketplace.json` at the repository root enables plugin installation through the standard Claude Code marketplace API. (#218)
 
 ---
 

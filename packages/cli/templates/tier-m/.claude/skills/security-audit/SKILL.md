@@ -360,3 +360,16 @@ Then write ONLY the approved entries to `docs/refactoring-backlog.md`:
 - SEO, robots.txt, meta tags, sitemaps, and public indexing are explicitly OUT OF SCOPE.
 - **Server-side form actions**: if the framework supports server-side form actions (e.g. Next.js Server Actions, SvelteKit form actions, Remix actions), treat them as directly-reachable POST endpoints and audit with the same auth/authz/validation checks. Note as N/A if absent.
 - After the report, ask: "Should I implement the Critical/High fixes identified?"
+
+---
+
+## Red flags
+
+The most common ways discipline is silently abandoned here:
+
+| Temptation | Why it fails |
+|---|---|
+| Marking a check as passing without executing the grep patterns | Each check has a defined pattern for a reason; visual inspection is not equivalent to systematic grep |
+| Downgrading a CVE severity to avoid blocking the build | Severity classification comes from the scan output, not from deployment pressure |
+| Silently skipping Step 3c when the dependency audit command is unavailable | Must announce the skip explicitly — silent omission reads as "zero findings" |
+| Writing to the backlog before the user responds to the decision gate | Step 6 defines an explicit STOP; the gate exists to prevent unrequested backlog writes |

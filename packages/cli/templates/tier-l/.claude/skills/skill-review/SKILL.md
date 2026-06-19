@@ -109,6 +109,8 @@ Present findings to user. For multi-option review questions, ALWAYS use `AskUser
 - 1 contamination probe: a pilot-project-like literal; verify the skill does NOT flag as stack-specific.
 - 1 severity-calibration case: a finding at a known severity; verify the skill produces that label.
 
+**Eval snapshot**: when 2.E runs before Phase 3, record the pass-rate as the before-state: `2.E before: N/N pass`. After Phase 3, re-run 2.E and record the after-state: `2.E after: M/M pass`. Report the delta in Phase 6. Skip if no fix session follows.
+
 **Mode `fixtures-only`**: stop after 2.E, report.
 
 ---
@@ -159,6 +161,7 @@ Present outcome checklist:
 - [ ] 2.B cross-tier: pass (N variants reviewed)
 - [ ] 2.C refinements: pass
 - [ ] 2.E fixtures: N/N pass (if applicable)
+- [ ] 2.E eval delta: [before: N/N → after: M/M] (if run in fix session)
 
 ### Fixes (Phase 3)
 - Applied: [N Critical + N High fixes]
@@ -240,3 +243,17 @@ Mode: full | preflight-only | fixtures-only
 - **Max 3 fix attempts** per Critical finding. After 3 failures: revert + escalate.
 - **Severity labels are rubric-anchored**, never intuitive. Re-read `SEVERITY_SCALE.md` decision tree when uncertain.
 - **FP-rate cap rule**: technical severity cannot override FP-rate cap. Critical requires < 10% FP evidence.
+
+---
+
+## Red flags
+
+The most common ways discipline is silently abandoned here:
+
+| Temptation | Why it fails |
+|---|---|
+| Applying a fix before the Phase 3 STOP confirmation | Phase 3 STOP is a hard gate; "obviously safe" fixes are not exceptions |
+| Downgrading a Critical to clear the false-positive cap | The cap is a quality floor; downgrade requires documented evidence, not cap pressure |
+| Declaring PASS when findings were deferred rather than resolved | PASS means all Phase checks closed; deferred findings are open findings |
+| Skipping 2.B cross-tier review when only one tier is modified | Cross-tier coherence is mandatory regardless of declared scope |
+| Skipping Phase 9 midpoint drift check "because nothing seems to have drifted" | Drift is silent by nature; the midpoint check exists precisely because it cannot be detected by inspection |

@@ -23,8 +23,8 @@ describe('NATIVE_STACKS', () => {
 // ---------------------------------------------------------------------------
 
 describe('SKILL_REGISTRY', () => {
-  it('has 25 entries', () => {
-    assert.equal(SKILL_REGISTRY.length, 25);
+  it('has 26 entries', () => {
+    assert.equal(SKILL_REGISTRY.length, 26);
   });
 
   it('every entry has required fields', () => {
