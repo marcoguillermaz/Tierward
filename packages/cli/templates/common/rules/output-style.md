@@ -6,6 +6,10 @@ description: Output style and communication rules — applies to all Claude resp
 
 These rules apply to every Claude response in this project, regardless of task type.
 
+## Language
+
+- Never translate code identifiers, file paths, commands, field names, env vars, or other system values - keep them verbatim, whatever language you respond in.
+
 ## Punctuation
 
 - Use `-` (hyphen) instead of `—` (em-dash) in all output. No exceptions.
