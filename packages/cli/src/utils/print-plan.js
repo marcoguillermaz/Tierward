@@ -268,12 +268,14 @@ function getFilePlan(config) {
   const tier = (config.tier || 's').toUpperCase();
   const mode = config.mode || 'greenfield';
 
-  // Tier 0 is a minimal scaffold - no pipeline, no rules, no governance layer
+  // Tier 0 is a minimal scaffold - communication governance only
+  // (output-style.md), no pipeline or workflow rules.
   if (tier === '0') {
     return [
       'CLAUDE.md',
       'GETTING_STARTED.md',
       '.claude/settings.json',
+      '.claude/rules/output-style.md',
       '.claude/session/  (directory)',
     ];
   }
