@@ -11,6 +11,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.33.1] — 2026-06-19
+
+### Added
+
+- **Language rule in `output-style.md` (all tiers).** Claude must never translate code identifiers, file paths, commands, field names, env vars, or other system values; they stay verbatim regardless of the response language. Shipped to every tier through the existing rule import. (#237, #238)
+
+### Fixed
+
+- **`doctor` now validates `output-style.md` on tier 0.** The `output-style-rule` check gated on `pipeline.md`, which tier 0 does not ship, so tier 0's only rule file was scaffolded but never checked. The gate is now `.claude/settings.json` (the scaffold signal), so the check covers every tier; the M/L-only standards checks still gate on `pipeline.md`. (#237, #238)
+
+---
+
 ## [1.33.0] — 2026-06-19
 
 ### Added
