@@ -87,6 +87,8 @@ Always use `AskUserQuestion` tool for multi-option review questions - never inli
 - 1 adversarial case.
 - 1 severity-calibration case.
 
+**Eval snapshot**: when 2.E runs before Phase 3, record the pass-rate as the before-state: `2.E before: N/N pass`. After Phase 3, re-run 2.E and record the after-state: `2.E after: M/M pass`. Report the delta in Phase 6. Skip if no fix session follows.
+
 **Mode `fixtures-only`**: stop after 2.E, report.
 
 ---
@@ -127,6 +129,7 @@ Rationale: external LLM review adds ~60-90 min per skill (prompt generation + 3 
 - [ ] 2.B cross-tier (N variants)
 - [ ] 2.C refinements
 - [ ] 2.E fixtures: N/N pass (if run)
+- [ ] 2.E eval delta: [before: N/N → after: M/M] (if run in fix session)
 
 ### Fixes (Phase 3)
 - Applied: [N Critical + N High]

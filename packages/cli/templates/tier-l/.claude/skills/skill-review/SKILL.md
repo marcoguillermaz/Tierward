@@ -109,6 +109,8 @@ Present findings to user. For multi-option review questions, ALWAYS use `AskUser
 - 1 contamination probe: a pilot-project-like literal; verify the skill does NOT flag as stack-specific.
 - 1 severity-calibration case: a finding at a known severity; verify the skill produces that label.
 
+**Eval snapshot**: when 2.E runs before Phase 3, record the pass-rate as the before-state: `2.E before: N/N pass`. After Phase 3, re-run 2.E and record the after-state: `2.E after: M/M pass`. Report the delta in Phase 6. Skip if no fix session follows.
+
 **Mode `fixtures-only`**: stop after 2.E, report.
 
 ---
@@ -159,6 +161,7 @@ Present outcome checklist:
 - [ ] 2.B cross-tier: pass (N variants reviewed)
 - [ ] 2.C refinements: pass
 - [ ] 2.E fixtures: N/N pass (if applicable)
+- [ ] 2.E eval delta: [before: N/N → after: M/M] (if run in fix session)
 
 ### Fixes (Phase 3)
 - Applied: [N Critical + N High fixes]
