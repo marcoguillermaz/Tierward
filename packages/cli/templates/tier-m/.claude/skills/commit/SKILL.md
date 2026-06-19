@@ -63,6 +63,19 @@ Use multiple `-m` flags for subject + body. Never use `--amend` or `--no-verify`
 
 ---
 
+## Red flags
+
+The most common ways discipline is silently abandoned here:
+
+| Temptation | Why it fails |
+|---|---|
+| Running `git commit -m "..."` directly | Bypasses type, scope, and body discipline — leaves missing metadata in history |
+| Using `--no-verify` because a hook failed | Hook failures are signals; bypassing them silences the signal |
+| Using `--amend` to avoid re-running the skill | Rewrites published history; always invoke the skill fresh for each commit |
+| Skipping the body "because the change is obvious" | Obviousness to the author is not obviousness to the next reader; Step 5 criteria decide, not author confidence |
+
+---
+
 ## Reference - Three-commit block pattern (S8)
 
 | Commit | Phase | Type | Scope | Content |
