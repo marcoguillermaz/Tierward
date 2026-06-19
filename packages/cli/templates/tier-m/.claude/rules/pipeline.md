@@ -140,6 +140,7 @@ A skip is a legitimate outcome. Silent degradation is not.
   - If project is native mobile: check keychain usage, data-at-rest encryption, App Transport Security (ATS).
   - If none of the above apply to this block: state explicitly that no security checklist items are applicable and why.
 - Run `/simplify` on changed files after writing (skip for trivial 1-file changes).
+- **Bugs encountered during implementation**: if a test failure or unexpected behavior surfaces while in Phase 2, invoke `/systematic-debugging` before proposing or applying any fix.
 
 ## Phase 3 - Build + tests
 
