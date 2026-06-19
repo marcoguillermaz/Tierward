@@ -81,6 +81,7 @@ These notes persist across sessions. Claude reads them every time.
 Tier 0 (what you have now) gives you the minimum viable scaffold:
 - Claude knows your project via `CLAUDE.md`
 - Tests must pass before Claude declares a task complete
+- Claude follows a small set of communication rules (`output-style.md`)
 
 When your team grows or your project complexity increases, upgrade to a higher tier:
 

@@ -362,8 +362,17 @@ async function scenarioTier0() {
   assertExists(dir, '.claude/settings.json');
   assertDirExists(dir, '.claude/session');
 
-  // Tier 0 must NOT have pipeline or governance files
+  // Tier 0 gets communication governance only (output-style.md) - no workflow rules
+  assertExists(dir, '.claude/rules/output-style.md');
+  assertContains(
+    dir,
+    'CLAUDE.md',
+    '@.claude/rules/output-style.md',
+    'tier-0 CLAUDE.md imports output-style',
+  );
   assertNotExists(dir, '.claude/rules/pipeline.md');
+  assertNotExists(dir, '.claude/rules/git.md');
+  assertNotExists(dir, '.claude/rules/security.md');
   assertNotExists(dir, 'README.md');
   assertNotExists(dir, '.github');
   assertNotExists(dir, '.pre-commit-config.yaml');
