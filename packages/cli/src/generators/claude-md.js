@@ -37,6 +37,11 @@ export async function generateClaudeMd(config, targetDir) {
   if (tier === 's' || tier === 'm' || tier === 'l') {
     content = injectRuleImports(content);
     content = injectActiveSkills(content, config);
+  } else if (tier === '0') {
+    // Tier 0 gets only the communication-governance import. The standards docs
+    // (@docs/*-standards.md) are not scaffolded for tier 0 - importing them
+    // would dangle - and there is no Active Skills section.
+    content = injectRuleImports(content, ['@.claude/rules/output-style.md']);
   }
 
   // Strip web-centric convention for projects without API routes
@@ -115,15 +120,18 @@ function buildCommandsBlock(config) {
 }
 
 /**
- * Append @-imports for the three shared rule files before the first ##-heading
- * that doesn't already have them. If they already exist, skip.
+ * Append rule @-imports after the first H1 heading. Defaults to the three
+ * shared files (S/M/L); callers pass a narrower list for leaner tiers
+ * (tier 0 imports only output-style.md). Idempotent - skips if already present.
  */
-function injectRuleImports(content) {
-  const imports = [
+function injectRuleImports(
+  content,
+  imports = [
     '@.claude/rules/output-style.md',
     '@docs/claudemd-standards.md',
     '@docs/pipeline-standards.md',
-  ];
+  ],
+) {
   // If any import already present, skip (idempotent)
   if (imports.every((i) => content.includes(i))) return content;
 

@@ -26,6 +26,17 @@ async function scaffoldTier0(targetDir, config, templatesDir) {
     await fs.writeFile(destPath, interpolate(content, config));
   }
 
+  // Copy the communication-governance rule only. Tier 0 deliberately gets no
+  // workflow governance (no pipeline, git, security, or context-review rules) -
+  // output-style.md is the single behavioral rule its CLAUDE.md @-imports.
+  const outputStyleSrc = path.join(templatesDir, 'common', 'rules', 'output-style.md');
+  if (await fs.pathExists(outputStyleSrc)) {
+    const outputStyleDest = path.join(targetDir, '.claude', 'rules', 'output-style.md');
+    await fs.ensureDir(path.dirname(outputStyleDest));
+    const content = await fs.readFile(outputStyleSrc, 'utf8');
+    await fs.writeFile(outputStyleDest, interpolate(content, config));
+  }
+
   // Create session directory (used by Claude for session recovery)
   await fs.ensureDir(path.join(targetDir, '.claude', 'session'));
 }

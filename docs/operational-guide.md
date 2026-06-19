@@ -282,15 +282,16 @@ The pipeline is the sequence of phases Claude follows for every development task
 ### Tier 0 - Discovery
 
 **Use for**: teams exploring Claude Code for the first time. No pipeline knowledge required.
-**What it provides**: one constraint (tests must pass) and project context (CLAUDE.md). Nothing else.
+**What it provides**: one constraint (tests must pass), project context (CLAUDE.md), and one communication rule (output-style.md). No pipeline, no workflow rules.
 
-| File                    | Purpose                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------- |
-| `CLAUDE.md`             | Project context: stack, commands, conventions. Claude reads this every session. |
-| `.claude/settings.json` | Stop hook: tests must pass before Claude declares a task complete.              |
-| `GETTING_STARTED.md`    | Step-by-step guide for the first session.                                       |
+| File                            | Purpose                                                                                  |
+| ------------------------------- | ---------------------------------------------------------------------------------------- |
+| `CLAUDE.md`                     | Project context: stack, commands, conventions. Claude reads this every session.          |
+| `.claude/settings.json`         | Stop hook: tests must pass before Claude declares a task complete.                       |
+| `.claude/rules/output-style.md` | Communication rules: answer-first, no AI-tells, hold position on evidence not pressure.  |
+| `GETTING_STARTED.md`            | Step-by-step guide for the first session.                                                |
 
-**The Stop hook is the only governance control in Tier 0** - and it's the most important one.
+**The Stop hook is the only enforcement control in Tier 0** - tests must pass before Claude can finish. The one rule file (output-style.md) shapes how Claude communicates, but it gates nothing.
 
 **After running init (Tier 0):**
 
@@ -678,7 +679,7 @@ Commit format, branch naming rules, PR conventions. Loaded for all git operation
 
 ---
 
-### .claude/rules/output-style.md (Tier M/L)
+### .claude/rules/output-style.md (all tiers)
 
 Communication rules for Claude in this project. No sycophantic openers, no AI discourse markers, plain vocabulary, directness-first, hyphen not em-dash.
 
