@@ -87,6 +87,8 @@ Always use `AskUserQuestion` tool for multi-option review questions - never inli
 - 1 adversarial case.
 - 1 severity-calibration case.
 
+**Eval snapshot**: when 2.E runs before Phase 3, record the pass-rate as the before-state: `2.E before: N/N pass`. After Phase 3, re-run 2.E and record the after-state: `2.E after: M/M pass`. Report the delta in Phase 6. Skip if no fix session follows.
+
 **Mode `fixtures-only`**: stop after 2.E, report.
 
 ---
@@ -127,6 +129,7 @@ Rationale: external LLM review adds ~60-90 min per skill (prompt generation + 3 
 - [ ] 2.B cross-tier (N variants)
 - [ ] 2.C refinements
 - [ ] 2.E fixtures: N/N pass (if run)
+- [ ] 2.E eval delta: [before: N/N → after: M/M] (if run in fix session)
 
 ### Fixes (Phase 3)
 - Applied: [N Critical + N High]
@@ -182,3 +185,16 @@ Mode: full | preflight-only | fixtures-only
 - **Severity labels are rubric-anchored**, never intuitive. Re-read `SEVERITY_SCALE.md` decision tree when uncertain.
 - **FP-rate cap rule**: Critical requires < 10% FP evidence.
 - **Upgrade trigger**: if portfolio exceeds 5 skills mid-cycle, pause and switch to Tier L full-mode variant - Phase 4 + Phase 9 become mandatory.
+
+---
+
+## Red flags
+
+The most common ways discipline is silently abandoned here:
+
+| Temptation | Why it fails |
+|---|---|
+| Applying a fix before the Phase 3 STOP confirmation | Phase 3 STOP is a hard gate; "obviously safe" fixes are not exceptions |
+| Downgrading a Critical to clear the false-positive cap | The cap is a quality floor; downgrade requires documented evidence, not cap pressure |
+| Declaring PASS when findings were deferred rather than resolved | PASS means all Phase checks closed; deferred findings are open findings |
+| Skipping 2.B cross-tier review when only one tier is modified | Cross-tier coherence is mandatory regardless of declared scope |
