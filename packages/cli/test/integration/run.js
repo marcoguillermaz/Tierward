@@ -3867,13 +3867,13 @@ async function scenarioMCPServer() {
   const config = { ...BASE, tier: 'm', isDiscovery: false };
   const dir = await scaffold('mcp-server-tier-m', 'm', config);
 
-  // Drop a team-settings.json so cdk_team_settings has something interesting to return
+  // Drop a team-settings.json so tierward_team_settings has something interesting to return
   fs.writeFileSync(
     path.join(dir, '.claude/team-settings.json'),
     JSON.stringify({ minTier: 'm', requiredSkills: ['arch-audit'] }, null, 2),
   );
 
-  // Mark a recent arch-audit so cdk_arch_audit_status returns a populated payload
+  // Mark a recent arch-audit so tierward_arch_audit_status returns a populated payload
   const sessionDir = path.join(dir, '.claude/session');
   await fs.ensureDir(sessionDir);
   const fixedEpoch = Math.floor(Date.now() / 1000) - 3 * 86400; // 3 days ago
@@ -3882,12 +3882,12 @@ async function scenarioMCPServer() {
   const transport = new StdioClientTransport({
     command: 'node',
     args: [SERVER_PATH],
-    env: { ...process.env, CDK_PROJECT_ROOT: dir },
+    env: { ...process.env, TIERWARD_PROJECT_ROOT: dir },
     stderr: 'pipe',
   });
 
   const client = new Client(
-    { name: 'cdk-integration-test', version: '0.0.1' },
+    { name: 'tierward-integration-test', version: '0.0.1' },
     { capabilities: {} },
   );
 
@@ -3896,17 +3896,22 @@ async function scenarioMCPServer() {
     pass('MCP server: connect via stdio succeeds');
 
     const tools = await client.listTools();
-    const expected = [
-      'cdk_doctor_report',
-      'cdk_team_settings',
-      'cdk_arch_audit_status',
-      'cdk_skill_inventory',
-      'cdk_package_meta',
-      'cdk_pr_review',
+    // Primary `tierward_*` names plus the deprecated `cdk_*` aliases (kept for
+    // backward compatibility after the claude-dev-kit → tierward rename).
+    const bases = [
+      'doctor_report',
+      'team_settings',
+      'arch_audit_status',
+      'skill_inventory',
+      'package_meta',
+      'pr_review',
     ];
+    const expected = [...bases.map((b) => `tierward_${b}`), ...bases.map((b) => `cdk_${b}`)];
     const got = tools.tools.map((t) => t.name).sort();
-    if (JSON.stringify(got) === JSON.stringify(expected.sort())) {
-      pass(`MCP server: listTools returns ${expected.length} expected tools`);
+    if (JSON.stringify(got) === JSON.stringify([...expected].sort())) {
+      pass(
+        `MCP server: listTools returns ${expected.length} tools (6 primary + 6 deprecated aliases)`,
+      );
     } else {
       fail(`MCP server: tool list mismatch. expected=${expected}, got=${got}`);
     }
@@ -3917,50 +3922,52 @@ async function scenarioMCPServer() {
       return JSON.parse(text);
     }
 
-    const meta = parseToolReply(await client.callTool({ name: 'cdk_package_meta', arguments: {} }));
+    const meta = parseToolReply(
+      await client.callTool({ name: 'tierward_package_meta', arguments: {} }),
+    );
     if (meta.name === 'tierward' && meta.cwd === dir) {
-      pass('cdk_package_meta: name + cwd correct');
+      pass('tierward_package_meta: name + cwd correct');
     } else {
-      fail(`cdk_package_meta: ${JSON.stringify(meta)}`);
+      fail(`tierward_package_meta: ${JSON.stringify(meta)}`);
     }
 
     const team = parseToolReply(
-      await client.callTool({ name: 'cdk_team_settings', arguments: {} }),
+      await client.callTool({ name: 'tierward_team_settings', arguments: {} }),
     );
     if (
       team.present === true &&
       team.settings?.minTier === 'm' &&
       Array.isArray(team.settings?.requiredSkills)
     ) {
-      pass('cdk_team_settings: present=true, minTier and requiredSkills parsed');
+      pass('tierward_team_settings: present=true, minTier and requiredSkills parsed');
     } else {
-      fail(`cdk_team_settings: ${JSON.stringify(team)}`);
+      fail(`tierward_team_settings: ${JSON.stringify(team)}`);
     }
 
     const arch = parseToolReply(
-      await client.callTool({ name: 'cdk_arch_audit_status', arguments: {} }),
+      await client.callTool({ name: 'tierward_arch_audit_status', arguments: {} }),
     );
     if (
       arch.everRan === true &&
       arch.lastRunUnix === fixedEpoch &&
       typeof arch.ageDays === 'number'
     ) {
-      pass(`cdk_arch_audit_status: lastRunUnix matches, ageDays=${arch.ageDays.toFixed(2)}`);
+      pass(`tierward_arch_audit_status: lastRunUnix matches, ageDays=${arch.ageDays.toFixed(2)}`);
     } else {
-      fail(`cdk_arch_audit_status: ${JSON.stringify(arch)}`);
+      fail(`tierward_arch_audit_status: ${JSON.stringify(arch)}`);
     }
 
     const inv = parseToolReply(
-      await client.callTool({ name: 'cdk_skill_inventory', arguments: {} }),
+      await client.callTool({ name: 'tierward_skill_inventory', arguments: {} }),
     );
     if (inv.present === true && Array.isArray(inv.skills) && inv.count > 0) {
-      pass(`cdk_skill_inventory: present, count=${inv.count}`);
+      pass(`tierward_skill_inventory: present, count=${inv.count}`);
     } else {
-      fail(`cdk_skill_inventory: ${JSON.stringify(inv)}`);
+      fail(`tierward_skill_inventory: ${JSON.stringify(inv)}`);
     }
 
     const doctorReport = parseToolReply(
-      await client.callTool({ name: 'cdk_doctor_report', arguments: {} }),
+      await client.callTool({ name: 'tierward_doctor_report', arguments: {} }),
     );
     if (
       doctorReport &&
@@ -3969,10 +3976,12 @@ async function scenarioMCPServer() {
       doctorReport.checks.length >= 20
     ) {
       pass(
-        `cdk_doctor_report: ${doctorReport.checks.length} checks, summary=${JSON.stringify(doctorReport.summary)}`,
+        `tierward_doctor_report: ${doctorReport.checks.length} checks, summary=${JSON.stringify(doctorReport.summary)}`,
       );
     } else {
-      fail(`cdk_doctor_report: unexpected shape ${JSON.stringify(doctorReport).slice(0, 200)}`);
+      fail(
+        `tierward_doctor_report: unexpected shape ${JSON.stringify(doctorReport).slice(0, 200)}`,
+      );
     }
 
     // Negative case: arch-audit absent
@@ -3980,29 +3989,29 @@ async function scenarioMCPServer() {
     const transport2 = new StdioClientTransport({
       command: 'node',
       args: [SERVER_PATH],
-      env: { ...process.env, CDK_PROJECT_ROOT: dirNoAudit },
+      env: { ...process.env, TIERWARD_PROJECT_ROOT: dirNoAudit },
       stderr: 'pipe',
     });
     const client2 = new Client(
-      { name: 'cdk-integration-test-2', version: '0.0.1' },
+      { name: 'tierward-integration-test-2', version: '0.0.1' },
       { capabilities: {} },
     );
     await client2.connect(transport2);
     const archEmpty = parseToolReply(
-      await client2.callTool({ name: 'cdk_arch_audit_status', arguments: {} }),
+      await client2.callTool({ name: 'tierward_arch_audit_status', arguments: {} }),
     );
     if (archEmpty.everRan === false && archEmpty.lastRunUnix === null) {
-      pass('cdk_arch_audit_status: clean scaffold reports everRan=false');
+      pass('tierward_arch_audit_status: clean scaffold reports everRan=false');
     } else {
-      fail(`cdk_arch_audit_status (no run): ${JSON.stringify(archEmpty)}`);
+      fail(`tierward_arch_audit_status (no run): ${JSON.stringify(archEmpty)}`);
     }
     const teamAbsent = parseToolReply(
-      await client2.callTool({ name: 'cdk_team_settings', arguments: {} }),
+      await client2.callTool({ name: 'tierward_team_settings', arguments: {} }),
     );
     if (teamAbsent.present === false && teamAbsent.settings === null) {
-      pass('cdk_team_settings: absent file reports present=false');
+      pass('tierward_team_settings: absent file reports present=false');
     } else {
-      fail(`cdk_team_settings (absent): ${JSON.stringify(teamAbsent)}`);
+      fail(`tierward_team_settings (absent): ${JSON.stringify(teamAbsent)}`);
     }
     await client2.close();
 

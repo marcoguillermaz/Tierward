@@ -16,7 +16,7 @@
         "project.*initialization.*template"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/src/generators/claude-md.js",
         "packages/cli/templates/"
       ],
@@ -34,7 +34,7 @@
         "settings.*wizard"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/templates/tier-s/.claude/settings.json",
         "packages/cli/templates/tier-m/.claude/settings.json",
         "packages/cli/templates/tier-l/.claude/settings.json"
@@ -53,7 +53,7 @@
         "default.*hook.*configuration"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/templates/tier-s/.claude/settings.json",
         "packages/cli/templates/tier-m/.claude/settings.json",
         "packages/cli/src/commands/doctor.js"
@@ -72,7 +72,7 @@
         "skill.*included.*by.*default"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/templates/common/skills/commit/",
         "packages/cli/templates/common/skills/simplify/"
       ],
@@ -90,7 +90,7 @@
         "framework.*recognition"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/src/utils/detect-stack.js",
         "packages/cli/src/scaffold/skill-registry.js"
       ],
@@ -108,7 +108,7 @@
         "scaffold.*level"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/templates/tier-0/",
         "packages/cli/templates/tier-s/",
         "packages/cli/templates/tier-m/",
@@ -128,7 +128,7 @@
         "default.*rule.*file"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/templates/common/rules/"
       ],
       "notes": "Tierward scaffolds pipeline.md, security.md, git.md as rules. If Anthropic ships starter rule templates, this overlap grows."
@@ -145,7 +145,7 @@
         "phase.*gate"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/templates/tier-m/rules/pipeline.md",
         "packages/cli/templates/tier-l/rules/pipeline.md"
       ],
@@ -163,7 +163,7 @@
         "team.*configuration.*policy"
       ],
       "keywordMode": "any",
-      "cdkFiles": [],
+      "tierwardFiles": [],
       "notes": "Tierward plans team-settings.json for org enforcement. Anthropic has server-managed settings via admin console - watch for expansion."
     },
     {
@@ -177,7 +177,7 @@
         "multi-project.*overview"
       ],
       "keywordMode": "any",
-      "cdkFiles": [],
+      "tierwardFiles": [],
       "notes": "Tierward's SaaS layer (Q2) aggregates doctor reports across projects. No current Anthropic equivalent."
     },
     {
@@ -192,7 +192,7 @@
         "built-in.*audit"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/templates/common/skills/"
       ],
       "notes": "Tierward ships 12 deep audit skills with model routing. Single-skill native equivalents are possible but full suite is unlikely."
@@ -209,7 +209,7 @@
         "public.*skill.*catalog"
       ],
       "keywordMode": "any",
-      "cdkFiles": [
+      "tierwardFiles": [
         "packages/cli/src/scaffold/skill-registry.js"
       ],
       "notes": "Tierward plans a public skill registry (Q4). If Anthropic ships a native skill marketplace, this becomes redundant."

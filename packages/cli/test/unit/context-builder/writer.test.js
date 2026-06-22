@@ -114,7 +114,7 @@ describe('round-trip property: serializeContext → validate passes', () => {
 
 describe('writeContextFile', () => {
   it('writes file to disk and round-trip-validates', () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-writer-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-writer-'));
     const target = path.join(tmpDir, 'CONTEXT.md');
     try {
       writeContextFile(target, validGreenfield);
@@ -127,7 +127,7 @@ describe('writeContextFile', () => {
   });
 
   it('returns the same content it wrote', () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-writer-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-writer-'));
     const target = path.join(tmpDir, 'CONTEXT.md');
     try {
       const returned = writeContextFile(target, validGreenfield);

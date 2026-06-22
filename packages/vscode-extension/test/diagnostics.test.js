@@ -23,7 +23,7 @@ const REPORT = {
       id: 'settings-json',
       label: '.claude/settings.json present',
       status: 'fail',
-      fix: 'Run `claude-dev-kit init`.',
+      fix: 'Run `tierward init`.',
     },
     {
       id: 'security-rules',
@@ -61,7 +61,7 @@ test('buildDiagnostics leaves unmapped checks at relPath null (→ hub)', () => 
 
 test('buildDiagnostics folds the fix into the message', () => {
   const specs = buildDiagnostics(REPORT, NEVER, NOW);
-  assert.match(specs.find((s) => s.code === 'settings-json').message, /Run `claude-dev-kit init`\./);
+  assert.match(specs.find((s) => s.code === 'settings-json').message, /Run `tierward init`\./);
 });
 
 test('buildDiagnostics adds a stale arch-audit warning', () => {

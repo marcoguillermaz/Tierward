@@ -113,7 +113,7 @@ Executable multi-step programs that run inside Claude Code. Not prompt instructi
 | `/infra-audit`          | M L   | Infrastructure security across GitHub Actions (pwn-request, secret logging, pinning, permissions), Dockerfile (root, latest tag, URL add), K8s (runAsNonRoot, privileged, hostNetwork), Terraform (IAM wildcards, state in git), GitLab CI. Stack-agnostic.                                                                                                                                                                                     |
 | `/compliance-audit`     | M L   | GDPR profile: data-subject rights (delete, export, rectify), consent, lawful basis, PII identification, encryption-at-rest on special-category, logging hygiene, retention, sub-processors. SOC 2 / HIPAA scaffolded for v1.15+.                                                                                                                                                                                                                |
 | `/dependency-audit`     | M L   | Outdated package audit: Tier A (safe batch) / B (non-core major) / C (core/breaking-risk) classification, changelog summary for Tier B/C, codebase impact grep, runtime LTS status. Stack-aware (node-ts/python/swift); agnostic fallback for other stacks. Audit-only in v1. **MCP-aware (v1.20+)**: Step 2 queries `package-registry-mcp` for multi-ecosystem package metadata with WebFetch fallback.                                       |
-| `/pr-review`            | M L   | Autonomous local PR review via gh CLI: spawns review subagent on the diff, classifies findings (Critical / Major / Minor) using universal + stack-specific severity criteria, posts review as PR comment for audit trail. Configurable via team-settings.json `prReviewSeverity`. Read-only. `--deep` escalates to opus for sensitive changes. Also exposed as `cdk_pr_review` MCP tool.                                                        |
+| `/pr-review`            | M L   | Autonomous local PR review via gh CLI: spawns review subagent on the diff, classifies findings (Critical / Major / Minor) using universal + stack-specific severity criteria, posts review as PR comment for audit trail. Configurable via team-settings.json `prReviewSeverity`. Read-only. `--deep` escalates to opus for sensitive changes. Also exposed as `tierward_pr_review` MCP tool.                                                        |
 | `/skill-review`         | M L   | Quality review pipeline for skill portfolios. Spec compliance, cross-tier coherence, behavioral fixtures.                                                                                                                                                                                                                                                                                                                                       |
 | `/dependency-scan`      | M L   | Pipeline-integrated (Phase 1): forked-context scan that returns the full file list — routes, components, shared types, DB tables — fed into the Phase 1 STOP gate. Six structurally independent checks (C1–C6) with a "Mandatory additions" section.                                                                                                                                                                                            |
 | `/context-review`       | L     | Pipeline-integrated (Phase 8.5): forked-context review that runs after block closure to recompact `CLAUDE.md` and detect context drift before the next block opens. Tier L only.                                                                                                                                                                                                                                                                |
@@ -197,7 +197,7 @@ Wire it up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (u
 ```json
 {
   "mcpServers": {
-    "cdk": { "command": "tierward-mcp" }
+    "tierward": { "command": "tierward-mcp" }
   }
 }
 ```
@@ -206,14 +206,16 @@ Read-only tools exposed:
 
 | Tool                    | Returns                                                                                                                                                               |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cdk_doctor_report`     | `doctor --report` JSON (29 checks)                                                                                                                                    |
-| `cdk_team_settings`     | parsed `.claude/team-settings.json`                                                                                                                                   |
-| `cdk_arch_audit_status` | last `arch-audit` run timestamp + age                                                                                                                                 |
-| `cdk_skill_inventory`   | installed skills + frontmatter snapshot                                                                                                                               |
-| `cdk_package_meta`      | Tierward package name, version, CLI path, cwd                                                                                                                         |
-| `cdk_pr_review`         | reads existing `/pr-review` skill comments on a GitHub PR (verdict, severity counts). Read-only — to generate a fresh review, invoke the `/pr-review` Tierward skill. |
+| `tierward_doctor_report`     | `doctor --report` JSON (29 checks)                                                                                                                                    |
+| `tierward_team_settings`     | parsed `.claude/team-settings.json`                                                                                                                                   |
+| `tierward_arch_audit_status` | last `arch-audit` run timestamp + age                                                                                                                                 |
+| `tierward_skill_inventory`   | installed skills + frontmatter snapshot                                                                                                                               |
+| `tierward_package_meta`      | Tierward package name, version, CLI path, cwd                                                                                                                         |
+| `tierward_pr_review`         | reads existing `/pr-review` skill comments on a GitHub PR (verdict, severity counts). Read-only — to generate a fresh review, invoke the `/pr-review` Tierward skill. |
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.33.0.
+*Note: The legacy `cdk_*` tool names remain available as deprecated aliases for backwards compatibility.*
+
+The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.33.0.
 
 ---
 

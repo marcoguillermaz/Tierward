@@ -9,7 +9,7 @@
  * See memory: project_context_builder_rubric_v1.md (16 MUST PASS criteria)
  */
 import fs from 'fs';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { CONTEXT_SCHEMA_V1 } from '../context-builder/schema.js';
 
 export const ValidationCode = Object.freeze({

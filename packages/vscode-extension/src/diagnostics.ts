@@ -1,4 +1,4 @@
-import type { ArchAuditStatus, DoctorReport } from './cdkBackend';
+import type { ArchAuditStatus, DoctorReport } from './tierwardBackend';
 import { ARCH_AUDIT_STALE_DAYS, archAuditAgeDays, describeArchAudit } from './health';
 
 /**

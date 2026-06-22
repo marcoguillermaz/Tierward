@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * lint-templates.mjs — Static analysis of CDK template files
+ * lint-templates.mjs — Static analysis of Tierward template files
  *
  * Catches contamination, placeholder orphans, and tier sync gaps
  * before they reach scaffolded projects.
@@ -191,7 +191,7 @@ function checkTierSync() {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-console.log(c.bold('lint-templates — Static analysis of CDK template files'));
+console.log(c.bold('lint-templates — Static analysis of Tierward template files'));
 
 checkBannedPatterns();
 checkPlaceholderCoverage();

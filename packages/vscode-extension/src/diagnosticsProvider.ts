@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
-import type { HealthSnapshot } from './cdkBackend';
+import type { HealthSnapshot } from './tierwardBackend';
 import { buildDiagnostics } from './diagnostics';
 
 const SEVERITY: Record<'error' | 'warning', vscode.DiagnosticSeverity> = {
@@ -19,11 +19,11 @@ const HUB_CANDIDATES = ['.claude/settings.json', 'CLAUDE.md', '.gitignore', 'REA
  * exists; otherwise it falls back to a project hub file so it stays navigable.
  * Driven by the shared {@link HealthSnapshot} — it does not fetch.
  */
-export class CdkDiagnostics {
+export class TierwardDiagnostics {
   private readonly collection: vscode.DiagnosticCollection;
 
   constructor() {
-    this.collection = vscode.languages.createDiagnosticCollection('cdk');
+    this.collection = vscode.languages.createDiagnosticCollection('tierward');
   }
 
   dispose(): void {
@@ -58,7 +58,7 @@ export class CdkDiagnostics {
         spec.message,
         SEVERITY[spec.severity],
       );
-      diag.source = 'claude-dev-kit';
+      diag.source = 'tierward';
       diag.code = spec.code;
 
       const key = uri.toString();

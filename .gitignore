@@ -28,7 +28,7 @@ credentials/
 # Claude Code — project context (local, never commit)
 CLAUDE.md
 
-# Claude Code — workspace config (used to develop CDK, not part of the product)
+# Claude Code — workspace config (used to develop Tierward, not part of the product)
 .claude/rules/
 .claude/settings.json
 .claude/CLAUDE.local.md
@@ -89,6 +89,6 @@ docs/claudemd-standards.md
 docs/pipeline-standards.md
 docs/adr/
 
-# claude-dev-kit
+# tierward
 .claude/context/
 CONTEXT_IMPORT.md

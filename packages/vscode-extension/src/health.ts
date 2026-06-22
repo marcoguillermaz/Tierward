@@ -1,4 +1,4 @@
-import type { ArchAuditStatus, DoctorSummary } from './cdkBackend';
+import type { ArchAuditStatus, DoctorSummary } from './tierwardBackend';
 
 /** Weekly cadence: arch-audit is considered stale past this many days. */
 export const ARCH_AUDIT_STALE_DAYS = 7;
@@ -70,13 +70,13 @@ export function evaluateHealth({
   let text: string;
   if (failed > 0) {
     severity = 'error';
-    text = `$(error) CDK ${failed}✗`;
+    text = `$(error) Tierward ${failed}✗`;
   } else if (warned > 0 || archStale) {
     severity = 'warning';
-    text = warned > 0 ? `$(warning) CDK ${warned}⚠` : '$(warning) CDK';
+    text = warned > 0 ? `$(warning) Tierward ${warned}⚠` : '$(warning) Tierward';
   } else {
     severity = 'ok';
-    text = '$(check) CDK';
+    text = '$(check) Tierward';
   }
 
   const tooltip = [

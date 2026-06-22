@@ -1,6 +1,6 @@
 # tierward - Operational Guide
 
-**Version**: 1.30.0
+**Version**: 1.33.1
 **Audience**: Builder PMs, tech leads, and senior developers using Claude Code - from first exploration to structured, reviewable delivery
 **Format**: Reference + step-by-step. Read section 1 and your target tier section first, then use the rest as a lookup.
 
@@ -44,7 +44,7 @@ Claude Code is a powerful CLI assistant that can read, write, and reason about y
 - A development pipeline Claude follows strictly - requirements reviewed before code is written, tests verified before declaring done
 - Pre-wired hooks that enforce the pipeline mechanically, not just as instructions
 - A tiered system matching process overhead to task complexity: a two-line bugfix does not go through the same process as a multi-week feature
-- 24 audit skills - executable multi-step programs with model routing (haiku for mechanical checks, sonnet for analysis)
+- 26 audit skills - executable multi-step programs with model routing (haiku for mechanical checks, sonnet for analysis)
 - Audit trails, commit attribution, secret scanning, and CODEOWNERS gates for full visibility over AI-generated changes
 - A discovery mechanism that teaches Claude about your existing codebase in a single structured session
 
@@ -190,7 +190,7 @@ For experienced users, the wizard asks:
   - "Do you use a component library or design system?" -> installs `/ui-audit`
   - "Design system name?" -> populates `[DESIGN_SYSTEM_NAME]` placeholder
   - "Track a PRD per feature block?" -> determines if `docs/prd/prd.md` is referenced in context review
-  - "Preferred model for deep analysis skills?" -> `claude-sonnet-4-6` (faster) or `claude-opus-4-7` (thorough)
+  - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-sonnet-4-6` (override with any current model id)
 - Whether to include pre-commit config and `.github/` files
 
 Output: a fully scaffolded project directory with `CLAUDE.md`, pipeline rules, settings, and docs - ready to open in Claude Code.
@@ -438,7 +438,7 @@ npx tierward add skill commit
 
 This copies the SKILL.md file into `.claude/skills/<name>/` and appends it to the `## Active Skills` section in CLAUDE.md (if that section exists). No other files are modified.
 
-Available skills (24): `arch-audit`, `security-audit`, `perf-audit`, `skill-dev`, `skill-review`, `simplify`, `commit`, `api-design`, `skill-db`, `migration-audit`, `visual-audit`, `ux-audit`, `responsive-audit`, `ui-audit`, `accessibility-audit`, `test-audit`, `dependency-audit`, `dependency-scan`, `pr-review`, `doc-audit`, `api-contract-audit`, `compliance-audit`, `infra-audit`, `context-review`.
+Available skills (26): `arch-audit`, `security-audit`, `perf-audit`, `skill-dev`, `skill-review`, `simplify`, `commit`, `skill-security`, `systematic-debugging`, `api-design`, `skill-db`, `migration-audit`, `visual-audit`, `ux-audit`, `responsive-audit`, `ui-audit`, `accessibility-audit`, `test-audit`, `dependency-audit`, `dependency-scan`, `pr-review`, `doc-audit`, `api-contract-audit`, `compliance-audit`, `infra-audit`, `context-review`.
 
 Options:
 
@@ -737,34 +737,40 @@ Defined in the `CLAUDE.md` template for Tier M/L. Governs how Claude handles non
 
 ## 10. Audit skills
 
-Twenty-four audit skills are scaffolded across the tiers (tier S installs 6, tier M installs 23, tier L installs all 24 with `context-review`). Run them as slash commands in Claude Code at any time - no pipeline phase required. Skills are **conditionally installed** based on wizard answers at init time.
+Twenty-six audit skills are scaffolded across the tiers (tier S installs 8, tier M installs 25, tier L installs all 26 with `context-review`). Run them as slash commands in Claude Code at any time - no pipeline phase required. Skills are **conditionally installed** based on wizard answers at init time.
 
 All skill applicability rules are managed by a central skill registry (`packages/cli/src/scaffold/skill-registry.js`). Each skill declares which tiers and project conditions it requires.
 
 ### Tier availability and install conditions
 
-| Command                | S   | M   | L   | Install condition                             | Requires                                                                     |
-| ---------------------- | --- | --- | --- | --------------------------------------------- | ---------------------------------------------------------------------------- |
-| `/arch-audit`          | x   | x   | x   | always                                        | Internet access (fetches Anthropic docs)                                     |
-| `/commit`              | x   | x   | x   | always                                        | -                                                                            |
-| `/security-audit`      | x   | x   | x   | always                                        | -                                                                            |
-| `/perf-audit`          | x   | x   | x   | always                                        | -                                                                            |
-| `/skill-dev`           | x   | x   | x   | always                                        | -                                                                            |
-| `/simplify`            | x   | x   | x   | always                                        | -                                                                            |
-| `/api-design`          | -   | x   | x   | `hasApi=true`                                 | -                                                                            |
-| `/skill-db`            | -   | x   | x   | `hasDatabase=true`                            | -                                                                            |
-| `/migration-audit`     | -   | x   | x   | `hasDatabase=true`                            | -                                                                            |
-| `/responsive-audit`    | -   | x   | x   | `hasFrontend=true`                            | Dev server + Playwright MCP                                                  |
-| `/ux-audit`            | -   | x   | x   | `hasFrontend=true`                            | Dev server + Playwright MCP                                                  |
-| `/visual-audit`        | -   | x   | x   | `hasFrontend=true`                            | Dev server + Playwright MCP                                                  |
-| `/ui-audit`            | -   | x   | x   | `hasFrontend=true` AND `hasDesignSystem=true` | - (static)                                                                   |
-| `/accessibility-audit` | -   | x   | x   | `hasFrontend=true`                            | Dev server + Playwright MCP (for full/wcag modes; static mode needs nothing) |
-| `/test-audit`          | -   | x   | x   | always (no `requires`)                        | - (static analysis)                                                          |
-| `/doc-audit`           | -   | x   | x   | always (no `requires`)                        | - (static analysis)                                                          |
-| `/api-contract-audit`  | -   | x   | x   | `hasApi=true`                                 | - (static analysis; optional dev server for framework auto-gen)              |
-| `/infra-audit`         | -   | x   | x   | always (no `requires`)                        | - (static analysis)                                                          |
-| `/compliance-audit`    | -   | x   | x   | always (no `requires`)                        | - (static analysis)                                                          |
-| `/skill-review`        | -   | x   | x   | always                                        | - (static analysis)                                                          |
+| Command                 | S | M | L | Install condition                             | Requires                                                                     |
+| ----------------------- | - | - | - | --------------------------------------------- | ---------------------------------------------------------------------------- |
+| `/arch-audit`           | x | x | x | always                                        | Internet access (fetches Anthropic docs)                                     |
+| `/commit`               | x | x | x | always                                        | -                                                                            |
+| `/security-audit`       | x | x | x | always                                        | -                                                                            |
+| `/perf-audit`           | x | x | x | always                                        | -                                                                            |
+| `/skill-dev`            | x | x | x | always                                        | -                                                                            |
+| `/simplify`             | x | x | x | always                                        | -                                                                            |
+| `/skill-security`       | x | x | x | always                                        | -                                                                            |
+| `/systematic-debugging` | x | x | x | always                                        | -                                                                            |
+| `/api-design`           | - | x | x | `hasApi=true`                                 | -                                                                            |
+| `/skill-db`             | - | x | x | `hasDatabase=true`                            | -                                                                            |
+| `/migration-audit`      | - | x | x | `hasDatabase=true`                            | -                                                                            |
+| `/responsive-audit`     | - | x | x | `hasFrontend=true`                            | Dev server + Playwright MCP                                                  |
+| `/ux-audit`             | - | x | x | `hasFrontend=true`                            | Dev server + Playwright MCP                                                  |
+| `/visual-audit`         | - | x | x | `hasFrontend=true`                            | Dev server + Playwright MCP                                                  |
+| `/ui-audit`             | - | x | x | `hasFrontend=true` AND `hasDesignSystem=true` | - (static)                                                                   |
+| `/accessibility-audit`  | - | x | x | `hasFrontend=true`                            | Dev server + Playwright MCP (for full/wcag modes; static mode needs nothing) |
+| `/test-audit`           | - | x | x | always (no `requires`)                        | - (static analysis)                                                          |
+| `/doc-audit`            | - | x | x | always (no `requires`)                        | - (static analysis)                                                          |
+| `/api-contract-audit`   | - | x | x | `hasApi=true`                                 | - (static analysis; optional dev server for framework auto-gen)              |
+| `/infra-audit`          | - | x | x | always (no `requires`)                        | - (static analysis)                                                          |
+| `/compliance-audit`     | - | x | x | always (no `requires`)                        | - (static analysis)                                                          |
+| `/skill-review`         | - | x | x | always                                        | - (static analysis)                                                          |
+| `/dependency-audit`     | - | x | x | always (no `requires`)                        | - (optional `package-registry-mcp`; WebFetch fallback)                       |
+| `/pr-review`            | - | x | x | always (no `requires`)                        | `gh` CLI                                                                     |
+| `/dependency-scan`      | - | x | x | always (no `requires`)                        | - (static analysis; forked context)                                          |
+| `/context-review`       | - | - | x | always (no `requires`)                        | - (grep-only; forked context)                                                |
 
 ### General rules
 
@@ -1014,7 +1020,7 @@ When the [`package-registry-mcp`](https://github.com/Artmann/package-registry-mc
 
 **File**: `.claude/skills/pr-review/SKILL.md` | **Tier**: M, L
 
-Autonomous local pull-request review via the `gh` CLI. Spawns a review subagent on the PR diff, classifies findings as Critical / Major / Minor using universal plus stack-specific severity criteria, and posts the review as a PR comment for audit trail. Configurable through `.claude/team-settings.json` `prReviewSeverity`. Read-only — no merges, no code changes. The `--deep` flag escalates the subagent to opus for sensitive changes. The skill is also exposed as the `cdk_pr_review` MCP tool, which reads existing review comments rather than generating fresh ones.
+Autonomous local pull-request review via the `gh` CLI. Spawns a review subagent on the PR diff, classifies findings as Critical / Major / Minor using universal plus stack-specific severity criteria, and posts the review as a PR comment for audit trail. Configurable through `.claude/team-settings.json` `prReviewSeverity`. Read-only — no merges, no code changes. The `--deep` flag escalates the subagent to opus for sensitive changes. The skill is also exposed as the `tierward_pr_review` MCP tool, which reads existing review comments rather than generating fresh ones.
 
 ---
 
@@ -1302,24 +1308,26 @@ The `tierward` npm package ships two binaries: `tierward` (the wizard CLI) and `
 
 The MCP server exposes Tierward governance state to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). Six read-only tools:
 
-- `cdk_doctor_report` — runs `doctor --report` and returns the JSON
-- `cdk_team_settings` — parsed `.claude/team-settings.json` contents
-- `cdk_arch_audit_status` — last arch-audit run timestamp + age in days
-- `cdk_skill_inventory` — installed skills with frontmatter snapshot
-- `cdk_package_meta` — package name, version, CLI path, project root
-- `cdk_pr_review` — reads existing `/pr-review` comments on a GitHub PR (verdict + severity counts). Read-only; to generate a fresh review, invoke the `/pr-review` Tierward skill.
+- `tierward_doctor_report` — runs `doctor --report` and returns the JSON
+- `tierward_team_settings` — parsed `.claude/team-settings.json` contents
+- `tierward_arch_audit_status` — last arch-audit run timestamp + age in days
+- `tierward_skill_inventory` — installed skills with frontmatter snapshot
+- `tierward_package_meta` — package name, version, CLI path, project root
+- `tierward_pr_review` — reads existing `/pr-review` comments on a GitHub PR (verdict + severity counts). Read-only; to generate a fresh review, invoke the `/pr-review` Tierward skill.
+
+*Note: The legacy `cdk_*` tool names remain available as deprecated aliases for backwards compatibility.*
 
 Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user-scoped):
 
 ```json
 {
   "mcpServers": {
-    "cdk": { "command": "tierward-mcp" }
+    "tierward": { "command": "tierward-mcp" }
   }
 }
 ```
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.30.0. A read-write surface remains a future-minor decision contingent on adoption signal.
+The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.33.1. A read-write surface remains a future-minor decision contingent on adoption signal.
 
 ### Adding team-specific rules
 
@@ -1492,4 +1500,4 @@ Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy 
 
 ---
 
-_Last updated: 2026-06-16 - v1.30.0_
+_Last updated: 2026-06-22 - v1.33.1_

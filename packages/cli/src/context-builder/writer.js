@@ -9,7 +9,7 @@
  * Operational constraints / Open questions.
  */
 import fs from 'fs';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 export const DEFAULT_BODY = `# Project Context
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// team-settings runtime enforcement hook (CDK v1.21+).
+// team-settings runtime enforcement hook (Tierward v1.21+).
 // Wired as a `PreToolUse` hook on the `Skill` matcher. Reads `.claude/team-settings.json`
 // from the project and refuses skill invocations that violate `blockedSkills` or
 // `allowedSkills`. Falls open silently on any error so a misconfigured project never
@@ -76,7 +76,7 @@ async function main() {
   try {
     settings = JSON.parse(readFileSync(SETTINGS_PATH, 'utf8'));
   } catch {
-    // malformed settings → fail-open. The CDK doctor check on team-settings-compliance
+    // malformed settings → fail-open. The Tierward doctor check on team-settings-compliance
     // will surface the parse error in interactive runs.
     process.exit(0);
   }

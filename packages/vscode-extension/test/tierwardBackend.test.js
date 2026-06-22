@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { CdkBackend, CdkBackendError } = require('../dist/cdkBackend.js');
+const { TierwardBackend, TierwardBackendError } = require('../dist/tierwardBackend.js');
 
 const SAMPLE_REPORT = {
   timestamp: '2026-06-08T00:00:00.000Z',
@@ -34,7 +34,7 @@ function fakeExec(stdout, { fail = false } = {}) {
 }
 
 test('getDoctorReport parses JSON from a clean exit', async () => {
-  const backend = new CdkBackend({
+  const backend = new TierwardBackend({
     projectRoot: '/tmp/project',
     exec: fakeExec(JSON.stringify(SAMPLE_REPORT)),
   });
@@ -44,7 +44,7 @@ test('getDoctorReport parses JSON from a clean exit', async () => {
 });
 
 test('getDoctorReport recovers the report when doctor exits 1', async () => {
-  const backend = new CdkBackend({
+  const backend = new TierwardBackend({
     projectRoot: '/tmp/project',
     exec: fakeExec(JSON.stringify(SAMPLE_REPORT), { fail: true }),
   });
@@ -52,25 +52,25 @@ test('getDoctorReport recovers the report when doctor exits 1', async () => {
   assert.equal(report.summary.passed, 26);
 });
 
-test('getDoctorReport throws CdkBackendError when the CLI fails without JSON', async () => {
-  const backend = new CdkBackend({
+test('getDoctorReport throws TierwardBackendError when the CLI fails without JSON', async () => {
+  const backend = new TierwardBackend({
     projectRoot: '/tmp/project',
-    exec: fakeExec('command not found: claude-dev-kit', { fail: true }),
+    exec: fakeExec('command not found: tierward', { fail: true }),
   });
-  await assert.rejects(() => backend.getDoctorReport(), CdkBackendError);
+  await assert.rejects(() => backend.getDoctorReport(), TierwardBackendError);
 });
 
-test('getDoctorReport throws CdkBackendError on malformed JSON', async () => {
-  const backend = new CdkBackend({
+test('getDoctorReport throws TierwardBackendError on malformed JSON', async () => {
+  const backend = new TierwardBackend({
     projectRoot: '/tmp/project',
     exec: fakeExec('{ not valid json'),
   });
-  await assert.rejects(() => backend.getDoctorReport(), CdkBackendError);
+  await assert.rejects(() => backend.getDoctorReport(), TierwardBackendError);
 });
 
 test('cliPath falls back to the default when blank', async () => {
   let receivedCommand;
-  const backend = new CdkBackend({
+  const backend = new TierwardBackend({
     projectRoot: '/tmp/project',
     cliPath: '   ',
     exec: async (command) => {
@@ -79,11 +79,11 @@ test('cliPath falls back to the default when blank', async () => {
     },
   });
   await backend.getDoctorReport();
-  assert.equal(receivedCommand, 'claude-dev-kit');
+  assert.equal(receivedCommand, 'tierward');
 });
 
 test('getHealthSnapshot returns the report and arch-audit status on success', async () => {
-  const backend = new CdkBackend({
+  const backend = new TierwardBackend({
     projectRoot: '/tmp/project',
     exec: fakeExec(JSON.stringify(SAMPLE_REPORT)),
   });
@@ -95,9 +95,9 @@ test('getHealthSnapshot returns the report and arch-audit status on success', as
 });
 
 test('getHealthSnapshot captures a doctor failure instead of throwing', async () => {
-  const backend = new CdkBackend({
+  const backend = new TierwardBackend({
     projectRoot: '/tmp/project',
-    exec: fakeExec('command not found: claude-dev-kit', { fail: true }),
+    exec: fakeExec('command not found: tierward', { fail: true }),
   });
   const snapshot = await backend.getHealthSnapshot();
   assert.equal(snapshot.report, null);

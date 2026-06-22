@@ -251,7 +251,7 @@ describe('generateClaudeMd - end-to-end', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cdk-claudemd-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tierward-claudemd-'));
   });
 
   afterEach(async () => {

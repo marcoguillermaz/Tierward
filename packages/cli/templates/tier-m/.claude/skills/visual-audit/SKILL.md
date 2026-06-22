@@ -387,7 +387,7 @@ See `${CLAUDE_SKILL_DIR}/DIMENSIONS.md` → Interpretation notes for full guidan
 ## Stack adaptation (fill after scaffold)
 
 <!-- Fill these values for your stack, then remove this comment block. -->
-<!-- Values left as placeholders will trigger warnings in `cdk doctor`. -->
+<!-- Values left as placeholders will trigger warnings in `tierward doctor`. -->
 
 | Key | Your value | Examples |
 |---|---|---|

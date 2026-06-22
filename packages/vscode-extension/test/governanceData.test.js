@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { CdkBackend } = require('../dist/cdkBackend.js');
+const { TierwardBackend } = require('../dist/tierwardBackend.js');
 
 function writeFile(filePath, content) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -13,7 +13,7 @@ function writeFile(filePath, content) {
 }
 
 function makeFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-fixture-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-fixture-'));
   writeFile(
     path.join(root, '.claude', 'skills', 'doc-audit', 'SKILL.md'),
     '---\nname: doc-audit\ndescription: Audits docs.\nmodel: sonnet\nuser-invocable: true\n---\n# body\n',
@@ -34,7 +34,7 @@ function makeFixture() {
 test('getSkillInventory lists skills with frontmatter and custom flag, sorted', async () => {
   const root = makeFixture();
   try {
-    const skills = await new CdkBackend({ projectRoot: root }).getSkillInventory();
+    const skills = await new TierwardBackend({ projectRoot: root }).getSkillInventory();
     assert.deepEqual(
       skills.map((s) => s.name),
       ['custom-thing', 'doc-audit'],
@@ -56,9 +56,9 @@ test('getSkillInventory lists skills with frontmatter and custom flag, sorted', 
 });
 
 test('getSkillInventory returns empty when .claude/skills is absent', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-empty-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-empty-'));
   try {
-    assert.deepEqual(await new CdkBackend({ projectRoot: root }).getSkillInventory(), []);
+    assert.deepEqual(await new TierwardBackend({ projectRoot: root }).getSkillInventory(), []);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -67,7 +67,7 @@ test('getSkillInventory returns empty when .claude/skills is absent', async () =
 test('getRules lists .md rule files with first-heading titles, sorted', async () => {
   const root = makeFixture();
   try {
-    const rules = await new CdkBackend({ projectRoot: root }).getRules();
+    const rules = await new TierwardBackend({ projectRoot: root }).getRules();
     assert.deepEqual(
       rules.map((r) => r.name),
       ['git', 'security'],
