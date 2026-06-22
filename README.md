@@ -292,7 +292,7 @@ See [GitHub Milestones](https://github.com/marcoguillermaz/Tierward/milestones) 
 Tierward is open-source, MIT-licensed, and built in the open. If it's useful to your team, here's how to support it:
 
 - ❤️ [**Sponsor on GitHub**](https://github.com/sponsors/marcoguillermaz) — fund ongoing development, recurring or one-time
-- ☕ [**Buy Me a Coffee**](https://www.buymeacoffee.com/marcoguillermaz) — one-off support, no account needed
+- ☕ [**Buy Me a Coffee**](https://buymeacoffee.com/marcoguillermaz) — one-off support, no account needed
 - ⭐ **Star the repo** — it helps other product and engineering teams discover the project
 - 🐛 [**Open an issue**](https://github.com/marcoguillermaz/Tierward/issues) or [**start a discussion**](https://github.com/marcoguillermaz/Tierward/discussions)
 - 🔧 **Send a pull request** — see [Contributing](#contributing) below
