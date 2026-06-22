@@ -40,7 +40,7 @@ node packages/cli/src/index.js new skill
 **Run the test suites**:
 
 ```bash
-node packages/cli/test/integration/run.js     # 1129 integration checks
+node packages/cli/test/integration/run.js     # 1170 integration checks
 node --test packages/cli/test/unit/*.test.js  # 373 unit tests
 ```
 
@@ -273,7 +273,7 @@ Tierward ships two test layers:
 
 **Unit tests** (`packages/cli/test/unit/*.test.js`) cover pure functions: `skill-registry`, `doctor-cross-file`, `skill-frontmatter`, individual scaffold helpers. Use `node:test`. Run via `npm run --prefix packages/cli test:unit`. Total: 373 tests across 61 suites.
 
-**Integration tests** (`packages/cli/test/integration/run.js`) scaffold full projects to a tmp directory and assert on file structure, content, and CLI behavior. Uses a custom `pass()` / `fail()` reporter (no test framework). Total: 1129 checks across ~118 scenarios. Run via `npm test --prefix packages/cli`.
+**Integration tests** (`packages/cli/test/integration/run.js`) scaffold full projects to a tmp directory and assert on file structure, content, and CLI behavior. Uses a custom `pass()` / `fail()` reporter (no test framework). Total: 1170 checks across ~118 scenarios. Run via `npm test --prefix packages/cli`.
 
 **Fixtures** for full CLI execution via `--answers` live in `packages/cli/test/integration/fixtures/`. Each fixture is a JSON file matching the wizard prompt schema. Used by `scenarioWizardCoverage`.
 
