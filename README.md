@@ -12,7 +12,7 @@
 
 Claude Code is fast. The gap it creates is not in the code: it is in the review. When AI writes everything autonomously, you end up approving diffs you don't fully understand, catching regressions two blocks later, and losing the thread of what the system actually does.
 
-**Tierward** closes that gap. Instead of going all-in overnight, teams adopt it tier by tier — from a light discovery setup to a fully governed pipeline — with the guardrails built in from the start: explicit STOP gates before implementation, a set of audit skills that surface issues before they reach production, and a Stop hook that mechanically prevents Claude from declaring done until your tests pass. Start at Tier 0 with zero process, move up when you need it.
+**Tierward** closes that gap. Instead of going all-in overnight, teams adopt it tier by tier — from a light discovery setup to a fully governed pipeline — with enforcement baked in from day one: explicit STOP gates before implementation, audit skills that surface issues before they reach production, and a Stop hook that mechanically prevents Claude from declaring done until your tests pass. Start at Tier 0 with zero process, move up when you need it.
 
 Since v1.17.0, Tierward ships an MCP server alongside the CLI. Any MCP-aware client can read your project's doctor report, team-settings policy, last arch-audit, and skill inventory without running the Tierward CLI. See [MCP server](#mcp-server).
 
@@ -20,9 +20,9 @@ Since v1.17.0, Tierward ships an MCP server alongside the CLI. Any MCP-aware cli
 
 ## Philosophy
 
-Tierward is built on one observation: Claude Code becomes harder to work with as projects grow not because it gets less capable, but because autonomous decisions accumulate faster than they can be reviewed. The pipeline enforces a review contract: requirements before code, hypothesis before fix, tests before done. Without slowing down work that doesn't need that structure.
+One thing drives Tierward: Claude Code doesn't become harder to work with because it gets less capable. It becomes harder to work with because autonomous decisions accumulate faster than anyone can review them. The pipeline enforces a review contract — requirements before code, hypothesis before fix, tests before done — without slowing down work that doesn't need that structure.
 
-The tier system exists because process has a cost. A solo bugfix should not pay the overhead of a team feature workflow. Two pipelines cover the spectrum: **Fast Lane** (4 steps, scope-confirm) for quick fixes, **Full** (14 phases, 4 review gates) for team features. Both enforce the same contract — Claude works phase by phase, your team approves each step. Start at the tier that fits your current risk. The scaffold grows with you.
+The tier system exists because process has a cost. A solo bugfix should not pay the overhead of a team feature workflow. Two pipelines cover the range: **Fast Lane** (4 steps, scope-confirm) for quick fixes, **Full** (14 phases, 4 review gates) for team features. Both enforce the same contract — Claude works phase by phase, your team approves each step. Start at the tier that fits your current risk and add more as the stakes rise.
 
 It is built for the people who carry the result — product managers and developers alike — so the decisions stay with them, not the model.
 
@@ -76,7 +76,7 @@ As of v1.27.0, the schema covers all four pipeline tiers: tier 0 (Discovery) and
 
 ## What it does
 
-One contract across four tiers — pick the structure your work needs today and add more as the stakes rise, from a solo bugfix to a fully governed team pipeline. Claude proposes, your team approves, at every tier.
+One contract across four tiers — from a solo bugfix to a fully governed team pipeline. Claude proposes, your team approves, at every tier.
 
 ### Tiered pipelines matched to risk
 
@@ -194,7 +194,7 @@ tierward-mcp                            # MCP server (stdio); wire from .mcp.jso
 
 ## MCP server
 
-`tierward-mcp` is a Model Context Protocol server that exposes Tierward governance signals to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). The CLI and MCP server ship in the same npm package, version-locked.
+`tierward-mcp` is a Model Context Protocol server that makes Tierward governance state readable by any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). The CLI and MCP server ship in the same npm package, version-locked.
 
 Wire it up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user-scoped):
 
@@ -289,9 +289,10 @@ See [GitHub Milestones](https://github.com/marcoguillermaz/Tierward/milestones) 
 
 ## Support
 
-Tierward is open-source and MIT-licensed. If it helps your team, here is how to support it and get involved:
+Tierward is open-source, MIT-licensed, and built in the open. If it's useful to your team, here's how to support it:
 
 - ❤️ [**Sponsor on GitHub**](https://github.com/sponsors/marcoguillermaz) — fund ongoing development, recurring or one-time
+- ☕ [**Buy Me a Coffee**](https://www.buymeacoffee.com/marcoguillermaz) — one-off support, no account needed
 - ⭐ **Star the repo** — it helps other product and engineering teams discover the project
 - 🐛 [**Open an issue**](https://github.com/marcoguillermaz/Tierward/issues) or [**start a discussion**](https://github.com/marcoguillermaz/Tierward/discussions)
 - 🔧 **Send a pull request** — see [Contributing](#contributing) below
