@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { CdkBackend, RuleInfo, SkillInfo } from './cdkBackend';
+import type { TierwardBackend, RuleInfo, SkillInfo } from './tierwardBackend';
 
 interface GroupNode {
   kind: 'group';
@@ -22,13 +22,13 @@ export type GovernanceNode = GroupNode | SkillNode | RuleNode;
 /**
  * Renders the project's `.claude/` skill and rule registry as a tree.
  * Backend access is deferred through a factory so the view reflects the
- * current workspace folder and `cdk.cliPath` setting on every refresh.
+ * current workspace folder and `tierward.cliPath` setting on every refresh.
  */
 export class GovernanceTreeProvider implements vscode.TreeDataProvider<GovernanceNode> {
   private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
-  constructor(private readonly resolveBackend: () => CdkBackend | undefined) {}
+  constructor(private readonly resolveBackend: () => TierwardBackend | undefined) {}
 
   refresh(): void {
     this.onDidChangeTreeDataEmitter.fire();
@@ -42,7 +42,7 @@ export class GovernanceTreeProvider implements vscode.TreeDataProvider<Governanc
     switch (node.kind) {
       case 'group': {
         const item = new vscode.TreeItem(node.label, vscode.TreeItemCollapsibleState.Expanded);
-        item.contextValue = `cdk.group.${node.id}`;
+        item.contextValue = `tierward.group.${node.id}`;
         item.iconPath = new vscode.ThemeIcon(node.id === 'skills' ? 'symbol-method' : 'law');
         return item;
       }
@@ -54,7 +54,7 @@ export class GovernanceTreeProvider implements vscode.TreeDataProvider<Governanc
         item.iconPath = new vscode.ThemeIcon(skill.isCustom ? 'star-full' : 'symbol-method');
         // `.invocable` gates the "Run in Claude Code" action to user-invocable
         // skills, matching the codelens and palette filters.
-        item.contextValue = skill.userInvocable === true ? 'cdk.skill.invocable' : 'cdk.skill';
+        item.contextValue = skill.userInvocable === true ? 'tierward.skill.invocable' : 'tierward.skill';
         item.resourceUri = vscode.Uri.file(skill.path);
         item.command = openFileCommand(skill.path);
         return item;
@@ -64,7 +64,7 @@ export class GovernanceTreeProvider implements vscode.TreeDataProvider<Governanc
         const item = new vscode.TreeItem(rule.name, vscode.TreeItemCollapsibleState.None);
         item.description = rule.title ?? undefined;
         item.iconPath = new vscode.ThemeIcon('law');
-        item.contextValue = 'cdk.rule';
+        item.contextValue = 'tierward.rule';
         item.resourceUri = vscode.Uri.file(rule.path);
         item.command = openFileCommand(rule.path);
         return item;

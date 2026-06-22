@@ -12,7 +12,7 @@
 # This is the enforcement layer that moves governance outside Claude's context window.
 # A PR cannot merge if the scaffold is missing or broken.
 
-name: claude-dev-kit verify
+name: tierward verify
 
 on:
   pull_request:
@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   verify:
-    name: Verify claude-dev-kit scaffold
+    name: Verify tierward scaffold
     runs-on: ubuntu-latest
     # Skip in the tierward source repository — this workflow is for user projects
     if: ${{ github.repository != 'marcoguillermaz/tierward' }}

@@ -4,7 +4,7 @@
  *
  * Reads a prompt + a directory of context files, fans out to every provider
  * whose API key is present in .env, and writes each response to an output
- * directory. Designed for reproducible cross-model review of CDK templates
+ * directory. Designed for reproducible cross-model review of Tierward templates
  * (agnosticity audit Fase 3, post-cleanup validation Fase 7, future release
  * reviews).
  *

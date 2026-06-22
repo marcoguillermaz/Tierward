@@ -1,4 +1,4 @@
-// Anthropic drift tracker — scans Anthropic docs for features overlapping with CDK.
+// Anthropic drift tracker — scans Anthropic docs for features overlapping with Tierward.
 // Zero external dependencies. Runs on Node.js >= 22 (native fetch).
 
 import { readFileSync, appendFileSync } from "node:fs";
@@ -21,7 +21,7 @@ export function loadFeatures(manifestPath) {
 
   const ids = new Set();
   for (const f of raw.features) {
-    if (!f.id || !f.name || !f.risk || !f.keywords || !f.cdkFiles) {
+    if (!f.id || !f.name || !f.risk || !f.keywords || !f.tierwardFiles) {
       throw new Error(
         `Feature "${f.id || "(unnamed)"}" missing required fields`,
       );
@@ -42,7 +42,7 @@ export function loadFeatures(manifestPath) {
 
 export async function fetchPage(url) {
   const res = await fetch(url, {
-    headers: { "User-Agent": "claude-dev-kit-drift-tracker/1.0" },
+    headers: { "User-Agent": "tierward-drift-tracker/1.0" },
     redirect: "follow",
   });
   if (!res.ok) {
@@ -199,11 +199,11 @@ export function formatIssueBody(matchResult, feature, scanMeta) {
     lines.push(`| \`${kw}\` | ${ctx} |`);
   }
 
-  if (feature.cdkFiles.length > 0) {
+  if (feature.tierwardFiles.length > 0) {
     lines.push("");
-    lines.push("### CDK files at risk");
+    lines.push("### Tierward files at risk");
     lines.push("");
-    for (const f of feature.cdkFiles) {
+    for (const f of feature.tierwardFiles) {
       lines.push(`- \`${f}\``);
     }
   }
@@ -212,7 +212,7 @@ export function formatIssueBody(matchResult, feature, scanMeta) {
   lines.push("### Recommended action");
   lines.push("");
   lines.push(
-    "Review the Anthropic documentation and assess whether CDK's implementation still adds value beyond the native capability.",
+    "Review the Anthropic documentation and assess whether Tierward's implementation still adds value beyond the native capability.",
   );
   lines.push("");
   lines.push(`- [Changelog](${scanMeta.changelogUrl})`);

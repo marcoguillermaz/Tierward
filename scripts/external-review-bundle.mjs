@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Auto-assembles a reproducible bundle of CDK files for external LLM review.
+ * Auto-assembles a reproducible bundle of Tierward files for external LLM review.
  *
  * Output bundle (default):
  *   - README.md

@@ -10,7 +10,8 @@
  * dependency). Tests pass a mock client.
  *
  * Requires ANTHROPIC_API_KEY in the environment when the default client
- * is used. Honors CDK_CONTEXT_LLM_MODEL to override the default model.
+ * is used. Honors TIERWARD_CONTEXT_LLM_MODEL (or the legacy CDK_CONTEXT_LLM_MODEL)
+ * to override the default model.
  *
  * See memory: project_context_builder_inference_v1.md
  */
@@ -160,7 +161,11 @@ export async function extractWithLlm({ dir, draft, llmClient, model, apiKey } = 
 
   const client = llmClient ?? defaultLlmClient;
   const resolvedKey = apiKey ?? process.env.ANTHROPIC_API_KEY;
-  const resolvedModel = model ?? process.env.CDK_CONTEXT_LLM_MODEL ?? DEFAULT_MODEL;
+  const resolvedModel =
+    model ??
+    process.env.TIERWARD_CONTEXT_LLM_MODEL ??
+    process.env.CDK_CONTEXT_LLM_MODEL ??
+    DEFAULT_MODEL;
 
   if (client === defaultLlmClient && !resolvedKey) {
     throw new Error('ANTHROPIC_API_KEY not set; either set it or pass a custom llmClient');

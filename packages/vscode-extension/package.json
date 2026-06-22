@@ -31,46 +31,46 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "workspaceContains:.claude/settings.json",
-    "onView:cdk.governance"
+    "onView:tierward.governance"
   ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "cdk-governance",
+          "id": "tierward-governance",
           "title": "Tierward",
-          "icon": "resources/cdk.svg"
+          "icon": "resources/tierward.svg"
         }
       ]
     },
     "views": {
-      "cdk-governance": [
+      "tierward-governance": [
         {
-          "id": "cdk.governance",
+          "id": "tierward.governance",
           "name": "Governance"
         }
       ]
     },
     "commands": [
       {
-        "command": "cdk.showDoctorReport",
+        "command": "tierward.showDoctorReport",
         "title": "Tierward: Run Doctor Report"
       },
       {
-        "command": "cdk.refreshGovernance",
+        "command": "tierward.refreshGovernance",
         "title": "Tierward: Refresh Governance",
         "icon": "$(refresh)"
       },
       {
-        "command": "cdk.runSkill",
+        "command": "tierward.runSkill",
         "title": "Tierward: Run Skill in Claude Code"
       },
       {
-        "command": "cdk.runSkillByName",
+        "command": "tierward.runSkillByName",
         "title": "Tierward: Run Skill (by name)"
       },
       {
-        "command": "cdk.runSkillInCc",
+        "command": "tierward.runSkillInCc",
         "title": "Run in Claude Code",
         "icon": "$(play)"
       }
@@ -78,30 +78,30 @@
     "menus": {
       "view/title": [
         {
-          "command": "cdk.refreshGovernance",
-          "when": "view == cdk.governance",
+          "command": "tierward.refreshGovernance",
+          "when": "view == tierward.governance",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "cdk.runSkillInCc",
-          "when": "view == cdk.governance && viewItem == cdk.skill.invocable",
+          "command": "tierward.runSkillInCc",
+          "when": "view == tierward.governance && viewItem == tierward.skill.invocable",
           "group": "inline"
         },
         {
-          "command": "cdk.runSkillInCc",
-          "when": "view == cdk.governance && viewItem == cdk.skill.invocable",
+          "command": "tierward.runSkillInCc",
+          "when": "view == tierward.governance && viewItem == tierward.skill.invocable",
           "group": "navigation"
         }
       ],
       "commandPalette": [
         {
-          "command": "cdk.runSkillByName",
+          "command": "tierward.runSkillByName",
           "when": "false"
         },
         {
-          "command": "cdk.runSkillInCc",
+          "command": "tierward.runSkillInCc",
           "when": "false"
         }
       ]
@@ -109,7 +109,7 @@
     "configuration": {
       "title": "Tierward",
       "properties": {
-        "cdk.cliPath": {
+        "tierward.cliPath": {
           "type": "string",
           "default": "tierward",
           "description": "Command used to invoke the Tierward CLI. Override with an absolute path if the CLI is not on PATH."

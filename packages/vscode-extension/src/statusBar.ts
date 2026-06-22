@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { ArchAuditStatus, HealthSnapshot } from './cdkBackend';
+import type { ArchAuditStatus, HealthSnapshot } from './tierwardBackend';
 import {
   ARCH_AUDIT_STALE_DAYS,
   describeArchAudit,
@@ -20,13 +20,13 @@ const BACKGROUND: Record<HealthSeverity, vscode.ThemeColor | undefined> = {
  * extension — the bar does not fetch, so it shares one `doctor` run with the
  * Problems-panel diagnostics.
  */
-export class CdkStatusBar {
+export class TierwardStatusBar {
   private readonly item: vscode.StatusBarItem;
 
   constructor() {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     this.item.name = 'Claude Dev Kit Health';
-    this.item.command = 'cdk.showDoctorReport';
+    this.item.command = 'tierward.showDoctorReport';
   }
 
   dispose(): void {
@@ -61,7 +61,7 @@ export class CdkStatusBar {
     archAudit: ArchAuditStatus,
     nowUnix: number,
   ): void {
-    this.item.text = '$(circle-slash) CDK';
+    this.item.text = '$(circle-slash) Tierward';
     this.item.backgroundColor = undefined;
     this.item.tooltip = new vscode.MarkdownString(
       [
@@ -69,7 +69,7 @@ export class CdkStatusBar {
         '',
         `Doctor unavailable: ${error ?? 'unknown error'}`,
         '',
-        'Set `cdk.cliPath` to your claude-dev-kit CLI, or install it on PATH.',
+        'Set `tierward.cliPath` to your tierward CLI, or install it on PATH.',
         '',
         `Arch-audit: ${describeArchAudit(archAudit, nowUnix, ARCH_AUDIT_STALE_DAYS)}`,
       ].join('\n'),

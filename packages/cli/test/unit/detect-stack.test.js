@@ -9,7 +9,7 @@ describe('detectStack — tech stack identification', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cdk-detect-stack-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tierward-detect-stack-'));
   });
 
   afterEach(async () => {
@@ -113,7 +113,7 @@ describe('detectStack — suggestedTier thresholds', () => {
   let tmpDir;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cdk-detect-tier-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tierward-detect-tier-'));
   });
 
   afterEach(async () => {

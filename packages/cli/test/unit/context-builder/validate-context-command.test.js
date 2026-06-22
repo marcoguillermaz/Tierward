@@ -136,7 +136,7 @@ describe('validate-context CLI (subprocess)', () => {
   });
 
   it('defaults to ./CONTEXT.md when no path given', () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-vc-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-vc-'));
     try {
       fs.copyFileSync(path.join(FIXTURES, 'valid-greenfield.md'), path.join(tmpDir, 'CONTEXT.md'));
       const r = runCli('validate-context', { cwd: tmpDir });

@@ -3,7 +3,7 @@ import { parseSkillHeader } from './ccBridge';
 
 /**
  * Adds a "Run in Claude Code" codelens at the top of a user-invocable
- * `SKILL.md`. The lens triggers `cdk.runSkillByName`, which bridges to Claude
+ * `SKILL.md`. The lens triggers `tierward.runSkillByName`, which bridges to Claude
  * Code. Skills without `user-invocable: true` get no lens.
  */
 export class SkillCodeLensProvider implements vscode.CodeLensProvider {
@@ -15,7 +15,7 @@ export class SkillCodeLensProvider implements vscode.CodeLensProvider {
     return [
       new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
         title: `$(play) Run /${header.name} in Claude Code`,
-        command: 'cdk.runSkillByName',
+        command: 'tierward.runSkillByName',
         arguments: [header.name],
       }),
     ];

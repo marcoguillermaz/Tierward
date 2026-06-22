@@ -34,7 +34,7 @@ body:
       required: false
 
   - type: input
-    id: cdk-version
+    id: tierward-version
     attributes:
       label: tierward version
       placeholder: "1.28.0"

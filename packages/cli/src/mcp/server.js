@@ -24,7 +24,7 @@ function readPackageName() {
 }
 
 function getCwd() {
-  return process.env.CDK_PROJECT_ROOT || process.cwd();
+  return process.env.TIERWARD_PROJECT_ROOT || process.env.CDK_PROJECT_ROOT || process.cwd();
 }
 
 function safeReadJson(path) {
@@ -248,73 +248,86 @@ export function buildServer() {
     version: readPackageVersion(),
   });
 
-  server.registerTool(
-    'cdk_doctor_report',
+  // Tool definitions are registered under the `tierward_*` namespace. The
+  // legacy `cdk_*` names (the project was formerly claude-dev-kit) are also
+  // registered as deprecated aliases sharing the same handler, so MCP clients
+  // wired before the rename keep working.
+  const tools = [
     {
-      title: 'Tierward doctor report',
-      description:
-        'Runs `tierward doctor --report` against the current project and returns the JSON compliance summary (28 checks: governance files, hooks, skill spec, security variant, drift markers).',
-      inputSchema: {},
-    },
-    async () => buildToolReply(runDoctorReport(getCwd())),
-  );
-
-  server.registerTool(
-    'cdk_team_settings',
-    {
-      title: 'Tierward team-settings.json contents',
-      description:
-        'Returns the parsed `.claude/team-settings.json` for the current project. The `present` flag indicates whether the file exists; when absent, the project is unrestricted by Tierward governance.',
-      inputSchema: {},
-    },
-    async () => buildToolReply(readTeamSettings(getCwd())),
-  );
-
-  server.registerTool(
-    'cdk_arch_audit_status',
-    {
-      title: 'Last arch-audit run status',
-      description:
-        'Returns the timestamp of the last `arch-audit` skill execution recorded in `.claude/session/last-arch-audit`, plus age in days. Useful to verify the weekly cadence is honoured.',
-      inputSchema: {},
-    },
-    async () => buildToolReply(readArchAuditStatus(getCwd())),
-  );
-
-  server.registerTool(
-    'cdk_skill_inventory',
-    {
-      title: 'Installed skills inventory',
-      description:
-        'Lists every skill installed in `.claude/skills/`, with frontmatter snapshot (description, model, allowed-tools, user-invocable). Custom skills are flagged separately.',
-      inputSchema: {},
-    },
-    async () => buildToolReply(readSkillInventory(getCwd())),
-  );
-
-  server.registerTool(
-    'cdk_pr_review',
-    {
-      title: 'Read /pr-review skill state on a PR',
-      description:
-        "Reads the audit trail of `/pr-review` skill comments on a GitHub PR (verdict, severity counts, body preview). Read-only: this tool does not run a fresh review. To generate a new review, invoke the `/pr-review` Tierward skill via the CLI (the tool returns the exact invocation in `cliInvocation`). Requires the `gh` CLI to be authenticated against the project's GitHub repo.",
-      inputSchema: {
-        prNumber: z.number().int().positive().describe('GitHub PR number to inspect'),
+      base: 'doctor_report',
+      config: {
+        title: 'Tierward doctor report',
+        description:
+          'Runs `tierward doctor --report` against the current project and returns the JSON compliance summary (28 checks: governance files, hooks, skill spec, security variant, drift markers).',
+        inputSchema: {},
       },
+      handler: async () => buildToolReply(runDoctorReport(getCwd())),
     },
-    async (args) => buildToolReply(readPrReviewState(args?.prNumber)),
-  );
-
-  server.registerTool(
-    'cdk_package_meta',
     {
-      title: 'Tierward package metadata',
-      description:
-        'Returns the Tierward package name, installed version, CLI path, and resolved project root. Useful for clients to verify which Tierward CLI is wired up to this MCP server.',
-      inputSchema: {},
+      base: 'team_settings',
+      config: {
+        title: 'Tierward team-settings.json contents',
+        description:
+          'Returns the parsed `.claude/team-settings.json` for the current project. The `present` flag indicates whether the file exists; when absent, the project is unrestricted by Tierward governance.',
+        inputSchema: {},
+      },
+      handler: async () => buildToolReply(readTeamSettings(getCwd())),
     },
-    async () => buildToolReply(getPackageMeta()),
-  );
+    {
+      base: 'arch_audit_status',
+      config: {
+        title: 'Last arch-audit run status',
+        description:
+          'Returns the timestamp of the last `arch-audit` skill execution recorded in `.claude/session/last-arch-audit`, plus age in days. Useful to verify the weekly cadence is honoured.',
+        inputSchema: {},
+      },
+      handler: async () => buildToolReply(readArchAuditStatus(getCwd())),
+    },
+    {
+      base: 'skill_inventory',
+      config: {
+        title: 'Installed skills inventory',
+        description:
+          'Lists every skill installed in `.claude/skills/`, with frontmatter snapshot (description, model, allowed-tools, user-invocable). Custom skills are flagged separately.',
+        inputSchema: {},
+      },
+      handler: async () => buildToolReply(readSkillInventory(getCwd())),
+    },
+    {
+      base: 'pr_review',
+      config: {
+        title: 'Read /pr-review skill state on a PR',
+        description:
+          "Reads the audit trail of `/pr-review` skill comments on a GitHub PR (verdict, severity counts, body preview). Read-only: this tool does not run a fresh review. To generate a new review, invoke the `/pr-review` Tierward skill via the CLI (the tool returns the exact invocation in `cliInvocation`). Requires the `gh` CLI to be authenticated against the project's GitHub repo.",
+        inputSchema: {
+          prNumber: z.number().int().positive().describe('GitHub PR number to inspect'),
+        },
+      },
+      handler: async (args) => buildToolReply(readPrReviewState(args?.prNumber)),
+    },
+    {
+      base: 'package_meta',
+      config: {
+        title: 'Tierward package metadata',
+        description:
+          'Returns the Tierward package name, installed version, CLI path, and resolved project root. Useful for clients to verify which Tierward CLI is wired up to this MCP server.',
+        inputSchema: {},
+      },
+      handler: async () => buildToolReply(getPackageMeta()),
+    },
+  ];
+
+  for (const { base, config, handler } of tools) {
+    server.registerTool(`tierward_${base}`, config, handler);
+    server.registerTool(
+      `cdk_${base}`,
+      {
+        ...config,
+        description: `[Deprecated alias for tierward_${base}] ${config.description}`,
+      },
+      handler,
+    );
+  }
 
   return server;
 }

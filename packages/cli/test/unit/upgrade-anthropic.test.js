@@ -52,7 +52,7 @@ describe('detectScaffoldedTier', () => {
   let tmp;
 
   function makeTmp() {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-detect-tier-'));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-detect-tier-'));
     return tmp;
   }
 

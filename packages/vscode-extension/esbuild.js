@@ -26,8 +26,8 @@ async function main() {
   // It imports no `vscode` API, which is exactly why it is unit-testable here.
   const backend = await esbuild.context({
     ...baseOptions,
-    entryPoints: ['src/cdkBackend.ts'],
-    outfile: 'dist/cdkBackend.js',
+    entryPoints: ['src/tierwardBackend.ts'],
+    outfile: 'dist/tierwardBackend.js',
   });
 
   // Pure health/display logic, also vscode-free and emitted standalone for tests.

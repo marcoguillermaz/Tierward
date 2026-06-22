@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { CdkBackend } from './cdkBackend';
+import { TierwardBackend } from './tierwardBackend';
 import { GovernanceTreeProvider, type GovernanceNode } from './governanceTree';
-import { CdkStatusBar } from './statusBar';
-import { CdkDiagnostics } from './diagnosticsProvider';
+import { TierwardStatusBar } from './statusBar';
+import { TierwardDiagnostics } from './diagnosticsProvider';
 import { SkillCodeLensProvider } from './skillCodeLens';
 import { buildCcUri, skillPrompt } from './ccBridge';
 
@@ -11,8 +11,8 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(output);
 
   const treeProvider = new GovernanceTreeProvider(() => resolveBackend());
-  const statusBar = new CdkStatusBar();
-  const diagnostics = new CdkDiagnostics();
+  const statusBar = new TierwardStatusBar();
+  const diagnostics = new TierwardDiagnostics();
 
   // Refreshes every surface from a single doctor invocation: the tree reads
   // skills/rules from disk, while the status bar and Problems-panel diagnostics
@@ -64,22 +64,22 @@ export function activate(context: vscode.ExtensionContext): void {
     treeProvider,
     statusBar,
     diagnostics,
-    vscode.window.registerTreeDataProvider('cdk.governance', treeProvider),
+    vscode.window.registerTreeDataProvider('tierward.governance', treeProvider),
     vscode.languages.registerCodeLensProvider(
       { pattern: '**/.claude/skills/**/SKILL.md' },
       new SkillCodeLensProvider(),
     ),
-    vscode.commands.registerCommand('cdk.refreshGovernance', () => void refreshSurfaces()),
-    vscode.commands.registerCommand('cdk.showDoctorReport', () =>
+    vscode.commands.registerCommand('tierward.refreshGovernance', () => void refreshSurfaces()),
+    vscode.commands.registerCommand('tierward.showDoctorReport', () =>
       runDoctorReport(output, statusBar, diagnostics),
     ),
-    vscode.commands.registerCommand('cdk.runSkill', () => pickAndRunSkill()),
-    vscode.commands.registerCommand('cdk.runSkillByName', (name: unknown) => {
+    vscode.commands.registerCommand('tierward.runSkill', () => pickAndRunSkill()),
+    vscode.commands.registerCommand('tierward.runSkillByName', (name: unknown) => {
       if (typeof name === 'string') {
         invokeSkill(name);
       }
     }),
-    vscode.commands.registerCommand('cdk.runSkillInCc', (node?: GovernanceNode) => {
+    vscode.commands.registerCommand('tierward.runSkillInCc', (node?: GovernanceNode) => {
       if (node && node.kind === 'skill') {
         invokeSkill(node.skill.name);
       }
@@ -95,20 +95,20 @@ export function deactivate(): void {
   // Subscriptions are disposed by VS Code via context.subscriptions.
 }
 
-function resolveBackend(): CdkBackend | undefined {
+function resolveBackend(): TierwardBackend | undefined {
   const root = resolveProjectRoot();
   if (!root) {
     return undefined;
   }
   const cliPath =
-    vscode.workspace.getConfiguration('cdk').get<string>('cliPath') ?? 'claude-dev-kit';
-  return new CdkBackend({ projectRoot: root, cliPath });
+    vscode.workspace.getConfiguration('tierward').get<string>('cliPath') ?? 'tierward';
+  return new TierwardBackend({ projectRoot: root, cliPath });
 }
 
 async function runDoctorReport(
   output: vscode.OutputChannel,
-  statusBar: CdkStatusBar,
-  diagnostics: CdkDiagnostics,
+  statusBar: TierwardStatusBar,
+  diagnostics: TierwardDiagnostics,
 ): Promise<void> {
   const root = resolveProjectRoot();
   const backend = resolveBackend();
@@ -137,7 +137,7 @@ async function runDoctorReport(
 
   const { passed, warned, failed, skipped } = snapshot.report.summary;
   const total = passed + warned + failed + skipped;
-  const message = `CDK doctor: ${passed}/${total} passed, ${failed} failed, ${warned} warnings.`;
+  const message = `Tierward doctor: ${passed}/${total} passed, ${failed} failed, ${warned} warnings.`;
   if (failed > 0) {
     void vscode.window.showWarningMessage(message);
   } else {

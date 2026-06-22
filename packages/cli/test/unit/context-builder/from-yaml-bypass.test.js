@@ -72,7 +72,7 @@ describe('normalizeFromYamlSource', () => {
 
 describe('runFromYamlBypass — programmatic', () => {
   it('writes CONTEXT.md from a valid raw YAML file', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-fy-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-fy-'));
     const src = path.join(tmpDir, 'config.yaml');
     fs.writeFileSync(src, VALID_YAML_ONLY);
     try {
@@ -90,7 +90,7 @@ describe('runFromYamlBypass — programmatic', () => {
   });
 
   it('writes CONTEXT.md from a full markdown file with frontmatter+body', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-fy-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-fy-'));
     const src = path.join(FIXTURES, 'valid-greenfield.md');
     try {
       const out = await runFromYamlBypass({
@@ -111,7 +111,7 @@ describe('runFromYamlBypass — programmatic', () => {
   it('throws FROM_YAML_SOURCE_MISSING when file does not exist', async () => {
     await assert.rejects(
       runFromYamlBypass({
-        sourcePath: '/tmp/cdk-does-not-exist-99999.yaml',
+        sourcePath: '/tmp/tierward-does-not-exist-99999.yaml',
         cwd: os.tmpdir(),
         silent: true,
         throwOnInvalid: true,
@@ -121,7 +121,7 @@ describe('runFromYamlBypass — programmatic', () => {
   });
 
   it('throws INVALID_CONTEXT when YAML fails schema', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-fy-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-fy-'));
     const src = path.join(tmpDir, 'bad.yaml');
     fs.writeFileSync(src, 'schema_version: 1\nproject:\n  name: incomplete\n');
     try {
@@ -142,7 +142,7 @@ describe('runFromYamlBypass — programmatic', () => {
 
 describe('context --from-yaml (CLI)', () => {
   it('exits 0 and writes CONTEXT.md from raw YAML', () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-fy-cli-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-fy-cli-'));
     const src = path.join(tmpDir, 'config.yaml');
     fs.writeFileSync(src, VALID_YAML_ONLY);
     try {
@@ -156,7 +156,7 @@ describe('context --from-yaml (CLI)', () => {
   });
 
   it('exits 1 with error message when source is invalid', () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-fy-cli-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-fy-cli-'));
     const src = path.join(tmpDir, 'bad.yaml');
     fs.writeFileSync(src, 'schema_version: 1\nproject:\n  name: incomplete\n');
     try {
@@ -171,9 +171,9 @@ describe('context --from-yaml (CLI)', () => {
   });
 
   it('exits 1 when source file missing', () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-fy-cli-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-fy-cli-'));
     try {
-      const r = runCli(`context --from-yaml /tmp/cdk-missing-99999.yaml`, { cwd: tmpDir });
+      const r = runCli(`context --from-yaml /tmp/tierward-missing-99999.yaml`, { cwd: tmpDir });
       assert.equal(r.exitCode, 1);
       assert.match(r.stderr, /not found/);
     } finally {

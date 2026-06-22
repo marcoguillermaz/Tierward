@@ -77,10 +77,10 @@ export interface ExecResult {
 /** Injectable command runner — the default shells out, tests pass a fake. */
 export type ExecFn = (command: string, args: string[], cwd: string) => Promise<ExecResult>;
 
-export class CdkBackendError extends Error {
+export class TierwardBackendError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'CdkBackendError';
+    this.name = 'TierwardBackendError';
   }
 }
 
@@ -92,31 +92,31 @@ const defaultExec: ExecFn = async (command, args, cwd) => {
   return { stdout, stderr };
 };
 
-export interface CdkBackendOptions {
+export interface TierwardBackendOptions {
   projectRoot: string;
   cliPath?: string;
   exec?: ExecFn;
 }
 
 /**
- * Sources CDK governance data for the extension by shelling out to the
- * installed `claude-dev-kit` CLI. Holds no `vscode` dependency so it can be
+ * Sources Tierward governance data for the extension by shelling out to the
+ * installed `tierward` CLI. Holds no `vscode` dependency so it can be
  * unit-tested under `node --test`.
  */
-export class CdkBackend {
+export class TierwardBackend {
   private readonly projectRoot: string;
   private readonly cliPath: string;
   private readonly exec: ExecFn;
 
-  constructor(options: CdkBackendOptions) {
+  constructor(options: TierwardBackendOptions) {
     this.projectRoot = options.projectRoot;
     this.cliPath =
-      options.cliPath && options.cliPath.trim() ? options.cliPath.trim() : 'claude-dev-kit';
+      options.cliPath && options.cliPath.trim() ? options.cliPath.trim() : 'tierward';
     this.exec = options.exec ?? defaultExec;
   }
 
   /**
-   * Runs `claude-dev-kit doctor --report` and returns the parsed JSON.
+   * Runs `tierward doctor --report` and returns the parsed JSON.
    *
    * `doctor` exits 1 when checks fail but still prints the report to stdout,
    * so a non-zero exit is recovered as long as stdout carries JSON.
@@ -130,7 +130,7 @@ export class CdkBackend {
       if (recovered && recovered.trim().startsWith('{')) {
         stdout = recovered;
       } else {
-        throw new CdkBackendError(
+        throw new TierwardBackendError(
           `Failed to run "${this.cliPath} doctor --report": ${describeError(error)}`,
         );
       }
@@ -139,7 +139,7 @@ export class CdkBackend {
     try {
       return JSON.parse(stdout) as DoctorReport;
     } catch {
-      throw new CdkBackendError('doctor --report did not return valid JSON.');
+      throw new TierwardBackendError('doctor --report did not return valid JSON.');
     }
   }
 
@@ -207,7 +207,7 @@ export class CdkBackend {
   /**
    * Reads the timestamp of the last `arch-audit` skill run from
    * `.claude/session/last-arch-audit` (a Unix epoch in seconds), mirroring the
-   * CDK MCP server's parser. Never throws — a missing or unreadable record
+   * Tierward MCP server's parser. Never throws — a missing or unreadable record
    * reports `everRan: false` so the status bar can degrade gracefully.
    */
   async getArchAuditStatus(): Promise<ArchAuditStatus> {
@@ -242,13 +242,13 @@ export class CdkBackend {
       const report = await this.getDoctorReport();
       return { archAudit, report, error: null };
     } catch (error) {
-      const message = error instanceof CdkBackendError ? error.message : String(error);
+      const message = error instanceof TierwardBackendError ? error.message : String(error);
       return { archAudit, report: null, error: message };
     }
   }
 }
 
-/** Minimal `key: value` frontmatter reader — matches the CDK MCP server's parser. */
+/** Minimal `key: value` frontmatter reader — matches the Tierward MCP server's parser. */
 function parseFrontmatter(raw: string): Record<string, string> {
   const match = raw.match(/^---\n([\s\S]*?)\n---/);
   const frontmatter: Record<string, string> = {};

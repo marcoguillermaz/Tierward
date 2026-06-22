@@ -560,7 +560,7 @@ describe('pruneSkills', () => {
   }
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cdk-test-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tierward-test-'));
   });
 
   afterEach(async () => {
@@ -672,7 +672,7 @@ describe('patchSettingsPermissions', () => {
   }
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cdk-test-'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tierward-test-'));
   });
 
   afterEach(async () => {

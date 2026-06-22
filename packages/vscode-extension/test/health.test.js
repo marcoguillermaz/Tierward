@@ -42,7 +42,7 @@ test('evaluateHealth: warnings without failures are a warning', () => {
 test('evaluateHealth: all green with no arch-audit is ok', () => {
   const d = evaluateHealth({ summary: summary({ passed: 12 }), archAudit: NEVER, nowUnix: NOW });
   assert.equal(d.severity, 'ok');
-  assert.equal(d.text, '$(check) CDK');
+  assert.equal(d.text, '$(check) Tierward');
 });
 
 test('evaluateHealth: a lapsed arch-audit cadence bumps a clean state to warning', () => {
@@ -53,7 +53,7 @@ test('evaluateHealth: a lapsed arch-audit cadence bumps a clean state to warning
   });
   assert.equal(d.severity, 'warning');
   // No doctor warnings, so the count glyph is omitted.
-  assert.equal(d.text, '$(warning) CDK');
+  assert.equal(d.text, '$(warning) Tierward');
 });
 
 test('evaluateHealth: a recent arch-audit run does not bump severity', () => {

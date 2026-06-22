@@ -14,12 +14,12 @@
 
 ## Source repositories
 
-<!-- Populated by claude-dev-kit init -->
+<!-- Populated by tierward init -->
 [SOURCE_REPOS]
 
 ## Source documents
 
-<!-- Populated by claude-dev-kit init -->
+<!-- Populated by tierward init -->
 [SOURCE_DOCS]
 
 ## Primary repository
@@ -131,7 +131,7 @@ After the developer confirms the summary and all gap questions are answered:
 **Gaps resolved**: [list of questions answered by developer]
 ```
 
-3. Run `npx mg-claude-dev-kit doctor` to validate the setup.
+3. Run `npx tierward doctor` to validate the setup.
 
 ---
 

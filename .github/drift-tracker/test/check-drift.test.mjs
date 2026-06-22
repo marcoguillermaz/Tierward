@@ -226,7 +226,7 @@ describe('loadFeatures', () => {
       assert.ok(['high', 'medium', 'low'].includes(f.risk), `invalid risk for ${f.id}`);
       assert.ok(Array.isArray(f.keywords), `keywords not array for ${f.id}`);
       assert.ok(f.keywords.length > 0, `empty keywords for ${f.id}`);
-      assert.ok(Array.isArray(f.cdkFiles), `cdkFiles not array for ${f.id}`);
+      assert.ok(Array.isArray(f.tierwardFiles), `tierwardFiles not array for ${f.id}`);
     }
   });
 
@@ -245,7 +245,7 @@ describe('formatIssueBody', () => {
     name: 'Test Feature',
     risk: 'high',
     keywords: ['test keyword'],
-    cdkFiles: ['src/test.js'],
+    tierwardFiles: ['src/test.js'],
     notes: 'Test context note.',
   };
   const matchResult = {
@@ -262,7 +262,7 @@ describe('formatIssueBody', () => {
     assert.ok(body.includes('## Anthropic Drift Alert: Test Feature'));
     assert.ok(body.includes('**Risk level**: HIGH'));
     assert.ok(body.includes('### What was detected'));
-    assert.ok(body.includes('### CDK files at risk'));
+    assert.ok(body.includes('### Tierward files at risk'));
     assert.ok(body.includes('`src/test.js`'));
     assert.ok(body.includes('### Recommended action'));
     assert.ok(body.includes('### Context'));

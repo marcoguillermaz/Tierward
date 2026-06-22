@@ -38,7 +38,7 @@ const baseAnswers = {
 
 describe('contextCommand — greenfield via PM persona', () => {
   it('writes a valid CONTEXT.md in an empty cwd', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-ctx-gf-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-ctx-gf-'));
     try {
       await silentConsole(() =>
         contextCommand({
@@ -60,7 +60,7 @@ describe('contextCommand — greenfield via PM persona', () => {
 
 describe('contextCommand — greenfield via developer persona (dev stub)', () => {
   it('falls back to PM flow and writes valid CONTEXT.md', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-ctx-dev-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-ctx-dev-'));
     try {
       await silentConsole(() =>
         contextCommand({
@@ -80,7 +80,7 @@ describe('contextCommand — greenfield via developer persona (dev stub)', () =>
 
 describe('contextCommand — in-place via inference (skipLlm)', () => {
   it('runs algo inference and PM-prefilled review and writes valid CONTEXT.md', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-ctx-ip-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-ctx-ip-'));
     try {
       // Create a minimal Node project so detectMode returns "in-place"
       fs.writeFileSync(
@@ -140,7 +140,7 @@ describe('contextCommand — in-place via inference (skipLlm)', () => {
   });
 
   it('populates body with prefilledProse (in-place mode, fix verification)', async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-ctx-body-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-ctx-body-'));
     try {
       fs.writeFileSync(
         path.join(tmpDir, 'package.json'),

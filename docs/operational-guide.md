@@ -1020,7 +1020,7 @@ When the [`package-registry-mcp`](https://github.com/Artmann/package-registry-mc
 
 **File**: `.claude/skills/pr-review/SKILL.md` | **Tier**: M, L
 
-Autonomous local pull-request review via the `gh` CLI. Spawns a review subagent on the PR diff, classifies findings as Critical / Major / Minor using universal plus stack-specific severity criteria, and posts the review as a PR comment for audit trail. Configurable through `.claude/team-settings.json` `prReviewSeverity`. Read-only — no merges, no code changes. The `--deep` flag escalates the subagent to opus for sensitive changes. The skill is also exposed as the `cdk_pr_review` MCP tool, which reads existing review comments rather than generating fresh ones.
+Autonomous local pull-request review via the `gh` CLI. Spawns a review subagent on the PR diff, classifies findings as Critical / Major / Minor using universal plus stack-specific severity criteria, and posts the review as a PR comment for audit trail. Configurable through `.claude/team-settings.json` `prReviewSeverity`. Read-only — no merges, no code changes. The `--deep` flag escalates the subagent to opus for sensitive changes. The skill is also exposed as the `tierward_pr_review` MCP tool, which reads existing review comments rather than generating fresh ones.
 
 ---
 
@@ -1308,24 +1308,26 @@ The `tierward` npm package ships two binaries: `tierward` (the wizard CLI) and `
 
 The MCP server exposes Tierward governance state to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). Six read-only tools:
 
-- `cdk_doctor_report` — runs `doctor --report` and returns the JSON
-- `cdk_team_settings` — parsed `.claude/team-settings.json` contents
-- `cdk_arch_audit_status` — last arch-audit run timestamp + age in days
-- `cdk_skill_inventory` — installed skills with frontmatter snapshot
-- `cdk_package_meta` — package name, version, CLI path, project root
-- `cdk_pr_review` — reads existing `/pr-review` comments on a GitHub PR (verdict + severity counts). Read-only; to generate a fresh review, invoke the `/pr-review` Tierward skill.
+- `tierward_doctor_report` — runs `doctor --report` and returns the JSON
+- `tierward_team_settings` — parsed `.claude/team-settings.json` contents
+- `tierward_arch_audit_status` — last arch-audit run timestamp + age in days
+- `tierward_skill_inventory` — installed skills with frontmatter snapshot
+- `tierward_package_meta` — package name, version, CLI path, project root
+- `tierward_pr_review` — reads existing `/pr-review` comments on a GitHub PR (verdict + severity counts). Read-only; to generate a fresh review, invoke the `/pr-review` Tierward skill.
+
+*Note: The legacy `cdk_*` tool names remain available as deprecated aliases for backwards compatibility.*
 
 Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user-scoped):
 
 ```json
 {
   "mcpServers": {
-    "cdk": { "command": "tierward-mcp" }
+    "tierward": { "command": "tierward-mcp" }
   }
 }
 ```
 
-The server resolves the project root from `$CDK_PROJECT_ROOT` if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.33.1. A read-write surface remains a future-minor decision contingent on adoption signal.
+The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.33.1. A read-write surface remains a future-minor decision contingent on adoption signal.
 
 ### Adding team-specific rules
 
