@@ -1,4 +1,4 @@
-name: Publish to npm
+name: Publish (npm + MCP registry)
 
 on:
   release:
@@ -30,3 +30,21 @@ jobs:
 
       - name: Publish to npm
         run: npm publish --access public
+
+      # ── Publish to the MCP Registry via GitHub OIDC ──────────────────────────
+      # No stored token, no expiry: the runner mints a short-lived OIDC token per
+      # run (id-token: write above). This replaces manual `mcp-publisher login
+      # github`, whose JWT expires and 401s. server.json lives at the repo root,
+      # so these steps override the packages/cli working-directory default.
+      - name: Install mcp-publisher
+        working-directory: ${{ github.workspace }}
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry (GitHub OIDC)
+        working-directory: ${{ github.workspace }}
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        working-directory: ${{ github.workspace }}
+        run: ./mcp-publisher publish
