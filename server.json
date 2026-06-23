@@ -12,6 +12,11 @@
       "registryType": "npm",
       "identifier": "tierward",
       "version": "1.33.2",
+      "runtimeHint": "npx",
+      "runtimeArguments": [
+        { "type": "named", "name": "--package", "value": "tierward" },
+        { "type": "positional", "value": "tierward-mcp", "valueHint": "mcp-binary" }
+      ],
       "transport": {
         "type": "stdio"
       }
