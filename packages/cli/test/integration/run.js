@@ -4015,6 +4015,37 @@ async function scenarioMCPServer() {
     }
     await client2.close();
 
+    // Regression (v1.33.3): the server must start when launched via a SYMLINK,
+    // not only the real path. npx and Claude Desktop invoke the `tierward-mcp`
+    // bin symlink, and macOS resolves /var -> /private/var. The old isMain guard
+    // (`import.meta.url === file://${argv[1]}`) was false in those cases, so
+    // startStdio() never ran and the process exited immediately. Launch via a
+    // symlink and assert the server still connects and exposes its tools.
+    const symlinkPath = path.join(dir, 'tierward-mcp-symlink.js');
+    fs.symlinkSync(SERVER_PATH, symlinkPath);
+    const transport3 = new StdioClientTransport({
+      command: 'node',
+      args: [symlinkPath],
+      env: { ...process.env, TIERWARD_PROJECT_ROOT: dir },
+      stderr: 'pipe',
+    });
+    const client3 = new Client(
+      { name: 'tierward-integration-test-3', version: '0.0.1' },
+      { capabilities: {} },
+    );
+    await client3.connect(transport3);
+    const toolsViaSymlink = await client3.listTools();
+    if (toolsViaSymlink.tools.length === expected.length) {
+      pass(
+        `MCP server: starts via bin symlink (${toolsViaSymlink.tools.length} tools) - isMain symlink regression guard`,
+      );
+    } else {
+      fail(
+        `MCP server via symlink: expected ${expected.length} tools, got ${toolsViaSymlink.tools.length}`,
+      );
+    }
+    await client3.close();
+
     await client.close();
   } catch (err) {
     fail(`MCP server scenario: ${err.message}`);
