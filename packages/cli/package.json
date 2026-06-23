@@ -17,6 +17,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
+    "preversion": "node ../../scripts/sync-plugin-version.mjs",
     "test": "node test/integration/run.js",
     "test:unit": "node --test 'test/unit/**/*.test.js'",
     "lint": "eslint src/ test/",
