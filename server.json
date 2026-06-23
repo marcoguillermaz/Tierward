@@ -1,17 +1,17 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.marcoguillermaz/tierward",
-  "description": "Read Tierward governance state from any MCP client: doctor report, team-settings policy, last arch-audit, and skill inventory.",
+  "description": "Read a project's Tierward governance state from any MCP client: doctor report, team-settings policy, last arch-audit, and skill inventory.",
   "repository": {
     "url": "https://github.com/marcoguillermaz/Tierward",
     "source": "github"
   },
-  "version": "1.33.1",
+  "version": "1.33.2",
   "packages": [
     {
-      "registry_type": "npm",
+      "registryType": "npm",
       "identifier": "tierward",
-      "version": "1.33.1",
+      "version": "1.33.2",
       "transport": {
         "type": "stdio"
       }
