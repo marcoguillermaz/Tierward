@@ -11,6 +11,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.33.2] — 2026-06-23
+
+### Added
+
+- **`mcpName` in `package.json`** (`io.github.marcoguillermaz/tierward`) for Model Context Protocol registry ownership verification, plus a `server.json` manifest at the repo root. Enables submitting the bundled `tierward-mcp` server to the official MCP registry. No runtime change.
+
+---
+
 ## [1.33.1] — 2026-06-19
 
 ### Added
