@@ -2,12 +2,12 @@ name: VS Code Extension
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
     paths:
       - 'packages/vscode-extension/**'
       - '.github/workflows/vscode-extension.yml'
   pull_request:
-    branches: [main]
+    branches: [main, staging]
     paths:
       - 'packages/vscode-extension/**'
       - '.github/workflows/vscode-extension.yml'
