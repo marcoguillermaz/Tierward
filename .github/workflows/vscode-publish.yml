@@ -1,14 +1,12 @@
 name: VS Code Extension — Publish
 
-# Inert until BOTH conditions are met:
-#   1. A `VSCE_PAT` repo secret exists (Marketplace publisher Personal Access Token).
-#   2. A tag matching `vscode-v*` is pushed (e.g. vscode-v0.1.0).
-# Without the secret the job runs but skips publishing, so it is safe to merge now.
-#
-# BEFORE the first real publish (post-rebrand): remove `"private": true` from
-# packages/vscode-extension/package.json — `vsce publish` REFUSES a private
-# package (it errors, it does not skip). Kept private for now as npm-publish
-# safety; the rebrand that sets the final name/identity must drop it.
+# Publishes the VS Code extension to the Marketplace on a `vscode-v*` tag
+# (e.g. vscode-v0.1.0) — a tag namespace independent of the CLI's `v*` releases,
+# so the extension versions on its own cadence. The package is no longer
+# `private`, so `vsce publish` runs for real once the `VSCE_PAT` repo secret
+# (a Marketplace publisher PAT) is set. Without the secret the job skips
+# publishing instead of failing. typecheck + tests gate the publish so a broken
+# build never reaches the Marketplace.
 on:
   push:
     tags:
@@ -32,6 +30,12 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
 
       - name: Publish (requires VSCE_PAT secret)
         env:
