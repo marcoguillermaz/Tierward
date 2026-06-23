@@ -16,7 +16,10 @@ permissions:
 jobs:
   enable-auto-merge:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    # Auto-squash feature PRs into staging only. Promotion PRs into `main`
+    # (head = staging) are merged manually with a merge commit, so staging
+    # stays an ancestor of main and the two branches do not diverge.
+    if: github.event.pull_request.draft == false && github.event.pull_request.base.ref != 'main'
     steps:
       - name: Enable auto-merge
         run: gh pr merge "$PR_NUMBER" --auto --squash
