@@ -11,6 +11,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.33.3] — 2026-06-23
+
+### Fixed
+
+- **MCP server now starts when launched via a symlink** (`npx`, Claude Desktop). The `isMain` guard compared `import.meta.url` against `file://${process.argv[1]}`; with a symlinked `tierward-mcp` bin (or macOS `/var`→`/private/var`) the two differed, so the server never started and the process exited immediately. The published 1.33.2 server was non-functional on the primary install path; integration tests missed it because they launch the real source path. Now resolves real paths on both sides, with a symlink-launch regression guard in the integration suite.
+
+---
+
 ## [1.33.2] — 2026-06-23
 
 ### Added
