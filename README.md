@@ -1,18 +1,18 @@
-# tierward
+# Tierward
 
 [![npm version](https://img.shields.io/npm/v/tierward.svg)](https://www.npmjs.com/package/tierward)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js >= 22](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org)
-[![CI](https://github.com/marcoguillermaz/tierward/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoguillermaz/tierward/actions/workflows/ci.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/marcoguillermaz/tierward/badge)](https://securityscorecards.dev/viewer/?uri=github.com/marcoguillermaz/tierward)
+[![CI](https://github.com/marcoguillermaz/Tierward/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoguillermaz/Tierward/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/marcoguillermaz/Tierward/badge)](https://securityscorecards.dev/viewer/?uri=github.com/marcoguillermaz/Tierward)
 
-> Scaffold for legible, reviewable AI-assisted development.
-> Claude generates. Your team decides.
+> **Claude generates. Your team decides.**
+> An open-source scaffold that brings AI-assisted coding into your team — for the product managers and developers who own the outcome — without giving up control of it.
 > MCP-native — read Tierward governance state from Claude Desktop, ChatGPT, Cursor, VS Code.
 
 Claude Code is fast. The gap it creates is not in the code: it is in the review. When AI writes everything autonomously, you end up approving diffs you don't fully understand, catching regressions two blocks later, and losing the thread of what the system actually does.
 
-**Tierward** closes that gap. One command scaffolds a structured process on top of Claude Code: a pipeline with explicit STOP gates before implementation, audit skills that surface issues before they reach production, and a Stop hook that mechanically prevents Claude from declaring done until your tests pass. Structure scales with your project. Start at Tier 0 with zero process, move up when you need it.
+**Tierward** closes that gap. Instead of going all-in overnight, teams adopt it tier by tier — from a light discovery setup to a fully governed pipeline — with enforcement baked in from day one: explicit STOP gates before implementation, audit skills that surface issues before they reach production, and a Stop hook that mechanically prevents Claude from declaring done until your tests pass. Start at Tier 0 with zero process, move up when you need it.
 
 Since v1.17.0, Tierward ships an MCP server alongside the CLI. Any MCP-aware client can read your project's doctor report, team-settings policy, last arch-audit, and skill inventory without running the Tierward CLI. See [MCP server](#mcp-server).
 
@@ -20,9 +20,11 @@ Since v1.17.0, Tierward ships an MCP server alongside the CLI. Any MCP-aware cli
 
 ## Philosophy
 
-Tierward is built on one observation: Claude Code becomes harder to work with as projects grow not because it gets less capable, but because autonomous decisions accumulate faster than they can be reviewed. The pipeline enforces a review contract: requirements before code, hypothesis before fix, tests before done. Without slowing down work that doesn't need that structure.
+One thing drives Tierward: Claude Code doesn't become harder to work with because it gets less capable. It becomes harder to work with because autonomous decisions accumulate faster than anyone can review them. The pipeline enforces a review contract — requirements before code, hypothesis before fix, tests before done — without slowing down work that doesn't need that structure.
 
-The tier system exists because process has a cost. A solo bugfix should not pay the overhead of a team feature workflow. Two pipelines cover the spectrum: **Fast Lane** (4 steps, scope-confirm) for quick fixes, **Full** (14 phases, 4 review gates) for team features. Both enforce the same contract — Claude works phase by phase, your team approves each step. Start at the tier that fits your current risk. The scaffold grows with you.
+The tier system exists because process has a cost. A solo bugfix should not pay the overhead of a team feature workflow. Two pipelines cover the range: **Fast Lane** (4 steps, scope-confirm) for quick fixes, **Full** (14 phases, 4 review gates) for team features. Both enforce the same contract — Claude works phase by phase, your team approves each step. Start at the tier that fits your current risk and add more as the stakes rise.
+
+It is built for the people who carry the result — product managers and developers alike — so the decisions stay with them, not the model.
 
 ---
 
@@ -73,6 +75,8 @@ As of v1.27.0, the schema covers all four pipeline tiers: tier 0 (Discovery) and
 ---
 
 ## What it does
+
+One contract across four tiers — from a solo bugfix to a fully governed team pipeline. Claude proposes, your team approves, at every tier.
 
 ### Tiered pipelines matched to risk
 
@@ -190,7 +194,7 @@ tierward-mcp                            # MCP server (stdio); wire from .mcp.jso
 
 ## MCP server
 
-`tierward-mcp` is a Model Context Protocol server that exposes Tierward governance signals to any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). The CLI and MCP server ship in the same npm package, version-locked.
+`tierward-mcp` is a Model Context Protocol server that makes Tierward governance state readable by any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio). The CLI and MCP server ship in the same npm package, version-locked.
 
 Wire it up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user-scoped):
 
@@ -244,7 +248,7 @@ The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legac
 ## Testing
 
 ```bash
-node packages/cli/test/integration/run.js    # 1132 integration checks
+node packages/cli/test/integration/run.js    # 1170 integration checks
 node --test 'packages/cli/test/unit/**/*.test.js'   # 585 unit tests
 ```
 
@@ -275,11 +279,23 @@ A separate **template-coverage** layer (under `packages/cli/test/template-covera
 
 ## Roadmap
 
-See [GitHub Milestones](https://github.com/marcoguillermaz/tierward/milestones) for the 12-month plan.
+See [GitHub Milestones](https://github.com/marcoguillermaz/Tierward/milestones) for the 12-month plan.
 
-**Current**: v1.33.0 adds `/systematic-debugging` (tier S+): root-cause enforcement with a STOP gate between hypothesis and fix, Red Flags anti-rationalization tables, and pipeline hooks in tier M/L. v1.32.0 ships the Tierward plugin for the Claude Code marketplace and a bootstrap soft hook for plugin-installed projects. v1.31.0 ships the VS Code extension (P1–P3): governance tree view with skill and rule browsing, live health status bar with arch-audit staleness, and Tierward doctor findings surfaced as Problems panel diagnostics. Also adds `/skill-security` (SkillSpector integration, tier S+), a 64-pattern vulnerability scanner for Claude Code skill files.
+**Current**: v1.33.1 adds an output-style language rule (code identifiers, paths, and commands stay verbatim across response languages) and extends `doctor` validation to tier 0. v1.33.0 adds `/systematic-debugging` (tier S+): root-cause enforcement with a STOP gate between hypothesis and fix, Red Flags anti-rationalization tables, and pipeline hooks in tier M/L. v1.32.0 ships the Tierward plugin for the Claude Code marketplace and a bootstrap soft hook for plugin-installed projects. v1.31.0 ships the VS Code extension (P1–P3): governance tree view with skill and rule browsing, live health status bar with arch-audit staleness, and Tierward doctor findings surfaced as Problems panel diagnostics. Also adds `/skill-security` (SkillSpector integration, tier S+), a 64-pattern vulnerability scanner for Claude Code skill files.
 
 **Next**: `/arch-audit` MCP-aware once the upstream Anthropic spec MCP server lands. `/privacy-audit` re-eval (Issue #97 sub-track 3) when AST tracing matures or demand signal materializes. Q2 #3 VitePress docs site (ICE 432) stays on hold.
+
+---
+
+## Support
+
+Tierward is open-source, MIT-licensed, and built in the open. If it's useful to your team, here's how to support it:
+
+- ❤️ [**Sponsor on GitHub**](https://github.com/sponsors/marcoguillermaz) — fund ongoing development, recurring or one-time
+- ☕ [**Buy Me a Coffee**](https://buymeacoffee.com/marcoguillermaz) — one-off support, no account needed
+- ⭐ **Star the repo** — it helps other product and engineering teams discover the project
+- 🐛 [**Open an issue**](https://github.com/marcoguillermaz/Tierward/issues) or [**start a discussion**](https://github.com/marcoguillermaz/Tierward/discussions)
+- 🔧 **Send a pull request** — see [Contributing](#contributing) below
 
 ---
 
@@ -295,4 +311,4 @@ To report a security issue, see [SECURITY.md](SECURITY.md).
 
 ---
 
-Built and maintained by [Marco Guillermaz](https://github.com/marcoguillermaz). Distributed on npm as [`tierward`](https://www.npmjs.com/package/tierward). Discussions and questions: [GitHub Discussions](https://github.com/marcoguillermaz/tierward/discussions).
+Built and maintained by [Marco Guillermaz](https://github.com/marcoguillermaz). Distributed on npm as [`tierward`](https://www.npmjs.com/package/tierward). Discussions and questions: [GitHub Discussions](https://github.com/marcoguillermaz/Tierward/discussions).

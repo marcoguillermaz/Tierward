@@ -37,6 +37,7 @@ Derive from the primary functional area of the staged changes:
 ## Step 4 - Write description
 
 Rules:
+- Always write the commit message (subject and body) in English, regardless of the conversation or repository language
 - Imperative mood: `add`, `fix`, `update`, `remove` - never past tense
 - Max 72 characters total including `type(scope): `
 - No period at end

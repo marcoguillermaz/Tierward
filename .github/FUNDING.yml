@@ -1,1 +1,5 @@
+# Only `github:` is set on purpose: with a single platform GitHub renders the
+# large "Sponsor" button. Adding other platforms (e.g. buy_me_a_coffee) downgrades
+# it to a compact list with raw URLs. Buy Me a Coffee lives in the README Support
+# section instead — https://buymeacoffee.com/marcoguillermaz
 github: [marcoguillermaz]
