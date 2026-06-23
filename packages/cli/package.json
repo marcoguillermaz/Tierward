@@ -1,8 +1,9 @@
 {
   "name": "tierward",
-  "version": "1.33.1",
+  "version": "1.33.2",
   "description": "Scaffold for legible, reviewable AI-assisted development",
   "type": "module",
+  "mcpName": "io.github.marcoguillermaz/tierward",
   "bin": {
     "tierward": "src/index.js",
     "tierward-mcp": "src/mcp/server.js",
