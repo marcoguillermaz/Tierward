@@ -26,7 +26,11 @@ cd tierward
 cd packages/cli && npm install
 ```
 
-**Branch flow.** Branch off `main`, push your branch, and open a PR back to `main`. PRs are squash-merged and the branch is deleted on merge, so keep each branch to one focused change. There is no long-lived integration branch; start every change from a fresh branch off `main`.
+**Branch flow.** `main` is released and stable; `staging` is the long-lived integration branch. Never commit to `main` directly. The only PRs into `main` are promotions from `staging`.
+
+For each change, branch off `staging` (a `feat|fix|chore/<slug>` branch, or a worktree via `./new-worktree.sh <type> <slug>`), do the work there, and open a PR back into `staging`. Feature PRs into `staging` are squash-merged. When `staging` is ready to ship, open a promotion PR from `staging` to `main` and merge it with a merge commit, not a squash: this keeps a shared history between the two branches. Squash promotion is what caused the recurring conflicts this flow replaces.
+
+**Worktrees.** `./new-worktree.sh <feat|fix|chore> <slug>` creates an isolated worktree in a sibling directory on a branch off `staging`. Each worktree is self-contained. Because `node_modules/` is gitignored, run `npm install` inside the worktree before you start, since a fresh checkout has no dependencies. Commit only on that worktree's branch, open the PR into `staging`, and once it merges, remove the worktree with `git worktree remove <dir>` to clean up.
 
 **Run the CLI locally**:
 
