@@ -1,14 +1,14 @@
 {
   "name": "tierward",
   "displayName": "Tierward",
-  "version": "1.31.1",
+  "version": "1.33.1",
   "description": "Governance skills for AI-assisted development: commit enforcement, architecture compliance, security audits, code quality, and humanized prose.",
   "author": {
     "name": "Marco Guillermaz",
     "url": "https://github.com/marcoguillermaz"
   },
-  "homepage": "https://github.com/marcoguillermaz/tierward",
-  "repository": "https://github.com/marcoguillermaz/tierward",
+  "homepage": "https://github.com/marcoguillermaz/Tierward",
+  "repository": "https://github.com/marcoguillermaz/Tierward",
   "license": "MIT",
   "keywords": [
     "claude",
