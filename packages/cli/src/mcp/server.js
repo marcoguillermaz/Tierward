@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, realpathSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -338,8 +338,22 @@ export async function startStdio() {
   await server.connect(transport);
 }
 
-const isMain = import.meta.url === `file://${process.argv[1]}`;
-if (isMain) {
+// Robust "run as main" detection. The naive
+// `import.meta.url === file://${process.argv[1]}` breaks whenever argv[1] is a
+// symlink or a path alias — e.g. the `tierward-mcp` bin symlink used by npx and
+// Claude Desktop, or macOS resolving /var -> /private/var. In those cases the
+// guard was false, startStdio() never ran, and the process exited immediately
+// ("Server transport closed unexpectedly"). Resolve real paths on both sides.
+function isMainModule() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule()) {
   startStdio().catch((err) => {
     process.stderr.write(`tierward-mcp fatal: ${err.message}\n`);
     process.exit(1);
