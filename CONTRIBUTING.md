@@ -26,6 +26,8 @@ cd tierward
 cd packages/cli && npm install
 ```
 
+**Branch flow.** Branch off `main`, push your branch, and open a PR back to `main`. PRs are squash-merged and the branch is deleted on merge, so keep each branch to one focused change. There is no long-lived integration branch; start every change from a fresh branch off `main`.
+
 **Run the CLI locally**:
 
 ```bash
