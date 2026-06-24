@@ -1,6 +1,6 @@
 # Stop hook
 
-The Stop hook runs every time Claude tries to mark a task as complete and blocks that completion until your test suite passes. It's wired into Claude Code at the OS level — Claude cannot declare done. That choice belongs to your tests.
+The Stop hook runs every time Claude tries to mark a task as complete and blocks that completion until your test suite passes. It's wired into Claude Code at the OS level: Claude cannot declare done. That choice belongs to your tests.
 
 ## How it works
 

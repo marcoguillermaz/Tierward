@@ -6,7 +6,7 @@ Tierward uses four tiers, each one adding more structure and enforcement. Start 
 
 | Tier | Pipeline | Best for |
 |---|---|---|
-| **0 — Discovery** | Stop hook only | First exploration — zero process overhead |
+| **0 — Discovery** | Stop hook only | First exploration, zero process overhead |
 | **S — Fast Lane** | 4 steps, scope-confirm | Solo dev, low-risk changes, quick fixes |
 | **M — Standard** | 13 phases, 3 STOP gates | Feature blocks, 1–2 collaborators |
 | **L — Full** | 14 phases, 4 STOP gates | Team projects, complex domain changes |
@@ -27,10 +27,10 @@ npx tierward init   # select Tier 0 in the wizard
 
 For a single developer moving quickly. Adds four pipeline steps and a scope-confirm gate:
 
-1. Scope confirm — Claude states what it's about to do; you approve or redirect
+1. Scope confirm: Claude states what it's about to do; you approve or redirect
 2. Implementation
-3. `/simplify` — early returns, dead code removal, nesting reduction
-4. Stop hook — tests must pass
+3. `/simplify`: early returns, dead code removal, nesting reduction
+4. Stop hook: tests must pass
 
 Use Tier S for personal projects, bugfixes, and any work where a lightweight review contract is enough. Most solo projects live here.
 
@@ -42,9 +42,9 @@ npx tierward upgrade --tier=s
 
 For small teams building features together. Adds 13 development phases with three explicit STOP gates:
 
-- **Gate 1** — After requirements: spec reviewed before any code
-- **Gate 2** — After implementation: code reviewed before tests
-- **Gate 3** — After testing: QA sign-off before merge
+- **Gate 1**: after requirements, spec reviewed before any code
+- **Gate 2**: after implementation, code reviewed before tests
+- **Gate 3**: after testing, QA sign-off before merge
 
 Also enables the team skills library: `/pr-review`, `/dependency-scan`, `/migration-audit`, `/accessibility-audit`, `/test-audit`, and more.
 

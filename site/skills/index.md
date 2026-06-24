@@ -1,6 +1,6 @@
 # Skills
 
-Tierward ships 26 audit skills — executable multi-step programs that run inside Claude Code. Each skill is a structured workflow with model routing: Haiku for mechanical checks, Sonnet for analysis.
+Tierward ships 26 audit skills: executable multi-step programs that run inside Claude Code. Each skill is a structured workflow with model routing (Haiku for mechanical checks, Sonnet for analysis).
 
 Skills are conditionally installed based on your project flags (`hasApi`, `hasDatabase`, `hasFrontend`, `hasDesignSystem`). Run `npx tierward doctor` to see which skills are installed and active.
 
@@ -20,9 +20,9 @@ Available in all tiers above Discovery.
 | `/arch-audit` | Governance files vs Anthropic docs. Auto-fixes deprecations. |
 | `/security-audit` | Auth, input validation, RLS, CVE scan. 3-path: WEB / NATIVE / HYBRID. MCP-aware (v1.20+): queries `mcp-nvd` for live CVE data with local fallback. |
 | `/perf-audit` | Bundle size, serial awaits, query efficiency. 8-stack patterns. |
-| `/skill-dev` | Coupling, duplication, dead code, debt-density. Step 3b (v1.22+): hotspot priority via churn × debt — top-10 ranked by 4-quadrant matrix. |
+| `/skill-dev` | Coupling, duplication, dead code, debt-density. Step 3b (v1.22+): hotspot priority via churn × debt; top-10 ranked by 4-quadrant matrix. |
 | `/simplify` | Early returns, nesting, dead code. Applies changes directly. |
-| `/commit` | Conventional Commits — auto-detects type, scope, description. |
+| `/commit` | Conventional Commits: auto-detects type, scope, description. |
 | `/skill-security` | Security scan for Claude Code skills using SkillSpector: prompt injection, data exfiltration, MCP tool poisoning, supply chain. 64-pattern scanner. |
 | `/systematic-debugging` | Root-cause investigation before any fix. STOP gate between hypothesis and fix: the hypothesis must be written and verified against evidence before touching code. |
 
@@ -48,7 +48,7 @@ Enabled when you upgrade to Tier M or above.
 | `/dependency-audit` | Outdated package audit: Tier A (safe batch) / B (non-core major) / C (core/breaking-risk). MCP-aware (v1.20+): queries `package-registry-mcp`. |
 | `/pr-review` | Autonomous local PR review via gh CLI. Posts findings as PR comments. `--deep` escalates to Opus for sensitive changes. |
 | `/skill-review` | Quality review pipeline for skill portfolios. Spec compliance, cross-tier coherence, behavioral fixtures. |
-| `/dependency-scan` | Pipeline-integrated (Phase 1): returns the full file list — routes, components, shared types, DB tables — fed into the Phase 1 STOP gate. |
+| `/dependency-scan` | Pipeline-integrated (Phase 1): returns the full file list (routes, components, shared types, DB tables) fed into the Phase 1 STOP gate. |
 
 ## Tier L only
 
