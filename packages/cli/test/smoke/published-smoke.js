@@ -154,7 +154,67 @@ async function main() {
       fail('doctor: --report is parseable JSON', doctor.stderr.trim().split('\n').pop());
     }
 
-    // 5. MCP server: launch via the .bin SYMLINK and complete an MCP handshake.
+    // 5. Context builder → deterministic init (P1a).
+    //
+    // `npx tierward context` generates CONTEXT.md via LLM interview — not smoke-testable
+    // in isolation. The testable path: (a) `tierward context --from-yaml` writes a
+    // schema-valid CONTEXT.md from a minimal YAML input without LLM calls, then (b)
+    // `tierward init` detects it and scaffolds without prompts. This path was absent
+    // from all automated tests despite being documented since v1.27.0 (README "Context
+    // Builder" section). Using `--from-yaml` means no ANTHROPIC_API_KEY required.
+    console.log('· context builder: context --from-yaml → CONTEXT.md → init deterministic');
+    const ctxScaffold = path.join(work, 'ctx-scaffold');
+    fs.mkdirSync(ctxScaffold);
+    // Minimal schema-valid YAML for --from-yaml (schema v1 requires these exact fields).
+    const ctxYaml = [
+      'schema_version: 1',
+      `generated_at: "${new Date().toISOString()}"`,
+      'generated_by: smoke-test',
+      'generated_by_version: "1.33.4"',
+      'project:',
+      '  name: Context Smoke Project',
+      '  description: Smoke test for context builder path',
+      '  mode: greenfield',
+      'stack:',
+      '  primary: node-ts',
+      'commands:',
+      '  install: npm install',
+      '  test: npx vitest run',
+      'tier:',
+      '  selected: "s"',
+      '  rationale: Solo project, fast lane',
+      'scaffold_options:',
+      '  include_pre_commit: false',
+      '  include_github: false',
+    ].join('\n');
+    const ctxYamlPath = path.join(work, 'ctx-input.yaml');
+    fs.writeFileSync(ctxYamlPath, ctxYaml);
+    const ctxGen = run(binTierward, ['context', '--from-yaml', ctxYamlPath], { cwd: ctxScaffold });
+    assert(
+      ctxGen.code === 0,
+      'context builder: context --from-yaml exits 0',
+      ctxGen.stderr.trim().split('\n').pop(),
+    );
+    assert(
+      fs.existsSync(path.join(ctxScaffold, 'CONTEXT.md')),
+      'context builder: CONTEXT.md written',
+    );
+    const ctxInit = run(binTierward, ['init'], { cwd: ctxScaffold });
+    assert(
+      ctxInit.code === 0,
+      'context builder: init from CONTEXT.md exits 0',
+      ctxInit.stderr.trim().split('\n').pop(),
+    );
+    assert(
+      fs.existsSync(path.join(ctxScaffold, 'CLAUDE.md')),
+      'context builder: CLAUDE.md scaffolded from CONTEXT.md',
+    );
+    assert(
+      fs.existsSync(path.join(ctxScaffold, '.claude', 'settings.json')),
+      'context builder: .claude/settings.json scaffolded from CONTEXT.md',
+    );
+
+    // 6. MCP server: launch via the .bin SYMLINK and complete an MCP handshake.
     //    This is the assertion that would have gone red on the v1.33.3 bug.
     console.log('· installed `tierward-mcp` via .bin symlink (MCP handshake)');
     try {
