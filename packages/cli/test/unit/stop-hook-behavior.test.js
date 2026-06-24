@@ -48,7 +48,7 @@ function runHook(command, testCmd) {
   }
 }
 
-for (const tier of ['tier-m', 'tier-l']) {
+for (const tier of ['tier-0', 'tier-s', 'tier-m', 'tier-l']) {
   describe(`Stop hook behavior — ${tier}`, () => {
     const command = stopHookCommand(tier);
 
