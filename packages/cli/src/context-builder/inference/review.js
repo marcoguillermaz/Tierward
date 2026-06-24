@@ -322,7 +322,7 @@ async function reviewSingleField(draft, field) {
   const current = getDottedPath(draft, field);
   const { action } = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'select',
       name: 'action',
       message: `${field} = ${JSON.stringify(current)} — ?`,
       choices: [

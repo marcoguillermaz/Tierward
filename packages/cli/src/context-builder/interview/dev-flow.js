@@ -37,7 +37,7 @@ export function assembleDevQuestions({ mode, projectNameDefault, algoDefaults } 
 
   return [
     {
-      type: 'list',
+      type: 'select',
       name: 'familiarity',
       message: 'How familiar is your team with Claude Code?',
       choices: [
@@ -60,14 +60,14 @@ export function assembleDevQuestions({ mode, projectNameDefault, algoDefaults } 
       validate: (v) => v.trim().length > 0 || 'Required',
     },
     {
-      type: 'list',
+      type: 'select',
       name: 'techStack',
       message: 'Primary tech stack?',
       default: stackDefault,
       choices: TECH_STACK_CHOICES,
     },
     {
-      type: 'list',
+      type: 'select',
       name: 'teamSize',
       message: 'How many engineers will use Claude Code on this project?',
       when: (a) => a.familiarity !== '0',
@@ -78,7 +78,7 @@ export function assembleDevQuestions({ mode, projectNameDefault, algoDefaults } 
       ],
     },
     {
-      type: 'list',
+      type: 'select',
       name: 'workScope',
       message: 'What kind of work will you primarily do?',
       when: (a) => a.familiarity !== '0',
@@ -89,7 +89,7 @@ export function assembleDevQuestions({ mode, projectNameDefault, algoDefaults } 
       ],
     },
     {
-      type: 'list',
+      type: 'select',
       name: 'tier',
       message: 'Pipeline tier:',
       when: (a) => a.familiarity !== '0',

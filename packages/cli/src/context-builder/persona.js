@@ -46,7 +46,7 @@ export async function askPersona(options = {}) {
   if (options.prefilled) return options.prefilled;
   const { persona } = await inquirer.prompt([
     {
-      type: 'list',
+      type: 'select',
       name: 'persona',
       message: 'Which best describes your role on this project?',
       choices: PERSONA_OPTIONS.map((o) => ({ name: o.label, value: o.value })),
