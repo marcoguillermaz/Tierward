@@ -1,7 +1,7 @@
 {
   "name": "tierward",
   "displayName": "Tierward",
-  "version": "1.33.3",
+  "version": "1.33.4",
   "description": "Governance skills for AI-assisted development: commit enforcement, architecture compliance, security audits, code quality, and humanized prose.",
   "author": {
     "name": "Marco Guillermaz",
