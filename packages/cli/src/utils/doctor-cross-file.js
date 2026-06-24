@@ -19,10 +19,18 @@ export function parseStopHookTestCmd(settingsJson) {
   try {
     const hook = settingsJson?.hooks?.Stop?.[0]?.hooks?.[0]?.command;
     if (!hook || typeof hook !== 'string') return null;
-    const tierM = hook.match(
+    // Tier M/L (v1.33.5+): test command captured in `OUT=$(<cmd> 2>&1)`.
+    // Must be tried before the tierS fallback — the new hook also contains
+    // `cd "$CLAUDE_PROJECT_DIR" || exit 0`, which the tierS regex would otherwise
+    // mis-capture as the test command.
+    const tierMl = hook.match(/OUT=\$\(\s*(.+?)\s+2>&1\s*\)/);
+    if (tierMl) return tierMl[1].trim();
+    // Tier M/L (legacy, pre-v1.33.5): `cd $CLAUDE_PROJECT_DIR && <cmd> 2>&1 | tail`.
+    // Kept so doctor still parses projects scaffolded by older Tierward versions.
+    const tierMlLegacy = hook.match(
       /&&\s*exit\s+0\s*;\s*cd\s+\$CLAUDE_PROJECT_DIR\s*&&\s*(.+?)\s+2>&1\s*\|/,
     );
-    if (tierM) return tierM[1].trim();
+    if (tierMlLegacy) return tierMlLegacy[1].trim();
     const tierS = hook.match(/&&\s*exit\s+0\s*;\s*(.+?)\s*\|\|/);
     return tierS ? tierS[1].trim() : null;
   } catch {

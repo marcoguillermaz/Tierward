@@ -95,6 +95,24 @@ describe('parseStopHookTestCmd', () => {
     };
     assert.equal(parseStopHookTestCmd(settings), 'npx vitest run');
   });
+
+  it('extracts tier M/L command from OUT=$(...) capture form (v1.33.5+)', () => {
+    const settings = {
+      hooks: {
+        Stop: [
+          {
+            hooks: [
+              {
+                command:
+                  '[ "$stop_hook_active" = "1" ] && exit 0; cd "$CLAUDE_PROJECT_DIR" || exit 0; OUT=$(npm run build 2>&1); CODE=$?; [ "$CODE" -ne 0 ] && { echo "$OUT" | tail -5 >&2; echo x; }; exit 0',
+              },
+            ],
+          },
+        ],
+      },
+    };
+    assert.equal(parseStopHookTestCmd(settings), 'npm run build');
+  });
 });
 
 describe('claudeMdContainsCommand', () => {

@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$stop_hook_active\" = \"1\" ] && exit 0; cd $CLAUDE_PROJECT_DIR && [TEST_COMMAND] 2>&1 | tail -5; [[ ${PIPESTATUS[0]} -ne 0 ]] && echo '{\"decision\": \"block\", \"reason\": \"Tests must pass before completing the task. Fix failing tests first.\"}'",
+            "command": "[ \"$stop_hook_active\" = \"1\" ] && exit 0; cd \"$CLAUDE_PROJECT_DIR\" || exit 0; OUT=$([TEST_COMMAND] 2>&1); CODE=$?; [ \"$CODE\" -ne 0 ] && { echo \"$OUT\" | tail -5 >&2; echo '{\"decision\": \"block\", \"reason\": \"Tests must pass before completing the task. Fix failing tests first.\"}'; }; exit 0",
             "timeout": 300
           }
         ]
