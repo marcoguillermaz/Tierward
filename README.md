@@ -248,8 +248,8 @@ The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legac
 ## Testing
 
 ```bash
-node packages/cli/test/integration/run.js    # 1170 integration checks
-node --test 'packages/cli/test/unit/**/*.test.js'   # 585 unit tests
+node packages/cli/test/integration/run.js    # 1171 integration checks
+node --test 'packages/cli/test/unit/**/*.test.js'   # 596 unit tests
 ```
 
 Covers: file structure per tier, Stop hook presence, pipeline gate counts, placeholder resolution, skill pruning, security variant selection, native stack adaptation, rubric scoring, cross-stack content invariants (10 stacks — the named stacks excluding the `other` fallback), golden-file assertions (Swift, Node-TS, Python), full CLI execution via `--answers` fixtures.
