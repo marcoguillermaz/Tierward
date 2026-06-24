@@ -47,7 +47,7 @@ export async function init(options) {
   } else {
     ({ mode } = await inquirer.prompt([
       {
-        type: 'list',
+        type: 'select',
         name: 'mode',
         message: "What's the state of this project?",
         choices: [

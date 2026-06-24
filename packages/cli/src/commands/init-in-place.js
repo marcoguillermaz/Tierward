@@ -61,7 +61,7 @@ export async function initInPlace(options) {
         default: path.basename(cwd),
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'techStack',
         message:
           detected.techStack !== 'other'
@@ -156,7 +156,7 @@ export async function initInPlace(options) {
         },
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'tier',
         message: `Pipeline tier (suggested: ${tierDefault.toUpperCase()} - ${tierLabels[tierDefault]}${detected.detectedFiles.length > 0 ? ', based on project size' : ''}):`,
         when: !options.tier,
@@ -289,7 +289,7 @@ export async function initInPlace(options) {
         },
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'auditModel',
         message:
           'Preferred model for deep analysis skills (ux-audit, visual-audit - full codebase scans)?',

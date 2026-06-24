@@ -94,14 +94,14 @@ export async function initFromContext(options) {
         validate: (v) => v.trim().length > 0 || 'Required',
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'primaryRepo',
         message: 'Which is the primary repository?',
         when: sourceInputs.length > 1,
         choices: sourceInputs,
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'tier',
         message: 'Pipeline tier:',
         when: !options.tier,
