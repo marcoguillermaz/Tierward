@@ -216,7 +216,7 @@ ${ph(q, '[Questions to track. Auto-populated from pending_decisions during inter
 export function assembleQuestions({ projectNameDefault } = {}) {
   return [
     {
-      type: 'list',
+      type: 'select',
       name: 'familiarity',
       message: 'How familiar is your team with Claude Code?',
       choices: [
@@ -238,7 +238,7 @@ export function assembleQuestions({ projectNameDefault } = {}) {
       validate: (v) => v.trim().length > 0 || 'Required',
     },
     {
-      type: 'list',
+      type: 'select',
       name: 'techStack',
       message: 'Primary tech stack?',
       choices: [
@@ -256,7 +256,7 @@ export function assembleQuestions({ projectNameDefault } = {}) {
       ],
     },
     {
-      type: 'list',
+      type: 'select',
       name: 'teamSize',
       message: 'How many engineers will use Claude Code on this project?',
       when: (a) => a.familiarity !== '0',
@@ -267,7 +267,7 @@ export function assembleQuestions({ projectNameDefault } = {}) {
       ],
     },
     {
-      type: 'list',
+      type: 'select',
       name: 'workScope',
       message: 'What kind of work will you primarily do?',
       when: (a) => a.familiarity !== '0',
@@ -278,7 +278,7 @@ export function assembleQuestions({ projectNameDefault } = {}) {
       ],
     },
     {
-      type: 'list',
+      type: 'select',
       name: 'tier',
       message: (a) => `Suggested: ${suggestTier(a).toUpperCase()}. Pipeline tier:`,
       when: (a) => a.familiarity !== '0',

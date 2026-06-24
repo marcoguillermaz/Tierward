@@ -181,7 +181,7 @@ export async function newSkill(options) {
         },
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'model',
         message: 'Model:',
         choices: [
@@ -198,7 +198,7 @@ export async function newSkill(options) {
         default: true,
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'effort',
         message: 'Expected effort level:',
         choices: [
@@ -229,7 +229,7 @@ export async function newSkill(options) {
         when: (a) => a.usesPlaywright,
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'stepCount',
         message: 'Number of steps in the skill:',
         choices: ['2', '3', '4', '5'],

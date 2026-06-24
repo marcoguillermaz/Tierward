@@ -33,7 +33,7 @@ export async function initGreenfield(options) {
     // First question: gauge familiarity to route beginners to Tier 0
     const { familiarity } = await inquirer.prompt([
       {
-        type: 'list',
+        type: 'select',
         name: 'familiarity',
         message: 'How familiar is your team with Claude Code?',
         choices: [
@@ -67,7 +67,7 @@ export async function initGreenfield(options) {
       },
       // Diagnostic tier selection for experienced users
       {
-        type: 'list',
+        type: 'select',
         name: 'teamSize',
         message: 'How many engineers will regularly use Claude Code on this project?',
         when: () => !isDiscovery && !options.tier,
@@ -78,7 +78,7 @@ export async function initGreenfield(options) {
         ],
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'workScope',
         message: 'What kind of work will you primarily do?',
         when: () => !isDiscovery && !options.tier,
@@ -89,7 +89,7 @@ export async function initGreenfield(options) {
         ],
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'tier',
         message: (a) => {
           const suggested = suggestTierFromDiagnostics(a);
@@ -111,7 +111,7 @@ export async function initGreenfield(options) {
         ],
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'techStack',
         message: 'Primary tech stack:',
         choices: [
@@ -209,7 +209,7 @@ export async function initGreenfield(options) {
       },
       // Feature flags - tier M/L only
       {
-        type: 'list',
+        type: 'select',
         name: 'hasApi',
         message:
           'Does your project expose an API (REST, GraphQL, RPC)? (controls whether api-design checks are included)',
@@ -225,7 +225,7 @@ export async function initGreenfield(options) {
         default: false,
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'hasDatabase',
         message:
           'Does your project use a database? (controls whether skill-db checks are included)',
@@ -240,7 +240,7 @@ export async function initGreenfield(options) {
         ],
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'hasFrontend',
         message:
           'Does your project have a UI? (controls whether visual-audit, ux-audit, responsive-audit are included)',
@@ -255,7 +255,7 @@ export async function initGreenfield(options) {
         ],
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'hasDesignSystem',
         message: (a) => {
           const isNative = [...NATIVE_STACKS, 'other'].includes(a.techStack);
@@ -287,7 +287,7 @@ export async function initGreenfield(options) {
         default: 'component library',
       },
       {
-        type: 'list',
+        type: 'select',
         name: 'auditModel',
         message:
           'Preferred model for deep analysis skills (ux-audit, visual-audit - full codebase scans)?',
