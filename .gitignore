@@ -73,6 +73,7 @@ scripts/*
 !scripts/external-review-bundle.mjs
 !scripts/cross-llm-rubric.mjs
 !scripts/sync-plugin-version.mjs
+!scripts/worktree-setup.sh
 
 # Internal project management (not product docs)
 FIRST_SESSION.md
