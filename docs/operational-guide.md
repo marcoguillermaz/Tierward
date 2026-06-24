@@ -639,6 +639,8 @@ Permissions and hooks. Five hooks are pre-configured in Tier M/L (three in Tier 
 | Python            | git, python, pip, uv, curl          | twine upload                                  |
 | Go                | git, go, curl                       | -                                             |
 
+> **Git-deploy hosts (Cloudflare Pages, Vercel, Netlify, Render):** these platforms deploy by watching pushes to `main`. The default deny `Bash(git push origin main*)` is intentional — it prevents accidental direct pushes. The correct flow is `feature/*` → PR → merge to `main`; the host picks up the merge commit automatically. Do **not** relax the deny to work around it.
+
 ---
 
 ### .claude/rules/pipeline.md
