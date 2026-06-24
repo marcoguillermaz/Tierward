@@ -639,6 +639,8 @@ Permissions and hooks. Five hooks are pre-configured in Tier M/L (three in Tier 
 | Python            | git, python, pip, uv, curl          | twine upload                                  |
 | Go                | git, go, curl                       | -                                             |
 
+> **Git-deploy hosts (Cloudflare Pages, Vercel, Netlify, Render):** these platforms deploy by watching pushes to `main`. The default deny `Bash(git push origin main*)` is intentional — it prevents accidental direct pushes. The correct flow is `feature/*` → PR → merge to `main`; the host picks up the merge commit automatically. Do **not** relax the deny to work around it.
+
 ---
 
 ### .claude/rules/pipeline.md
@@ -1399,7 +1401,7 @@ node scripts/cross-llm-rubric.mjs \
 
 Output: `report.json` (machine-readable), `report.md` (human-readable table), and `raw-<provider>.txt` for each model.
 
-The locked jury is `claude-opus-4-7` + `claude-sonnet-4-6` + `gemini-2.5-pro`. PASS requires all medians ≥ 2 **and** ≥ 80 % of criteria with median ≥ 2. The script hard-fails (exit 2) if `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` is missing, and hard-fails at runtime (exit 1) on any provider network error; a model that responds with malformed JSON is penalised in scoring rather than crashing the run.
+The locked jury is `claude-opus-4-8` + `claude-sonnet-4-6` + `gemini-2.5-pro`. PASS requires all medians ≥ 2 **and** ≥ 80 % of criteria with median ≥ 2. The script hard-fails (exit 2) if `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` is missing, and hard-fails at runtime (exit 1) on any provider network error; a model that responds with malformed JSON is penalised in scoring rather than crashing the run.
 
 This is a maintainer gate: run it before any release that touches `packages/cli/src/context-builder/**`, the schema, or prompt templates. End users do not run it; they get the deterministic MUST PASS via `npx tierward validate-context`.
 

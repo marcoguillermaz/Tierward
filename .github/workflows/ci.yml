@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
 
     steps:
       - uses: actions/checkout@v7
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
 
     steps:
       - uses: actions/checkout@v7
@@ -96,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
 
     steps:
       - uses: actions/checkout@v7
@@ -109,3 +109,25 @@ jobs:
 
       - name: Run integration tests
         run: npm test --prefix packages/cli
+
+  published-smoke:
+    name: Published-package smoke
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24]
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install --prefix packages/cli
+
+      # Packs the tarball, installs it in a clean dir, and drives the INSTALLED
+      # bins (init + doctor + MCP-via-symlink). Catches files-allowlist, ESM,
+      # and bin-symlink regressions the source-path tests cannot see.
+      - name: Published-package smoke
+        run: npm run test:smoke --prefix packages/cli
