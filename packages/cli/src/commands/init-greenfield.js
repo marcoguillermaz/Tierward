@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { generateClaudeMd } from '../generators/claude-md.js';
 import { generateReadme } from '../generators/readme.js';
 import { scaffoldTier } from '../scaffold/index.js';
-import { printPlan, printNextSteps } from '../utils/print-plan.js';
+import { printPlan, printNextSteps, printStarCta } from '../utils/print-plan.js';
 import { AUDIT_MODELS } from '../utils/constants.js';
 import { NATIVE_STACKS, WEB_STACKS } from '../scaffold/skill-registry.js';
 import { enforceTeamSettingsTier } from '../utils/team-settings-cli.js';
@@ -406,4 +406,6 @@ export async function initGreenfield(options) {
 
   console.log();
   console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/tierward'));
+  console.log();
+  printStarCta();
 }
