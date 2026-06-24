@@ -1,8 +1,16 @@
 name: Publish (npm + MCP registry)
 
 on:
+  # Triggered by a GitHub Release — kept for manual/legacy release flows.
   release:
     types: [published]
+  # Triggered automatically when the CLI version bumps on main (tw-pr flow).
+  # The idempotency check below prevents double-publishing when a release is
+  # also created for the same version.
+  push:
+    branches: [main]
+    paths:
+      - 'packages/cli/package.json'
   workflow_dispatch:
 
 permissions:
@@ -28,7 +36,22 @@ jobs:
 
       - run: npm test
 
+      # Skip if this exact version is already on npm (prevents double-publish
+      # when both the push trigger and a release event fire for the same bump).
+      - name: Check if version already published
+        id: version_check
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "tierward@$PKG_VERSION" version > /dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Version $PKG_VERSION already on npm — skipping publish"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to npm
+        if: steps.version_check.outputs.skip == 'false'
         run: npm publish --access public
 
       # ── Publish to the MCP Registry via GitHub OIDC ──────────────────────────
@@ -37,14 +60,17 @@ jobs:
       # github`, whose JWT expires and 401s. server.json lives at the repo root,
       # so these steps override the packages/cli working-directory default.
       - name: Install mcp-publisher
+        if: steps.version_check.outputs.skip == 'false'
         working-directory: ${{ github.workspace }}
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
 
       - name: Authenticate to MCP Registry (GitHub OIDC)
+        if: steps.version_check.outputs.skip == 'false'
         working-directory: ${{ github.workspace }}
         run: ./mcp-publisher login github-oidc
 
       - name: Publish to MCP Registry
+        if: steps.version_check.outputs.skip == 'false'
         working-directory: ${{ github.workspace }}
         run: ./mcp-publisher publish

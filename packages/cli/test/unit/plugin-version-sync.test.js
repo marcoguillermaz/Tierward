@@ -4,12 +4,11 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 
-// Release guard: the Claude Code marketplace plugin version must stay in lockstep
-// with the published CLI package. They drifted once (plugin.json 1.33.1 vs
-// package 1.33.3) because releases bump packages/cli/package.json but not
-// .claude-plugin/plugin.json. This test runs in the required CI checks, so a
-// mismatch BLOCKS the merge — a hard stop, not a reminder. On release, bump
-// .claude-plugin/plugin.json to match and re-publish the marketplace plugin.
+// Release guard: all versioned manifests must stay in lockstep with the CLI
+// package. They drifted in the past when releases bumped packages/cli/package.json
+// but not the plugin/server manifests. This test runs in the required CI checks,
+// so a mismatch BLOCKS the merge. The postversion script (sync-plugin-version.mjs)
+// syncs all three automatically; drift means the script was bypassed.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../../../..');
 
@@ -21,8 +20,32 @@ describe('marketplace plugin / CLI package version sync', () => {
       plugin.version,
       pkg.version,
       `.claude-plugin/plugin.json version (${plugin.version}) must equal ` +
-        `packages/cli/package.json version (${pkg.version}). Bump plugin.json and ` +
-        `re-publish the Claude Code marketplace plugin on release.`,
+        `packages/cli/package.json version (${pkg.version}). Run ` +
+        `scripts/sync-plugin-version.mjs to fix.`,
+    );
+  });
+
+  it('server.json version equals packages/cli/package.json version', () => {
+    const pkg = fs.readJsonSync(path.join(repoRoot, 'packages/cli/package.json'));
+    const server = fs.readJsonSync(path.join(repoRoot, 'server.json'));
+    assert.equal(
+      server.version,
+      pkg.version,
+      `server.json version (${server.version}) must equal ` +
+        `packages/cli/package.json version (${pkg.version}). Run ` +
+        `scripts/sync-plugin-version.mjs to fix.`,
+    );
+  });
+
+  it('server.json packages[0].version equals packages/cli/package.json version', () => {
+    const pkg = fs.readJsonSync(path.join(repoRoot, 'packages/cli/package.json'));
+    const server = fs.readJsonSync(path.join(repoRoot, 'server.json'));
+    assert.equal(
+      server.packages?.[0]?.version,
+      pkg.version,
+      `server.json packages[0].version (${server.packages?.[0]?.version}) must equal ` +
+        `packages/cli/package.json version (${pkg.version}). Run ` +
+        `scripts/sync-plugin-version.mjs to fix.`,
     );
   });
 });
