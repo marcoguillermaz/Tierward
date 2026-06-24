@@ -1,6 +1,6 @@
 # team-settings.json
 
-`team-settings.json` (v1.16+) is an optional file that lets a tech lead set org-wide policy for skill and tier usage. When present in `.claude/`, Tierward enforces it at runtime via the PreToolUse hook — no model discretion involved.
+`team-settings.json` (v1.16+) is an optional file that lets a tech lead set org-wide policy for skill and tier usage. When present in `.claude/`, Tierward enforces it at runtime via the PreToolUse hook, with no model discretion involved.
 
 ```
 .claude/team-settings.json
@@ -30,7 +30,7 @@ All fields are optional. An empty object `{}` is valid and has no effect.
 
 The PreToolUse hook reads `team-settings.json` before every tool call. If a blocked skill is invoked, the hook returns `decision: block` before the skill executes. If `minTier` is set and the current project tier is lower, the hook blocks the session and explains the mismatch.
 
-This enforcement runs in the hook layer — outside Claude's context — so it cannot be reasoned around or overridden by model output.
+This enforcement runs in the hook layer, outside Claude's context, so it cannot be reasoned around or overridden by model output.
 
 ## MCP access
 

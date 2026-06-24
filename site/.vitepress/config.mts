@@ -6,11 +6,10 @@ export default defineConfig({
   base: '/Tierward/',
 
   head: [
-    ['link', { rel: 'icon', href: '/Tierward/favicon.ico' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/Tierward/favicon.svg' }],
   ],
 
   themeConfig: {
-    logo: { src: '/logo.svg', alt: 'Tierward' },
     siteTitle: 'Tierward',
 
     nav: [

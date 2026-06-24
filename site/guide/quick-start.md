@@ -21,7 +21,7 @@ Three paths are available:
 |---|---|
 | **Existing project** | Add structure to a project that already has code |
 | **New project** | Starting from scratch |
-| **From existing docs** | You have a spec or requirements doc — Claude reads it and populates everything |
+| **From existing docs** | You have a spec or requirements doc; Claude reads it and populates everything |
 
 After the wizard completes, open Claude Code. The scaffold is active immediately, no restart needed.
 
@@ -73,6 +73,6 @@ npx tierward context --all     # one-shot: context then init
 
 ## Next steps
 
-- **[Tiers →](./tiers)** — Understand which tier fits your team and when to upgrade
-- **[Skills →](../skills/)** — Browse the full skill library
-- **[Stop hook →](../config/stop-hook)** — How the enforcement mechanism works
+- **[Tiers →](./tiers)** — which tier fits your team and when to upgrade
+- **[Skills →](../skills/)** — full skill library
+- **[Stop hook →](../config/stop-hook)** — how the enforcement mechanism works
