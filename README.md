@@ -84,7 +84,7 @@ One contract across four tiers — from a solo bugfix to a fully governed team p
 | ----------------- | ----------------------- | ------------------------------------- |
 | **0 - Discovery** | Stop hook only          | First exploration - zero process      |
 | **S - Fast Lane** | 4 steps, scope-confirm  | Single dev, low risk, quick fixes     |
-| **M - Standard**  | 8 phases, 2 STOP gates  | Feature blocks, 1-2 collaborators     |
+| **M - Standard**  | 13 phases, 3 STOP gates | Feature blocks, 1-2 collaborators     |
 | **L - Full**      | 14 phases, 4 STOP gates | Team projects, complex domain changes |
 
 Start at Tier 0. Move up when you need more structure: `npx tierward upgrade --tier=m`
@@ -281,7 +281,7 @@ A separate **template-coverage** layer (under `packages/cli/test/template-covera
 
 See [GitHub Milestones](https://github.com/marcoguillermaz/Tierward/milestones) for the 12-month plan.
 
-**Current**: v1.33.1 adds an output-style language rule (code identifiers, paths, and commands stay verbatim across response languages) and extends `doctor` validation to tier 0. v1.33.0 adds `/systematic-debugging` (tier S+): root-cause enforcement with a STOP gate between hypothesis and fix, Red Flags anti-rationalization tables, and pipeline hooks in tier M/L. v1.32.0 ships the Tierward plugin for the Claude Code marketplace and a bootstrap soft hook for plugin-installed projects. v1.31.0 ships the VS Code extension (P1–P3): governance tree view with skill and rule browsing, live health status bar with arch-audit staleness, and Tierward doctor findings surfaced as Problems panel diagnostics. Also adds `/skill-security` (SkillSpector integration, tier S+), a 64-pattern vulnerability scanner for Claude Code skill files.
+**Current**: v1.33.4 fixes a critical wizard regression: `npx tierward init` was completely broken on all interactive installs due to an inquirer v14 prompt-type rename (list→select), undetected by the test suite because tests bypass the real prompt layer. Adds a static guard (`prompt-types.test.js`) and a published-package smoke test that drives the installed bins directly (never the source path), catching the class of breakage behind this and the v1.33.3 MCP symlink regression. v1.33.2 added `mcpName`, auto-publishes to the MCP registry on every GitHub Release via OIDC, and ships the Stop hook fix across all four scaffold tiers. v1.33.1 adds an output-style language rule and extends `doctor` validation to tier 0. v1.33.0 adds `/systematic-debugging` (tier S+): root-cause enforcement with a STOP gate between hypothesis and fix.
 
 **Next**: `/arch-audit` MCP-aware once the upstream Anthropic spec MCP server lands. `/privacy-audit` re-eval (Issue #97 sub-track 3) when AST tracing matures or demand signal materializes. Q2 #3 VitePress docs site (ICE 432) stays on hold.
 
