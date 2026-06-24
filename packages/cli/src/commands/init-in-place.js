@@ -9,7 +9,7 @@ import { enforceTeamSettingsTier } from '../utils/team-settings-cli.js';
 import { scaffoldTierSafe } from '../scaffold/index.js';
 import { generateClaudeMd } from '../generators/claude-md.js';
 import { generateContextImport } from '../generators/context-import.js';
-import { printPlan, printNextSteps } from '../utils/print-plan.js';
+import { printPlan, printNextSteps, printStarCta } from '../utils/print-plan.js';
 import { AUDIT_MODELS } from '../utils/constants.js';
 import { NATIVE_STACKS, WEB_STACKS } from '../scaffold/skill-registry.js';
 
@@ -461,6 +461,8 @@ export async function initInPlace(options) {
   printNextSteps(config, { ranDoctor, ranPreCommit });
   console.log();
   console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/tierward'));
+  console.log();
+  printStarCta({ doctorPassed: ranDoctor || undefined });
 }
 
 async function detectConflicts(dir, _config) {
