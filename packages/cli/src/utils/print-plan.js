@@ -340,3 +340,19 @@ function getFilePlan(config) {
 
   return base;
 }
+
+/**
+ * Print a low-friction star CTA after a successful scaffold.
+ * Only shown once, at the very end of the init output, after Next steps and Docs.
+ *
+ * @param {object} [opts]
+ * @param {boolean} [opts.doctorPassed] - When true (in-place flow with inline doctor),
+ *   we know the scaffold is healthy. When undefined/false (greenfield/discovery),
+ *   we show it anyway since the scaffold succeeded.
+ */
+export function printStarCta({ doctorPassed } = {}) {
+  if (doctorPassed === false) return; // doctor ran and reported issues — skip
+  console.log(chalk.dim('─'.repeat(50)));
+  console.log(chalk.dim('If Tierward is useful, a ★ on GitHub helps others find it.'));
+  console.log(chalk.dim('  https://github.com/marcoguillermaz/Tierward'));
+}
