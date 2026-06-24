@@ -59,18 +59,23 @@ jobs:
       # run (id-token: write above). This replaces manual `mcp-publisher login
       # github`, whose JWT expires and 401s. server.json lives at the repo root,
       # so these steps override the packages/cli working-directory default.
+      #
+      # MCP registry versions independently from npm: these steps always run so
+      # that a re-trigger (e.g. workflow_dispatch after a failed MCP publish) can
+      # recover without re-publishing to npm. The publish step uses
+      # continue-on-error so a "duplicate version" 400 from the registry does not
+      # fail the job — the npm publish already succeeded and is the source of
+      # truth.
       - name: Install mcp-publisher
-        if: steps.version_check.outputs.skip == 'false'
         working-directory: ${{ github.workspace }}
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
 
       - name: Authenticate to MCP Registry (GitHub OIDC)
-        if: steps.version_check.outputs.skip == 'false'
         working-directory: ${{ github.workspace }}
         run: ./mcp-publisher login github-oidc
 
       - name: Publish to MCP Registry
-        if: steps.version_check.outputs.skip == 'false'
+        continue-on-error: true
         working-directory: ${{ github.workspace }}
         run: ./mcp-publisher publish
