@@ -11,6 +11,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.33.4] — 2026-06-24
+
+### Fixed
+
+- **`npx tierward init` now works** — inquirer v14 (Dependabot float `^8→^14`) dropped the `list` prompt type, renamed to `select`. All 31 uses of `type:'list'` across 9 files were broken for every user running the interactive wizard. The integration tests use `--answers` (bypasses inquirer), so no test caught it across the version float.
+
+### Added
+
+- **Prompt-type registration guard** (`test/unit/prompt-types.test.js`) — greps source for all `type:'x'` prompt strings and asserts each is registered in the installed inquirer. Runs in required CI unit checks; catches this class of breakage at commit time without a TTY.
+
+---
+
 ## [1.33.3] — 2026-06-23
 
 ### Fixed

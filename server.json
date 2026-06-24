@@ -6,12 +6,12 @@
     "url": "https://github.com/marcoguillermaz/Tierward",
     "source": "github"
   },
-  "version": "1.33.3",
+  "version": "1.33.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "tierward",
-      "version": "1.33.3",
+      "version": "1.33.4",
       "runtimeHint": "npx",
       "runtimeArguments": [
         { "type": "named", "name": "--package", "value": "tierward" },
