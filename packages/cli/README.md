@@ -1,6 +1,8 @@
 # Tierward
 
-Governed AI coding on Claude Code: tiered pipelines, audit skills, and a Stop hook that mechanically blocks task completion until your tests pass.
+Governed AI coding, built exclusively for Claude Code: tiered pipelines, audit skills, and a Stop hook that mechanically blocks task completion until your tests pass.
+
+> **Claude Code-only.** Tierward's enforcement layer — Stop hook, STOP gates, audit skills — is built on Claude Code primitives and does not support other AI coding tools. See [why](https://marcoguillermaz.github.io/Tierward/guide/quick-start) in the docs.
 
 ```bash
 npx tierward init
@@ -85,7 +87,9 @@ Install **Tierward** from the VS Code Marketplace. Auto-wires the MCP server and
 
 ## Documentation
 
-Full reference, operational guide, and skill documentation: [github.com/marcoguillermaz/Tierward](https://github.com/marcoguillermaz/Tierward)
+**[marcoguillermaz.github.io/Tierward](https://marcoguillermaz.github.io/Tierward/)** — quick start, tiers, skill reference, configuration.
+
+Source and full changelog: [github.com/marcoguillermaz/Tierward](https://github.com/marcoguillermaz/Tierward)
 
 ## License
 
