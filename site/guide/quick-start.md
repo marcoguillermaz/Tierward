@@ -7,6 +7,10 @@ Get Tierward running in your project in under two minutes.
 - Node.js 22 or later
 - Claude Code installed and active in your project
 
+::: info Claude Code-only
+Tierward's enforcement layer — Stop hook, STOP gates, audit skills — is built on Claude Code primitives (`settings.json`, `pipeline.md`, the agent skill system). It does not support Cursor, Copilot, or other AI coding tools. This is a deliberate architectural choice; see [Claude Code-first, by design](https://github.com/marcoguillermaz/Tierward#claude-code-first-by-design) in the README for the reasoning.
+:::
+
 ## Run the wizard
 
 ```bash
