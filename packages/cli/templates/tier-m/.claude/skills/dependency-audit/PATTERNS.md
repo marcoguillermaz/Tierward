@@ -183,9 +183,50 @@ tail -10 /tmp/dependency-audit-test-baseline.log
 
 ---
 
+## go
+
+**Manifest files**: `go.mod` (authoritative module list), `go.sum` (checksum lock).
+
+### Outdated detection
+
+```bash
+go list -u -m -json all 2>/dev/null | jq 'select(.Update != null) | {Path, Version, Update: .Update.Version}'
+```
+
+### Tier classification
+
+| Tier | Rule |
+|---|---|
+| **A** (safe batch) | Patch and minor bumps with no entry in `CHANGELOG.md` or GitHub releases tagged as breaking |
+| **B** (non-core major) | Major bump for packages in `require` but not imported by >10 source files |
+| **C** (core/breaking-risk) | Major bump for stdlib wrappers (`database/sql` drivers, `net/http` middleware), router (`gin`, `chi`, `echo`), ORM (`gorm`, `ent`), or any package imported in >10 source files |
+
+### Special directives to flag
+
+| Directive | Flag condition |
+|---|---|
+| `replace` | Manual override of a module version or path — review why it exists and whether it can be removed after upgrade |
+| `retract` | Upstream has retracted the version in use — update immediately |
+| `go 1.X` directive | Check against current stable release (`go version` in CI) — flag if more than 2 minor versions behind |
+
+### Runtime version check
+
+```bash
+go version   # local
+# Compare to: https://go.dev/dl/ (latest stable)
+```
+
+### Test baseline
+
+```bash
+go test ./... 2>&1 | tail -20
+```
+
+---
+
 ## Other stacks (fallback)
 
-For stacks not covered above (`node-js`, `go`, `ruby`, `rust`, `kotlin`, `java`, `dotnet`, `generic`), the skill body uses the agnostic rules. The decision matrix and Tier definitions still apply; what's missing is per-stack package classification (which packages map to which Tier) and the per-stack source-path globs.
+For stacks not covered above (`node-js`, `ruby`, `rust`, `kotlin`, `java`, `dotnet`, `generic`), the skill body uses the agnostic rules. The decision matrix and Tier definitions still apply; what's missing is per-stack package classification (which packages map to which Tier) and the per-stack source-path globs.
 
 When auditing one of these stacks, the skill's report should include a footer noting:
 

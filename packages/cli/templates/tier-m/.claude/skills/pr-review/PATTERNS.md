@@ -125,6 +125,40 @@ For stacks not listed (`node-js`, `go`, `ruby`, `rust`, `kotlin`, `java`, `dotne
 
 ---
 
+## go
+
+### Critical — blocks merge
+
+- **Unchecked error**: `_, err :=` or `:= someFunc()` with multi-return where `err` is `_` or not checked on the next line — silent failure path
+- **SQL injection**: `fmt.Sprintf` / string concatenation used to build a query string passed to `db.Query`, `db.Exec`, or equivalent
+- **Goroutine leak**: `go func()` without context cancellation path (`ctx.Done()` check or `wg.Done()`) inside a handler or long-lived function — leaks on request cancellation
+- **Panic in production path**: `panic(` outside of `init()` or test helpers — unrecovered panics crash the server
+- **Credentials in source**: hardcoded connection strings or API keys (e.g. `postgres://user:password@`)
+
+### Major — should be resolved before merge
+
+- **Error wrapping without `%w`**: `fmt.Errorf("...: " + err.Error())` or `errors.New(err.Error())` instead of `fmt.Errorf("...: %w", err)` — breaks `errors.Is` / `errors.As` unwrapping
+- **Exported function without doc comment**: a public `func` or `type` declaration with no preceding `// FuncName ...` comment — required by `golint` and godoc convention
+- **Nil map write**: assigning to a map field that may be `nil` (e.g. map declared with `var m map[K]V` then `m[key] = val`) — runtime panic
+- **Context not propagated**: HTTP handler or repository function using `context.Background()` instead of the incoming `ctx` — prevents cancellation and tracing
+- **`defer` inside loop**: `defer` call inside a `for` loop body — deferred calls accumulate until the enclosing function returns, not the iteration
+
+### Minor — backlog
+
+- **`fmt.Println` in production code**: debug output left in non-test files — use structured logger
+- **Magic number without const**: raw numeric literals in business logic without a named constant
+- **`interface{}` / `any` in public API**: untyped parameters or return values that weaken type safety without justification
+- **Exported error variable not prefixed `Err`**: e.g. `var NotFound = errors.New(...)` instead of `var ErrNotFound = ...` (Go convention)
+
+### Project conventions to respect
+
+- `err` variable reuse with `:=` in the same scope is idiomatic Go (shadow assignment); do not flag
+- `//nolint:` directives with a justification comment are acceptable
+- Error strings are lowercase without trailing punctuation (Go convention) — do not flag
+- `context.Background()` is correct in `main()` and `TestMain` — only flag in handler/repository code
+
+---
+
 ## Other stacks (fallback)
 
 For stacks not covered above (`node-js`, `go`, `ruby`, `rust`, `kotlin`, `java`, `dotnet`, `generic`), the skill body uses the universal severity defaults. The decision matrix and review structure still apply; what's missing is per-stack pattern recognition (specific framework idioms, language-specific anti-patterns).
