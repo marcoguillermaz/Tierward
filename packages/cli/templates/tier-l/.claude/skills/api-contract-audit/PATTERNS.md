@@ -98,6 +98,42 @@ Per-framework parsers for field-level schema comparison.
 
 Depth: one level deep. Nested object comparison is best-effort; complex compositions (unions, discriminated unions, refinements) may produce false positives flagged as `probable`.
 
+### Go (gin / chi / echo + swaggo / oapi-codegen)
+
+**Markers**:
+- `github.com/gin-gonic/gin` in `go.mod` → gin
+- `github.com/go-chi/chi` in `go.mod` → chi
+- `github.com/labstack/echo` in `go.mod` → echo
+- `github.com/swaggo/swag` in `go.mod` → swaggo annotations present
+- `github.com/oapi-codegen/oapi-codegen` or `github.com/deepmap/oapi-codegen` in `go.mod` → generated spec
+
+**Spec source** (priority order):
+1. Committed spec file: `openapi.yaml`, `openapi.json`, `api/openapi.yaml`, `docs/swagger.yaml`.
+2. swaggo generated: `docs/swagger.json` or `docs/docs.go` (look for `// @title` annotations in source).
+3. oapi-codegen generated: spec file passed to `oapi-codegen` (usually `api.yaml` or `spec/openapi.yaml`).
+4. Infer from source: use route extraction below.
+
+**Route extraction by router**:
+
+| Router | Route registration pattern |
+|---|---|
+| gin | `r\.(GET\|POST\|PUT\|PATCH\|DELETE)\s*\(\s*"(?P<path>[^"]+)"` |
+| gin RouterGroup | `v1\.(GET\|POST\|...)\s*\(\s*"(?P<path>[^"]+)"` |
+| chi | `r\.(Get\|Post\|Put\|Patch\|Delete)\s*\(\s*"(?P<path>[^"]+)"` |
+| echo | `e\.(GET\|POST\|PUT\|PATCH\|DELETE)\s*\(\s*"(?P<path>[^"]+)"` |
+
+**swaggo annotation extraction**:
+
+Grep for `// @Router` comments:
+```
+// @Router /path [method]
+// @Summary Short description
+// @Param name in type required "description"
+// @Success 200 {object} ResponseType
+```
+
+Extract path + method from `@Router`, request body from `@Param body`, response type from `@Success`.
+
 ---
 
 ## L3 HATEOAS detection (AC8)

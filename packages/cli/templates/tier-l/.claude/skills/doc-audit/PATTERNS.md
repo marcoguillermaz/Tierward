@@ -106,6 +106,27 @@ If an `*.xcodeproj` or `*.xcworkspace` exists, the primary scheme name is usuall
 
 ---
 
+### go
+
+Marker: `go.mod` in repo root.
+
+**Surface A - Module and package documentation**
+
+- Module path in `go.mod` (e.g. `module github.com/org/repo`) → check that the main package or `cmd/` entry has a doc comment at the top of the file
+- Exported functions, types, and constants without a doc comment: `grep -rn '^func [A-Z]\|^type [A-Z]\|^var [A-Z]\|^const [A-Z]'` then verify a preceding `// <Name>` comment exists
+- `Example*` functions in `*_test.go` files — check they follow `ExampleFuncName()` or `ExampleType_Method()` naming (godoc renders them as runnable examples)
+
+**Surface B - README install / import instructions**
+
+- README must have a `go get` or `go install` command for libraries and tools
+- Grep: `go get\|go install` in README; if absent and the repo has public exported packages, flag as Low
+
+**Surface C - Deprecated symbol markers**
+
+- Grep for `// Deprecated:` comments — verify that the replacement is named and linked (godoc convention)
+
+---
+
 ## Notes for future stacks
 
 When adding a new stack to D7 (`node-js`, `go`, `rust`, `kotlin`, `dotnet`, `ruby`, `java`):

@@ -125,6 +125,25 @@ Severity: Critical.
 
 Severity: Low.
 
+### D-7 Go single-stage build (Go-specific)
+
+Applies when `go.mod` exists in the repo.
+
+- `^FROM\s+golang:` in a Dockerfile that has only **one** `FROM` directive — no multi-stage build.
+- Expected pattern: builder stage (`FROM golang:X.Y AS builder`) + minimal final stage (`FROM gcr.io/distroless/static` or `FROM scratch` or `FROM alpine`).
+- Single-stage Go builds ship the full toolchain and source into the image.
+
+Severity: Medium.
+
+### D-8 Go final image not minimal (Go-specific)
+
+Applies when a multi-stage Go build is detected (two or more `FROM` directives).
+
+- Final `FROM` is NOT one of: `scratch`, `gcr.io/distroless/static`, `gcr.io/distroless/base`, `alpine`, `debian:slim`.
+- Pattern: last `^FROM\s+(?!scratch|gcr\.io/distroless|alpine|.*slim)`.
+
+Severity: Low.
+
 ---
 
 ## Layer C - Kubernetes patterns
@@ -165,6 +184,24 @@ Severity: Medium. Preferred alternative: `volumeMounts` from a Secret volume.
 - Container `image: ...:latest` OR no tag, combined with `imagePullPolicy: IfNotPresent` or missing.
 
 Severity: Low.
+
+### K-8 Go workload missing health probes (Go-specific)
+
+Applies when `go.mod` exists in the repo AND a Kubernetes workload manifest is found.
+
+- `Deployment` or `StatefulSet` container with no `livenessProbe` or `readinessProbe` defined.
+- Go HTTP servers should expose `/healthz` (liveness) and `/readyz` (readiness) endpoints; their absence makes restart policy and rolling update safety unreliable.
+
+Severity: Low.
+
+### K-9 Go operator without leader election (Go-specific)
+
+Applies when `sigs.k8s.io/controller-runtime` appears in `go.mod`.
+
+- Deployment with `replicas > 1` and no `leaderElection` flag in `args` (e.g. `--leader-elect=true`) or no `LeaderElection: true` in the controller manager config.
+- Running multiple controller replicas without leader election causes duplicate reconciliation loops.
+
+Severity: Medium.
 
 ---
 
