@@ -99,6 +99,22 @@ Grep for these to find where route handlers parse the request body.
 
 ---
 
+## Go - API conventions
+
+Go-specific API design checks. Apply when `Language: Go` is detected in CLAUDE.md.
+
+| Check | What to look for | Flag condition |
+|---|---|---|
+| Status codes | `http.StatusOK` on POST handlers | POST creating a resource must return `http.StatusCreated` (201); DELETE with no body must return `http.StatusNoContent` (204) |
+| Error shape consistency | Mix of `map[string]string{"error": ...}` and `map[string]interface{}{"message": ...}` | All error responses must share one schema — `{"error": string, "code": string}` |
+| RESTful URL conventions | Grep handler registrations for verb-in-path: `router.GET.*\/create\|router.POST.*\/delete\|router.GET.*\/update` | Verbs in URL path — use nouns + HTTP method instead |
+| Pagination consistency | Mix of `limit`/`offset`, `page`/`size`, and cursor patterns across handlers | All list endpoints must use the same pagination strategy |
+| Content-Type negotiation | `w.Header().Set("Content-Type"` absent before `json.NewEncoder` | Every JSON response must set `Content-Type: application/json` explicitly |
+| Idempotency on POST | Absence of idempotency key handling on POST endpoints that mutate state | Consider `Idempotency-Key` header for non-idempotent POST endpoints |
+| API versioning | Mix of URL versioning (`/v1/`) and no versioning | All routes should follow one consistent versioning strategy |
+
+---
+
 ## V3 - Validation error detail property
 
 When returning validation errors to the client, use the library's documented property for field-level details.

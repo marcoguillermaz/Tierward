@@ -12,7 +12,7 @@ The executing agent reads this file at the start of Step 6. For each check, sele
 | **node** (jest/vitest/mocha) | `\b(it\|test\|describe)\.only\b`, `\bfit\(`, `\bfdescribe\(` | |
 | **swift** (swift-testing) | `@Test\([^)]*\.disabled:\s*false[^)]*\.only` (rare - verify framework support) | |
 | **python** | | N/A |
-| **go** | | N/A |
+| **go** | `t\.Run\([^)]+\)` siblings commented out or `-run=TestSpecific` hardcoded in CI scripts | Verify manually — no direct `.only` equivalent, but selective `-run` in CI scripts has the same effect |
 | **rust** | | N/A |
 | **java / kotlin** | | N/A |
 | **dotnet** | | N/A |
@@ -32,6 +32,21 @@ The executing agent reads this file at the start of Step 6. For each check, sele
 | **kotlin / java** | `@Disabled\b`, `@Ignore\b` |
 | **dotnet** | `\[Fact\(Skip\s*=`, `\[SkippableFact\b` |
 | **ruby** | `\bskip\b` inside describe/it blocks, `\bpending\b` |
+
+---
+
+## T8 - Go table-driven test patterns
+
+Apply when `Language: Go` is detected. These checks are Go-specific.
+
+| Check | Pattern | Flag condition |
+|---|---|---|
+| Missing table-driven tests | Multiple `t.Run("case1"`, `t.Run("case2"` without `for _, tc := range` | Repeated subtests should use table-driven pattern |
+| Missing `t.Parallel()` | `func Test` without `t.Parallel()` in independent tests | Independent tests should declare `t.Parallel()` to speed up the suite |
+| Parallel on shared state | `t.Parallel()` in tests that read/write shared mutable state | Race condition — parallel tests must not share state without synchronization |
+| Race detector in CI | `go test` invocations in CI scripts without `-race` flag | Missing race detection — add `-race` to catch data races at test time |
+| Coverage command | `go test -coverprofile=` present | Parse `go tool cover -func=coverage.out` for per-function coverage breakdown |
+| Testify require vs assert | `assert\.` used before operations that require the test to stop | Use `require.` (fatal) before setup steps; `assert.` (non-fatal) for independent checks |
 
 ---
 
