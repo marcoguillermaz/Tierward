@@ -103,10 +103,16 @@ The executing agent reads this file at the start of Step 2 (web) or Step 6 (nati
 
 | Check | Grep pattern | Flag condition |
 |---|---|---|
-| Goroutine in loops | `go func` or `go ` inside `for` | No semaphore/pool limits concurrency |
-| Channel sizing | `make(chan` unbuffered in producer-consumer | Causes blocking |
-| Defer in loops | `defer` inside `for` | Deferred calls accumulate until function returns |
-| Escape analysis | Run `go build -gcflags='-m' 2>&1 \| grep 'escapes to heap'` | Hot-path heap escapes |
+| Goroutine in loops | `go func\|go ` inside `for` loop | No semaphore or worker pool — unbounded goroutine creation |
+| Goroutine leak | `go func()` without `ctx.Done()\|context.WithCancel\|wg.Done()` nearby | Goroutine has no cancellation path or wait group tracking |
+| Channel sizing | `make(chan` with no capacity argument | Unbuffered channel in producer-consumer causes synchronous blocking |
+| Defer in loops | `defer` inside `for` | Deferred calls accumulate until the enclosing function returns, not the loop iteration |
+| Escape analysis | `go build -gcflags='-m' 2>&1 \| grep 'escapes to heap'` | Hot-path heap escapes — check `interface{}` in loops, `fmt.Sprintf` in hot path |
+| fmt in hot path | `fmt\.Sprintf\|fmt\.Fprintf` in tight loops | Use `strconv.Itoa`, `strconv.AppendInt`, or `strings.Builder` instead |
+| HTTP client timeout | `http\.Get(\|http\.Client{}` without `Timeout:` field | No timeout on HTTP client — hangs on slow/unreachable endpoints |
+| Map preallocation | `make(map\[` without size hint, `append(` to nil slice in loops | Use `make(map[K]V, n)` and `make([]T, 0, n)` when count is known |
+| DB connection pool | `db\.SetMaxOpenConns(0)\|sql\.Open(` without `SetMaxOpenConns\|SetConnMaxLifetime` | Unlimited or unconfigured connection pool |
+| pprof exposure | `_ "net/http/pprof"` import | pprof endpoint active in production binary — exposes heap, goroutine, and CPU data |
 
 ### Python
 
