@@ -48,12 +48,17 @@ Detect the migration framework in this priority order. First matching marker win
 | Django | `manage.py` + any `*/migrations/*.py` | `*/migrations/*.py` |
 | Alembic | `alembic.ini` | `alembic/versions/*.py` |
 | Flyway | `flyway.conf` or `flyway.toml` | `**/db/migration/V*__*.sql` |
+| **golang-migrate** | `go.mod` + `migrations/*.up.sql` (numeric prefix `NNNNNN_name.up.sql`) | `migrations/` |
+| **goose** | `go.mod` + `migrations/` with `-- +goose Up` comment in .sql, OR `.go` migration files | `migrations/` |
+| **atlas** | `atlas.hcl` or `atlas.sum` | `migrations/` |
 
-**Supported at launch**: Prisma, Drizzle, Supabase CLI, Raw SQL.
+**Supported at launch**: Prisma, Drizzle, Supabase CLI, Raw SQL, golang-migrate, goose, atlas.
 
 For Rails / Django / Alembic / Flyway: announce `Framework detected: <name> - not yet supported. The audit checks assume SQL-based migrations (PostgreSQL DDL). If your framework generates raw SQL, pass target:file: with the migration file path.` and exit 0.
 
-If no marker is found: announce `No migration framework detected. Checked: Prisma, Drizzle, Supabase CLI, Raw SQL. If migrations live elsewhere, pass target:file: with the absolute path.` and exit 0.
+If no marker is found: announce `No migration framework detected. Checked: Prisma, Drizzle, Supabase CLI, Raw SQL, golang-migrate, goose, atlas. If migrations live elsewhere, pass target:file: with the absolute path.` and exit 0.
+
+**Go stacks**: if `Language: Go` is detected in `CLAUDE.md`, read the sibling `PATTERNS.md` file in this skill directory before Step 2. The Go section contains golang-migrate, goose, and atlas-specific safety checks (down-file pairing, tool-specific DDL lints, filename conventions).
 
 Update announcement: `Running migration-audit - scope: [FULL | target: <resolved>] - stack: <detected>`
 

@@ -54,6 +54,8 @@ Read these files in order before proceeding:
 
 Do not proceed until all five reads are complete.
 
+**Go stacks**: if `Language: Go` is detected in `CLAUDE.md`, also read the sibling `PATTERNS.md` file in this skill directory before Step 2. The Go section contains ORM/driver-specific query patterns for `database/sql`, `pgx`, `sqlx`, and `gorm` (N+1 detection, connection pool, prepared statements, transaction isolation).
+
 ---
 
 ## Step 2 - Schema quality checks (main context)
