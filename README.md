@@ -12,7 +12,7 @@
 
 Claude Code is fast. The problem it creates isn't in the code: it's in the review. When AI writes everything autonomously, you end up approving diffs you don't fully understand, catching regressions two blocks later, and losing the thread of what the system actually does.
 
-**Tierward** sits between Claude and done. Teams adopt it tier by tier, from a light discovery setup to a fully governed pipeline: explicit STOP gates before implementation, audit skills that surface issues before they reach production, and a Stop hook that mechanically prevents Claude from declaring done until your tests pass. Start at Tier 0 with zero process, move up when you need it.
+**Tierward** sits between Claude and done. Teams adopt it tier by tier, from a zero-process discovery setup up to a fully governed pipeline: explicit STOP gates before implementation, audit skills that surface issues before they reach production, and a Stop hook that mechanically prevents Claude from declaring done until your tests pass. Start at Tier 0 and move up when you need more structure.
 
 Since v1.17.0, Tierward ships an MCP server alongside the CLI. Any MCP-aware client can read your project's doctor report, team-settings policy, last arch-audit, and skill inventory without running the Tierward CLI. See [MCP server](#mcp-server).
 
@@ -20,11 +20,21 @@ Since v1.17.0, Tierward ships an MCP server alongside the CLI. Any MCP-aware cli
 
 ## Philosophy
 
-One thing drives Tierward: Claude Code doesn't become harder to work with because it gets less capable. It becomes harder to work with because autonomous decisions accumulate faster than anyone can review them. The pipeline enforces a review contract, requirements before code, hypothesis before fix, tests before done, without slowing down work that doesn't need that structure.
+One thing drives Tierward: Claude Code doesn't become harder to work with because it gets less capable. It becomes harder to work with because autonomous decisions accumulate faster than anyone can review them. The pipeline enforces a review contract: scope confirmed before code, hypothesis written before a fix, tests passing before done. It doesn't slow down work that doesn't need that structure.
 
 The tier system exists because process has a cost. A solo bugfix shouldn't pay the overhead of a team feature workflow. Two pipelines cover the range: **Fast Lane** (4 steps, scope-confirm) for quick fixes, **Full** (14 phases, 4 review gates) for team features. Both enforce the same contract: Claude works phase by phase, your team approves each step. Start at the tier that fits your current risk and add more as the stakes rise.
 
 Built for the people who carry the result, product managers and developers alike, so the decisions stay with them, not the model.
+
+### Claude Code-first, by design
+
+Tierward works exclusively with Claude Code. No Cursor support, no Copilot layer, no multi-tool abstractions. That's intentional.
+
+The enforcement mechanisms that make Tierward useful are Claude Code primitives: a Stop hook is a hard OS-level block in `settings.json`; a STOP gate lives in `pipeline.md`, a rules file Claude reads at session start; audit skills are structured programs that run inside the Claude Code agent loop. These aren't portable concepts wrapped in an abstraction layer. They're direct calls into Claude Code's architecture.
+
+Supporting multiple tools would mean replacing these with lowest-common-denominator abstractions that strip out the enforcement layer. The value of Tierward is precisely that enforcement: the Stop hook doesn't ask Claude to run tests, it prevents Claude from completing a task until they pass.
+
+If your team uses other AI coding tools alongside Claude Code, Tierward governs only the Claude Code sessions. The underlying principles (tests before done, requirements before code, audit before deploy) aren't Claude-specific, but the implementation is, by choice.
 
 ---
 
@@ -76,7 +86,7 @@ As of v1.27.0, the schema covers all four pipeline tiers: tier 0 (Discovery) and
 
 ## What it does
 
-One contract across four tiers, from a solo bugfix to a fully governed team pipeline. Claude proposes, your team approves, at every tier.
+One contract across four tiers. Solo bugfix or fully governed team pipeline, the rule is the same: Claude proposes, your team approves.
 
 ### Tiered pipelines matched to risk
 
