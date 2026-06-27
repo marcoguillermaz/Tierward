@@ -27,7 +27,10 @@ describe('generateGreenfieldContextImport (NF-4)', () => {
   it('leaves no raw import-from-repo placeholders', async () => {
     const content = await genInto({ projectName: 'Habit Tracker', description: 'A habit tracker' });
     for (const ph of ['[IMPORT_MODE]', '[SOURCE_REPOS]', '[SOURCE_DOCS]', '[PRIMARY_REPO]']) {
-      assert.ok(!content.includes(ph), `raw placeholder ${ph} must not survive in greenfield CONTEXT_IMPORT`);
+      assert.ok(
+        !content.includes(ph),
+        `raw placeholder ${ph} must not survive in greenfield CONTEXT_IMPORT`,
+      );
     }
   });
 
@@ -57,7 +60,10 @@ describe('generateGreenfieldContextImport (NF-4)', () => {
 
   it('falls back gracefully when no description is provided', async () => {
     const content = await genInto({ projectName: 'X' });
-    assert.ok(!content.includes('[PROJECT_DESCRIPTION]'), 'description placeholder must be resolved');
+    assert.ok(
+      !content.includes('[PROJECT_DESCRIPTION]'),
+      'description placeholder must be resolved',
+    );
     assert.match(content, /infer the idea/i, 'must instruct inferring the idea when none given');
   });
 });

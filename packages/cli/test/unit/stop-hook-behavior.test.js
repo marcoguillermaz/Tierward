@@ -89,7 +89,11 @@ for (const tier of ['tier-0', 'tier-s', 'tier-m', 'tier-l']) {
         techStack: 'node-ts',
       });
       assert.equal(exit, 0, 'guard must let the hook exit 0 when no project marker exists');
-      assert.equal(stdout.trim(), '', 'guard must skip silently — no block JSON on a greenfield repo');
+      assert.equal(
+        stdout.trim(),
+        '',
+        'guard must skip silently — no block JSON on a greenfield repo',
+      );
     });
   });
 }
