@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { generateClaudeMd } from '../generators/claude-md.js';
 import { generateReadme } from '../generators/readme.js';
+import { generateGreenfieldContextImport } from '../generators/context-import.js';
 import { scaffoldTier } from '../scaffold/index.js';
 import { printPlan, printNextSteps, printStarCta } from '../utils/print-plan.js';
 import { AUDIT_MODELS } from '../utils/constants.js';
@@ -363,6 +364,11 @@ export async function initGreenfield(options) {
     await generateClaudeMd(config, process.cwd());
     if (!isDiscovery) {
       await generateReadme(config, process.cwd());
+      // scaffoldTier copies the raw common/CONTEXT_IMPORT.md (an import-from-repo
+      // workflow whose [SOURCE_REPOS]/[IMPORT_MODE] placeholders interpolate()
+      // leaves raw). Overwrite it with the idea-based greenfield variant.
+      // Tier 0 (isDiscovery) never gets CONTEXT_IMPORT — scaffoldTier0 skips it.
+      await generateGreenfieldContextImport(config, process.cwd());
     }
     spinner.succeed('Done.');
   } catch (err) {
