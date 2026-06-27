@@ -83,15 +83,15 @@ Tier 0 (what you have now) gives you the minimum viable scaffold:
 - Tests must pass before Claude declares a task complete
 - Claude follows a small set of communication rules (`output-style.md`)
 
-When your team grows or your project complexity increases, upgrade to a higher tier:
+When your team grows or your project complexity increases, promote to a higher tier by re-running `init` and choosing **"Existing project"** when prompted:
 
 ```bash
-npx tierward upgrade --tier=s   # Fast Lane: branch discipline + commit rules
-npx tierward upgrade --tier=m   # Standard: phased pipeline with review gates
-npx tierward upgrade --tier=l   # Full: audit skills, security review, multi-agent
+npx tierward init --tier=s   # Fast Lane: branch discipline + commit rules
+npx tierward init --tier=m   # Standard: phased pipeline with review gates
+npx tierward init --tier=l   # Full: audit skills, security review, multi-agent
 ```
 
-Upgrade is non-destructive - it adds new files without overwriting your existing ones.
+Re-running `init` in-place is non-destructive - it adds the new tier's files without overwriting your existing ones (`CLAUDE.md`, `settings.json`, and any customizations are preserved).
 
 ---
 
@@ -103,7 +103,7 @@ Upgrade is non-destructive - it adds new files without overwriting your existing
 | Give Claude context | Edit `CLAUDE.md` |
 | Run tests manually | `[TEST_COMMAND]` |
 | See what Claude can do | Ask: "What slash commands are available?" |
-| Add more structure | `npx tierward upgrade --tier=s` |
+| Add more structure | `npx tierward init --tier=s` (choose "Existing project") |
 
 ---
 

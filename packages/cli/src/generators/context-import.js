@@ -4,6 +4,30 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_PATH = path.resolve(__dirname, '../../templates/common/CONTEXT_IMPORT.md');
+const GREENFIELD_TEMPLATE_PATH = path.resolve(
+  __dirname,
+  '../../templates/common/CONTEXT_IMPORT_GREENFIELD.md',
+);
+
+/**
+ * Generate the greenfield CONTEXT_IMPORT.md — an idea-based discovery workflow.
+ *
+ * Greenfield has no source repos/docs to import, so the import-from-repo template
+ * (and its [SOURCE_REPOS]/[IMPORT_MODE] placeholders) is the wrong shape and is
+ * left raw by interpolate(). This variant keeps the PENDING_DISCOVERY trigger but
+ * drives discovery from the project idea (the wizard's one-line description).
+ */
+export async function generateGreenfieldContextImport(config, targetDir) {
+  let template = await fs.readFile(GREENFIELD_TEMPLATE_PATH, 'utf8');
+  template = template
+    .replace(/\[PROJECT_NAME\]/g, config.projectName || 'this project')
+    .replace(
+      /\[PROJECT_DESCRIPTION\]/g,
+      config.description ||
+        '_(no description was provided at init — infer the idea from any brief in the project directory, then confirm with the developer)_',
+    );
+  await fs.writeFile(path.join(targetDir, 'CONTEXT_IMPORT.md'), template);
+}
 
 /**
  * Generate CONTEXT_IMPORT.md from the template, injecting actual source info.
