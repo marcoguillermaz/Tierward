@@ -84,3 +84,29 @@ export const STACK_COMMANDS = {
     typeCheckPlaceholder: '',
   },
 };
+
+/**
+ * Per-stack project markers used to detect whether test infrastructure exists.
+ *
+ * Consumed by scaffold/index.js to build the [TEST_GUARD] clause prepended to
+ * the Stop hook command. The guard skips the test gate when NONE of a stack's
+ * markers are present — i.e. an un-scaffolded greenfield project — so the Stop
+ * hook no longer deadlocks before any code (and thus any test runner) exists.
+ *
+ * Empty array = no reliable single-file marker (dotnet uses *.csproj/*.sln
+ * globs; 'other' is unknown by definition). Those stacks get no guard and keep
+ * the prior always-on behaviour.
+ */
+export const TEST_INFRA_MARKERS = {
+  'node-ts': ['package.json'],
+  'node-js': ['package.json'],
+  python: ['pyproject.toml', 'setup.py', 'setup.cfg', 'requirements.txt'],
+  go: ['go.mod'],
+  rust: ['Cargo.toml'],
+  swift: ['Package.swift'],
+  kotlin: ['build.gradle', 'build.gradle.kts'],
+  java: ['pom.xml', 'build.gradle'],
+  dotnet: [],
+  ruby: ['Gemfile'],
+  other: [],
+};

@@ -297,6 +297,9 @@ function getFilePlan(config) {
   if (mode === 'greenfield') {
     base.unshift('CLAUDE.md');
     base.push('README.md');
+    // Tier 0 returned early above; S/M/L greenfield generate the idea-based
+    // discovery variant (see generateGreenfieldContextImport).
+    base.push('CONTEXT_IMPORT.md  ← Claude reads this to turn your idea into a plan');
   } else {
     base.push('CONTEXT_IMPORT.md  ← Claude reads this and fills in the rest');
   }

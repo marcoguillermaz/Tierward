@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { NATIVE_STACKS, getSkillsToRemove, getCheatsheetSkillsToRemove } from './skill-registry.js';
-import { STACK_COMMANDS } from '../utils/stack-commands.js';
+import { STACK_COMMANDS, TEST_INFRA_MARKERS } from '../utils/stack-commands.js';
 
 /**
  * Scaffold Tier 0 (Discovery) - minimal: settings.json, GETTING_STARTED.md only.
@@ -616,6 +616,24 @@ function resolveDevCommand(userCommand, nativeDefault) {
   return nativeDefault || 'npm run dev';
 }
 
+/**
+ * Build the [TEST_GUARD] clause for the Stop hook command.
+ *
+ * Returns a shell snippet that exits 0 (skips the test gate) when NONE of the
+ * stack's project markers exist — i.e. an un-scaffolded greenfield project with
+ * no test runner yet. Without this guard the Stop hook runs the test command on
+ * an empty repo, fails, and blocks every task completion (the NF-3 deadlock).
+ *
+ * Stacks with no reliable single-file marker (dotnet globs, 'other') get an
+ * empty guard and retain the prior always-on behaviour.
+ */
+export function buildTestGuard(techStack) {
+  const markers = TEST_INFRA_MARKERS[techStack] || [];
+  if (markers.length === 0) return '';
+  const absence = markers.map((m) => `[ ! -f ${m} ]`).join(' && ');
+  return `${absence} && exit 0; `;
+}
+
 function resolveE2eToolName(config) {
   if (
     config.e2eCommand &&
@@ -664,6 +682,7 @@ function interpolate(content, config) {
       /\[TYPE_CHECK_COMMAND\]/g,
       config.typeCheckCommand || ncd.typeCheckPlaceholder || 'npx tsc --noEmit',
     )
+    .replace(/\[TEST_GUARD\]/g, buildTestGuard(config.techStack))
     .replace(
       /\[TEST_COMMAND\]/g,
       config.testCommand || (ncd.test ? ncd.test + swiftScheme : '') || 'npm test',

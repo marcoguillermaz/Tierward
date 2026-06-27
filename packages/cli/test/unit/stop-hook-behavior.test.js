@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildTestGuard } from '../../src/scaffold/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
@@ -28,14 +29,23 @@ function stopHookCommand(tier) {
   return JSON.parse(raw).hooks.Stop[0].hooks[0].command;
 }
 
-// Run the resolved hook the way Claude Code does: under a shell, with the
-// `stop_hook_active` / `CLAUDE_PROJECT_DIR` env it provides, capturing only the
-// hook's stdout (stderr carries diagnostics and is intentionally discarded).
-function runHook(command, testCmd) {
-  const resolved = command.replace(/\[TEST_COMMAND\]/g, testCmd);
+// Run the resolved hook the way Claude Code does: under a shell, in the project
+// directory, with the `stop_hook_active` / `CLAUDE_PROJECT_DIR` env it provides,
+// capturing only the hook's stdout (stderr carries diagnostics, discarded).
+//
+// [TEST_GUARD] is resolved with the given stack the same way scaffold/index.js
+// does at init time. `seedMarker: true` writes the stack's project marker into
+// the temp dir so the guard does NOT skip — that isolates the test gate's
+// success/failure behavior from the greenfield guard-skip path.
+function runHook(command, testCmd, { seedMarker = false, techStack = 'node-ts' } = {}) {
+  const resolved = command
+    .replace(/\[TEST_GUARD\]/g, buildTestGuard(techStack))
+    .replace(/\[TEST_COMMAND\]/g, testCmd);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-stophook-'));
+  if (seedMarker) fs.writeFileSync(path.join(dir, 'package.json'), '{}\n');
   try {
     const stdout = execFileSync('bash', ['-c', resolved], {
+      cwd: dir,
       env: { ...process.env, stop_hook_active: '', CLAUDE_PROJECT_DIR: dir },
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -53,18 +63,37 @@ for (const tier of ['tier-0', 'tier-s', 'tier-m', 'tier-l']) {
     const command = stopHookCommand(tier);
 
     it('exits 0 with empty stdout when the test command passes', () => {
-      const { exit, stdout } = runHook(command, 'true');
+      const { exit, stdout } = runHook(command, 'true', { seedMarker: true });
       assert.equal(exit, 0, 'hook must exit 0 on success (no spurious non-blocking error)');
       assert.equal(stdout.trim(), '', 'stdout must be empty on success');
     });
 
     it('exits 0 and emits only parseable block JSON when the test command fails', () => {
       // Failing command that prints to STDOUT first — the exact pollution case.
-      const { exit, stdout } = runHook(command, 'echo "ERROR: build broke"; false');
+      const { exit, stdout } = runHook(command, 'echo "ERROR: build broke"; false', {
+        seedMarker: true,
+      });
       assert.equal(exit, 0, 'hook must exit 0 so Claude Code parses the JSON');
       const decision = JSON.parse(stdout.trim());
       assert.equal(decision.decision, 'block', 'block decision must be honored');
       assert.ok(decision.reason, 'block reason must be present');
+    });
+
+    // NF-3 regression: on an un-scaffolded greenfield repo (no project marker,
+    // hence no test runner), the [TEST_GUARD] must skip the gate so the hook
+    // does not deadlock task completion. Without the guard, the failing test
+    // command below would block every Stop.
+    it('skips the gate (exit 0, empty stdout) on a greenfield repo with no test infra', () => {
+      const { exit, stdout } = runHook(command, 'echo "no tests here"; false', {
+        seedMarker: false,
+        techStack: 'node-ts',
+      });
+      assert.equal(exit, 0, 'guard must let the hook exit 0 when no project marker exists');
+      assert.equal(
+        stdout.trim(),
+        '',
+        'guard must skip silently — no block JSON on a greenfield repo',
+      );
     });
   });
 }
