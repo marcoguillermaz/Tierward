@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$stop_hook_active\" = \"1\" ] && exit 0; OUT=$([TEST_COMMAND] 2>&1); CODE=$?; [ \"$CODE\" -ne 0 ] && { echo \"$OUT\" >&2; echo '{\"decision\": \"block\", \"reason\": \"Tests must pass before Claude can complete a task. Fix the failing tests first.\"}'; }; exit 0",
+            "command": "[ \"$stop_hook_active\" = \"1\" ] && exit 0; [TEST_GUARD]OUT=$([TEST_COMMAND] 2>&1); CODE=$?; [ \"$CODE\" -ne 0 ] && { echo \"$OUT\" >&2; echo '{\"decision\": \"block\", \"reason\": \"Tests must pass before Claude can complete a task. Fix the failing tests first.\"}'; }; exit 0",
             "timeout": 300
           }
         ]
