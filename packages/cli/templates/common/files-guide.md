@@ -173,7 +173,7 @@ No `settings.local.json` is currently active - personal overrides are in `~/.cla
 Key settings configured:
 - `attribution.commit/pr: ""` - suppresses automatic Co-Authored-By (pipeline adds it manually in commit heredoc)
 - `includeGitInstructions: false` - removes redundant built-in git instructions from system prompt (pipeline.md covers this); replaces the old `env.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` env var approach
-- `hooks.SessionStart` - checks `.claude/session/last-arch-audit` timestamp in the project directory; if >7 days since last `/arch-audit`, prints a reminder at session open
+- `hooks.SessionStart` - on tier M/L, runs `tierward-session-orientation.mjs`: emits a one-line Tierward state banner at session open (tier · active block + `requirements_approved` · branch · discovery-pending) and gates the arch-audit reminder so it fires only after ≥1 block has completed (a brand-new project is never nagged). Plain stdout, so the line is both shown to you and injected into the model's first-turn context. Tier S keeps the simpler time-based arch-audit reminder
 - `hooks.InstructionsLoaded` - appends raw hook payload (JSON) to `/tmp/claude-instructions-YYYYMMDD.log` (async, non-blocking); inspect this file to debug which CLAUDE.md or rules files were loaded and when
 
 ---

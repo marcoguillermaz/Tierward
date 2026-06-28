@@ -12,7 +12,7 @@ Your development scaffold is ready. This guide walks through setup and your firs
 | `MEMORY.md` | Active plan + lessons (updated by Claude, not by hand) |
 | `.claude/rules/pipeline.md` | 8-phase development pipeline |
 | `.claude/rules/context-review.md` | End-of-block compliance checklist (C1–C12) |
-| `.claude/settings.json` | Hooks: test gate, weekly arch-audit reminder |
+| `.claude/settings.json` | Hooks: test gate, session-orientation banner, gated arch-audit reminder |
 | `docs/requirements.md` | Product specification |
 | `docs/implementation-checklist.md` | Block-by-block progress tracker |
 | `docs/refactoring-backlog.md` | Tech debt tracker |
