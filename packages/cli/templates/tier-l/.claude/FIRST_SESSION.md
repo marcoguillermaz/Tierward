@@ -14,7 +14,7 @@ Your development scaffold is ready. This guide walks through setup and your firs
 | `.claude/rules/context-review.md` | End-of-block compliance checklist (C1–C12) |
 | `.claude/skills/dependency-scan/SKILL.md` | Phase 1: dependency scan skill (`/dependency-scan`) |
 | `.claude/skills/context-review/SKILL.md` | Phase 8.5: C1–C3 grep checks skill (`/context-review`) |
-| `.claude/settings.json` | Hooks: test gate, session-orientation banner, gated arch-audit reminder, PostCompact |
+| `.claude/settings.json` | Hooks: test gate, weekly arch-audit reminder, PostCompact |
 | `docs/requirements.md` | Product specification |
 | `docs/implementation-checklist.md` | Block-by-block progress tracker |
 | `docs/refactoring-backlog.md` | Tech debt tracker |
