@@ -26,10 +26,13 @@
 // has no SessionStart hook by design.
 //
 // Spec reference: https://code.claude.com/docs/en/hooks
-//   - event: SessionStart; input JSON on stdin carries `source`
-//     (startup | resume | clear | compact)
-//   - `compact` is skipped: the PostCompact hook owns post-/compact restoration,
-//     so re-emitting here would double-inject.
+//   - event: SessionStart; fires on every session start (source: startup | resume |
+//     clear | compact). It orients on ALL of them. In particular it does NOT skip
+//     `compact`: the PostCompact hook emits only the CLAUDE.local.md restore reminder
+//     (verified in the template — not orientation), and /compact is run often in the
+//     M/L workflow (Phase 8.5, mid-Phase-2). Post-compact is therefore the moment the
+//     model has most lost context and re-grounding on tier/block/state matters most,
+//     so the banner must re-fire there too. The hook does not depend on stdin.
 //
 // Fail-open: any error → exit 0 with no output, so a misconfigured project never
 // has its session start blocked or polluted by this hook.
@@ -40,16 +43,6 @@ import path from 'node:path';
 const PROJECT_DIR = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const SESSION_DIR = path.join(PROJECT_DIR, '.claude', 'session');
 const SEVEN_DAYS = 604800; // seconds
-
-function readStdin() {
-  return new Promise((resolve) => {
-    let data = '';
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (chunk) => (data += chunk));
-    process.stdin.on('end', () => resolve(data));
-    process.stdin.on('error', () => resolve(''));
-  });
-}
 
 // Tier from the pipeline.md heading — the one reliable runtime marker.
 // "Fast Lane Pipeline" → S · "… - Tier M" → M · "… - Tier L" → L.
@@ -176,17 +169,8 @@ function archAudit() {
   };
 }
 
-async function main() {
+function main() {
   try {
-    const raw = await readStdin();
-    let source = 'startup';
-    try {
-      source = JSON.parse(raw).source || 'startup';
-    } catch {
-      // no/!JSON stdin → treat as startup
-    }
-    if (source === 'compact') process.exit(0); // PostCompact owns this
-
     const tier = detectTier();
     if (!tier) process.exit(0); // not a piped tier → nothing to orient
 
