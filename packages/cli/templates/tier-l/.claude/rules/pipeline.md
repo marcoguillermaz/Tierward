@@ -32,8 +32,18 @@ A skip is a legitimate outcome. Silent degradation is not.
 
 **Session file - non-negotiable**: check `.claude/session/` for existing `block-*.md` files.
 - If one exists: read it immediately - a previous session was interrupted. Resume from the recorded state. Do NOT create a new file.
-- If none: create `.claude/session/block-new-session.md` with the current date and a placeholder skeleton. Rename to `block-[name].md` in Phase 1 once the block name is known.
+- If none: create `.claude/session/block-new-session.md` starting with this machine-readable front matter (a Tierward hook reads it — keep the keys exact):
+
+  ```
+  ---
+  block: new-session
+  requirements_approved: false
+  ---
+  ```
+
+  Below the front matter, add the current date and a placeholder skeleton. Rename to `block-[name].md` in Phase 1 once the block name is known.
 - The session file must exist before any other Phase 0 action runs.
+- **Do not edit `requirements_approved` yourself.** The `tierward-capture-approval` hook sets it to `true` when YOU (the developer) reply at the Phase 1 STOP gate with a **bare** execution keyword — reply with just `Proceed` (or `Execute` / `Confirmed` / `Go ahead`), on its own. A keyword inside a longer sentence ("Proceed to the next file") does not arm approval — this is deliberate, so a casual imperative never authorizes a commit. The `tierward-governance-gate` hook then allows `git commit`. This is governance enforced from your approval, not Claude's self-assertion.
 
 Then:
 - Read `.claude/CLAUDE.local.md` to confirm active overrides (if file exists).

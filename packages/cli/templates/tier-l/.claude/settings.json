@@ -67,6 +67,22 @@
           {
             "type": "command",
             "command": "echo \"$CLAUDE_TOOL_INPUT\" | jq -r '.command // \"\"' | grep -qE '(rm -rf /|DROP DATABASE|format C:|del /f /s /q C:)' && echo '{\"decision\": \"block\", \"reason\": \"Potentially destructive command blocked. Confirm manually if intentional.\"}' || true"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-governance-gate.mjs\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-capture-approval.mjs\"",
+            "timeout": 5
           }
         ]
       }

@@ -261,6 +261,30 @@ function assertStopHookResolved(dir) {
   }
 }
 
+// N-2b: verify the governance hooks are both scaffolded AND wired in settings.json.
+// Unit tests cover the hook logic; this guards the scaffold→settings wiring so a
+// future edit that drops the hooks or the settings entries is caught.
+function assertGovernanceHooksWired(dir) {
+  assertExists(dir, '.claude/hooks/tierward-capture-approval.mjs');
+  assertExists(dir, '.claude/hooks/tierward-governance-gate.mjs');
+  const settingsPath = path.join(dir, '.claude', 'settings.json');
+  if (!fs.existsSync(settingsPath)) {
+    fail('governance wiring - .claude/settings.json missing');
+    return;
+  }
+  const raw = fs.readFileSync(settingsPath, 'utf8');
+  if (raw.includes('tierward-capture-approval.mjs') && raw.includes('"UserPromptSubmit"')) {
+    pass('governance: capture-approval wired on UserPromptSubmit');
+  } else {
+    fail('governance: capture-approval hook not wired in settings.json');
+  }
+  if (raw.includes('tierward-governance-gate.mjs')) {
+    pass('governance: commit-gate wired in PreToolUse');
+  } else {
+    fail('governance: commit-gate hook not wired in settings.json');
+  }
+}
+
 function assertFileUnchanged(dir, relPath, originalContent) {
   const full = path.join(dir, relPath);
   if (!fs.existsSync(full)) {
@@ -535,6 +559,7 @@ async function scenarioTierM() {
 
   assertStopHookPresent(dir);
   assertStopHookResolved(dir);
+  assertGovernanceHooksWired(dir);
   assertNoUnfilledWizardPlaceholders(dir);
 }
 
@@ -588,6 +613,7 @@ async function scenarioTierL() {
 
   assertStopHookPresent(dir);
   assertStopHookResolved(dir);
+  assertGovernanceHooksWired(dir);
   assertNoUnfilledWizardPlaceholders(dir);
 }
 
