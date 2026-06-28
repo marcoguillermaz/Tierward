@@ -80,10 +80,10 @@ describe('session-orientation: tier detection', () => {
   });
 });
 
-describe('session-orientation: source gating', () => {
-  it('is silent on source=compact (PostCompact owns restoration)', () => {
+describe('session-orientation: fires on every source (incl. post-compact)', () => {
+  it('emits on source=compact — PostCompact restores only CLAUDE.local.md, not orientation', () => {
     const dir = setup({ '.claude/rules/pipeline.md': PIPELINE.M });
-    assert.equal(run(dir, { source: 'compact' }), '');
+    assert.match(run(dir, { source: 'compact' }), /Tierward tier-M/);
   });
 
   it('emits on source=resume', () => {
@@ -91,7 +91,7 @@ describe('session-orientation: source gating', () => {
     assert.match(run(dir, { source: 'resume' }), /Tierward tier-M/);
   });
 
-  it('treats missing/non-JSON stdin as startup (still emits)', () => {
+  it('does not depend on stdin (emits with empty stdin)', () => {
     const dir = setup({ '.claude/rules/pipeline.md': PIPELINE.M });
     const out = execFileSync('node', [SCRIPT], {
       input: '',
