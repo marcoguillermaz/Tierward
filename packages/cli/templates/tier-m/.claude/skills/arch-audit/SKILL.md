@@ -149,7 +149,7 @@ Expected: all lines show "OK". Any "MISSING" = FAIL.
 AUTO-FIX: add a minimal row to the "Custom Skills" table in cheatsheet.md for any missing skill.
 
 **C12 - settings.json hook integrity and hook type coverage**
-Check: `.claude/settings.json` must contain all 3 essential hooks: `SessionStart` (audit overdue reminder), `PostCompact` (CLAUDE.local.md restore reminder), `InstructionsLoaded` (debug log).
+Check: `.claude/settings.json` must contain all 3 essential hooks: `SessionStart` (session orientation banner + gated audit reminder), `PostCompact` (CLAUDE.local.md restore reminder), `InstructionsLoaded` (debug log).
 Expected: 3 lines (SessionStart, PostCompact, InstructionsLoaded). Any missing = FAIL.
 RECOMMEND if failing - do not auto-fix (hooks require verifying intent before restoring).
 
