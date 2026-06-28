@@ -729,6 +729,17 @@ async function scenarioArchAuditTimestamp() {
           `Tier ${tier}: SessionStart still uses external ~/.claude/projects/ path for last-audit`,
         );
       }
+
+      // Tier M/L gate the nag on >=1 completed block (a dated implementation-checklist
+      // Log row), so a brand-new project is never nagged. Tier S has no checklist and
+      // keeps the unconditional time-based reminder.
+      if (tier === 'm' || tier === 'l') {
+        if (raw.includes('implementation-checklist.md') && raw.includes('DONE')) {
+          pass(`Tier ${tier}: arch-audit nag gated on >=1 completed block`);
+        } else {
+          fail(`Tier ${tier}: arch-audit nag not gated on completed-block count`);
+        }
+      }
     }
 
     const skillPath = path.join(scenarioDir, '.claude/skills/arch-audit/SKILL.md');
