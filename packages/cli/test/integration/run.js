@@ -394,6 +394,20 @@ async function scenarioTier0() {
     '@.claude/rules/output-style.md',
     'tier-0 CLAUDE.md imports output-style',
   );
+  // N-3 (NF-7): Tier 0 ships a proactive guidance block so a beginner isn't routed to
+  // a zero-guidance tier. Conversational (propose/suggest), never gates.
+  assertContains(
+    dir,
+    'CLAUDE.md',
+    'How to work in this project (Discovery tier)',
+    'tier-0 CLAUDE.md has proactive guidance block',
+  );
+  assertContains(
+    dir,
+    'CLAUDE.md',
+    'propose and suggest, never block',
+    'tier-0 guidance preserves the 0/S boundary (no gates)',
+  );
   assertNotExists(dir, '.claude/rules/pipeline.md');
   assertNotExists(dir, '.claude/rules/git.md');
   assertNotExists(dir, '.claude/rules/security.md');
