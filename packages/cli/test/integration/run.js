@@ -722,39 +722,22 @@ async function scenarioArchAuditTimestamp() {
     const settingsPath = path.join(scenarioDir, '.claude/settings.json');
     if (fs.existsSync(settingsPath)) {
       const raw = fs.readFileSync(settingsPath, 'utf8');
-      if (tier === 's') {
-        // Tier S keeps the inline time-based reminder directly in settings.json.
-        if (raw.includes('.claude/session/last-arch-audit')) {
-          pass(`Tier ${tier}: SessionStart reads from .claude/session/last-arch-audit`);
-        } else {
-          fail(
-            `Tier ${tier}: SessionStart still uses external ~/.claude/projects/ path for last-audit`,
-          );
-        }
+      if (raw.includes('.claude/session/last-arch-audit')) {
+        pass(`Tier ${tier}: SessionStart reads from .claude/session/last-arch-audit`);
       } else {
-        // Tier M/L (A-2): SessionStart runs tierward-session-orientation.mjs, which
-        // owns the orientation banner AND the gated arch-audit reminder. The timestamp
-        // read moved from settings.json into the script — assert the wiring + that the
-        // script reads the PROJECT-local timestamp, never the external ~/.claude path.
-        if (raw.includes('tierward-session-orientation.mjs')) {
-          pass(`Tier ${tier}: SessionStart wires tierward-session-orientation.mjs`);
+        fail(
+          `Tier ${tier}: SessionStart still uses external ~/.claude/projects/ path for last-audit`,
+        );
+      }
+
+      // Tier M/L gate the nag on >=1 completed block (a dated implementation-checklist
+      // Log row), so a brand-new project is never nagged. Tier S has no checklist and
+      // keeps the unconditional time-based reminder.
+      if (tier === 'm' || tier === 'l') {
+        if (raw.includes('implementation-checklist.md') && raw.includes('DONE')) {
+          pass(`Tier ${tier}: arch-audit nag gated on >=1 completed block`);
         } else {
-          fail(`Tier ${tier}: SessionStart does not wire the orientation hook`);
-        }
-        const orientPath = path.join(scenarioDir, '.claude/hooks/tierward-session-orientation.mjs');
-        if (fs.existsSync(orientPath)) {
-          const orientRaw = fs.readFileSync(orientPath, 'utf8');
-          if (
-            orientRaw.includes('last-arch-audit') &&
-            orientRaw.includes('CLAUDE_PROJECT_DIR') &&
-            !orientRaw.includes('.claude/projects')
-          ) {
-            pass(`Tier ${tier}: orientation hook reads project-local last-arch-audit`);
-          } else {
-            fail(`Tier ${tier}: orientation hook missing or reads a non-project path`);
-          }
-        } else {
-          fail(`Tier ${tier}: tierward-session-orientation.mjs not scaffolded`);
+          fail(`Tier ${tier}: arch-audit nag not gated on completed-block count`);
         }
       }
     }

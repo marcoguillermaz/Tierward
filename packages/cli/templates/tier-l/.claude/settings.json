@@ -109,7 +109,8 @@
           },
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-session-orientation.mjs\""
+            "command": "LAST=$(cat \"$CLAUDE_PROJECT_DIR/.claude/session/last-arch-audit\" 2>/dev/null || echo 0); DONE=$(grep -cE '^\\| *[0-9]{4}-[0-9]{2}-[0-9]{2} *\\|' \"$CLAUDE_PROJECT_DIR/docs/implementation-checklist.md\" 2>/dev/null); DONE=${DONE:-0}; NOW=$(date +%s); DIFF=$((NOW - LAST)); if [ \"$DONE\" -ge 1 ] && [ $DIFF -gt 604800 ]; then DAYS=$((DIFF / 86400)); LAST_DATE=$([ $LAST -eq 0 ] && echo 'never' || date -r $LAST '+%Y-%m-%d' 2>/dev/null || date -d \"@$LAST\" '+%Y-%m-%d' 2>/dev/null || echo 'unknown'); echo \"⚠️  Arch audit overdue — last run: $LAST_DATE (${DAYS}d ago). Run /arch-audit to check compliance with latest Anthropic docs.\"; fi",
+            "async": true
           }
         ]
       }
