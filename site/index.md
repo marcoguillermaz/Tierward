@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Tierward"
   text: "Governance skills for Claude Code"
-  tagline: "Claude generates. Your team decides. Audit skills, STOP gates, and mechanical test enforcement, adopted tier by tier."
+  tagline: "Claude generates. You or your team decides. A governed, phased process for building with Claude Code, tier by tier."
   actions:
     - theme: brand
       text: Quick Start

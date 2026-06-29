@@ -1,8 +1,8 @@
 # Tierward
 
-Governed AI coding, built exclusively for Claude Code: tiered pipelines, audit skills, and a Stop hook that mechanically blocks task completion until your tests pass.
+A governed, phased process for building with Claude Code: tiered pipelines, STOP gates you approve, audit skills, and a human-approval commit gate. Built on Claude Code primitives.
 
-> **Claude Code-only.** Tierward's enforcement layer — Stop hook, STOP gates, audit skills — is built on Claude Code primitives and does not support other AI coding tools. See [why](https://marcoguillermaz.github.io/Tierward/guide/quick-start) in the docs.
+> **Claude Code-only.** Tierward's enforcement layer (STOP gates, the human-approval commit gate, and audit skills) is built on Claude Code primitives and does not support other AI coding tools. See [why](https://marcoguillermaz.github.io/Tierward/guide/quick-start) in the docs.
 
 ```bash
 npx tierward init
