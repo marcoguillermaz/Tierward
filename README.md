@@ -6,8 +6,8 @@
 [![CI](https://github.com/marcoguillermaz/Tierward/actions/workflows/ci.yml/badge.svg)](https://github.com/marcoguillermaz/Tierward/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/marcoguillermaz/Tierward/badge)](https://securityscorecards.dev/viewer/?uri=github.com/marcoguillermaz/Tierward)
 
-> **Claude generates. Your team decides.**
-> An open-source scaffold that brings AI-assisted coding into your team, for the product managers and developers who own the outcome.
+> **Claude generates. You or your team decides.**
+> A development framework that gives Claude Code a governed, phased process, so you build real software consistently and reviewably, from day one.
 > MCP-native: read Tierward governance state from Claude Desktop, ChatGPT, Cursor, VS Code.
 
 Claude Code is fast. The problem it creates isn't in the code: it's in the review. When AI writes everything autonomously, you end up approving diffs you don't fully understand, catching regressions two blocks later, and losing the thread of what the system actually does.
