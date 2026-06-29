@@ -11,6 +11,26 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.34.0] — 2026-06-29
+
+### Added
+
+- **Branded wizard onboarding.** `npx tierward init` opens with a Tierward masthead and a one-line value statement. The post-scaffold output closes with a tier-aware summary of what you got and a concrete "Try it now" first action.
+- **Human-approval commit gate** (Tier M/L): a hook blocks `git commit` until you approve the block's requirements at the Phase 1 STOP gate. Governance enforced from your approval, not asserted by Claude.
+- **Go support** across the audit skills (security, performance, migration, dependency, doc, API-contract, infrastructure, pr-review, database).
+
+### Changed
+
+- **Positioning, on every surface** (README, npm page, docs site). Tierward now leads with the governed, phased process and the human-approval commit gate; the test gate is presented as verification rather than the headline. Hook: "Claude generates. You or your team decides."
+- **Greenfield 0-to-1 activation.** The tier-upgrade command works (`init --tier=s|m|l`), the test gate no longer deadlocks on an empty project, and discovery turns an idea into a plan.
+- **Tier 0 guidance.** A lightweight, proactive guide for the Discovery tier. The arch-audit reminder no longer nags brand-new projects; it waits until at least one block has completed.
+
+### Fixed
+
+- vite bumped 5 to 6.4.3, resolving the open Dependabot CVEs.
+
+---
+
 ## [1.33.4] — 2026-06-24
 
 ### Fixed
