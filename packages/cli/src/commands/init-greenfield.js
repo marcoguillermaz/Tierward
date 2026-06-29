@@ -415,7 +415,7 @@ export async function initGreenfield(options) {
   }
 
   console.log();
-  console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/tierward'));
+  console.log(chalk.dim('Docs: https://marcoguillermaz.github.io/Tierward/'));
   console.log();
   printStarCta();
 }
