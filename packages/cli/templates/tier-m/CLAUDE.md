@@ -63,6 +63,8 @@
 
 **Exception - read-only operations**: `Read`, `Grep`, `Glob`, `git status/log/diff` may run without prior confirmation.
 
+Before claiming how code or a system behaves, read the relevant files or output first. If you haven't read them, say so and treat the statement as an assumption.
+
 ## Reference Documents
 - **Requirements**: `docs/requirements.md`
 - **Progress tracker**: `docs/implementation-checklist.md`
