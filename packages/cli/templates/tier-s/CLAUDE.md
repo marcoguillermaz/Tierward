@@ -35,6 +35,8 @@ Before any action that modifies files, configuration, or external systems:
 
 **Exception**: `Read`, `Grep`, `Glob`, `git status/log/diff` are always free - no confirmation needed.
 
+Before claiming how code or a system behaves, read the relevant files or output first. If you haven't read them, say so and treat the statement as an assumption.
+
 ## Environment
 - `.env.local` - never commit. Contains [list key env vars without values].
 - [Any non-obvious environment setup.]

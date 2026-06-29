@@ -58,8 +58,7 @@ describe('printNextSteps - closing brand frame + try-it-now', () => {
     captureStart();
     printNextSteps({ tier: 's', mode: 'greenfield' });
     const out = captureEnd();
-    assert.match(out, /fix\//);
-    assert.match(out, /Fast Lane/);
+    assert.match(out, /fix\/ branch.*Fast Lane activates automatically/);
   });
 });
 

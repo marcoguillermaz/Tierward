@@ -55,6 +55,9 @@
 ## Known Patterns
 <!-- Add non-obvious gotchas here as you discover them. -->
 <!-- Format: short title → what → why it matters → how to handle it -->
+<!-- Worktree setup: standard for all functional blocks. Document the worktree path, branch prefix,
+     and any env copy steps here. See pipeline.md Phase 0 for setup commands.
+     Example: worktrees at `.claude/worktrees/[block-name]`, prefix `worktree-`, base `staging`. -->
 
 ## Interaction Protocol - Plan-then-Confirm
 
@@ -71,6 +74,8 @@
 **Exception - active Phase 2**: once a plan is confirmed and an execution keyword was given, Claude proceeds autonomously through implementation without re-confirming each individual file edit or tool call. The confirmation covers the approved plan, not each step.
 
 **Exception - read-only operations**: `Read`, `Grep`, `Glob`, `git status/log/diff` may run without prior confirmation.
+
+Before claiming how code or a system behaves, read the relevant files or output first. If you haven't read them, say so and treat the statement as an assumption.
 
 ## Reference Documents
 - **Session recovery**: `.claude/session/` - per-block session files.

@@ -121,7 +121,7 @@ At the scope gate, Claude also declares whether **Phase 4 E2E** and **Phase 5d q
 |---|---|
 | `/arch-audit` | Audits governance files vs. latest Anthropic docs (run weekly) |
 | `/security-audit` | Reviews API routes and auth guards |
-| `/skill-dev` | Code quality and tech debt audit |
+| `/skill-dev` | Code quality and tech debt audit — see `.claude/skills/skill-dev/AGENT_PATTERN.md` to run checks in parallel or chain into a Workflow pipeline |
 | `/skill-db` | Database schema and query audit |
 | `/visual-audit` | Visual polish review via Playwright screenshots |
 | `/ux-audit` | User experience flow analysis |

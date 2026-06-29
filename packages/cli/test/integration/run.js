@@ -1369,14 +1369,14 @@ async function scenarioPlaceholderNoiseReduction() {
     }
   }
 
-  // Verify CLAUDE.md line count reduced (raw template ~92 lines with injections, stripped should be < 90).
+  // Verify CLAUDE.md line count reduced (raw template ~94 lines with injections, stripped should be < 92).
   // The threshold scales linearly with the Active Skills list (one line per skill); raise it as new skills
   // are added to the registry so this guard catches regressions, not growth.
   const lineCountM = claudeM.split('\n').length;
-  if (lineCountM < 90) {
+  if (lineCountM < 92) {
     pass(`Tier M: CLAUDE.md line count reduced (${lineCountM} lines)`);
   } else {
-    fail(`Tier M: CLAUDE.md still ${lineCountM} lines - expected < 90 after stripping`);
+    fail(`Tier M: CLAUDE.md still ${lineCountM} lines - expected < 92 after stripping`);
   }
 
   // Tier S - Known Patterns stripped (only section applicable)

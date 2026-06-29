@@ -52,6 +52,28 @@ Then:
 - Do not re-read files already in context - use the already-acquired line reference.
 - **Branch check**: if on `main` or `staging`, stop. Development always starts on `feature/block-name`.
 
+## Worktree isolation
+
+Use git worktrees to give each feature block an isolated working tree and a dedicated Claude Code session. Branch collisions and dirty working tree conflicts go away.
+
+**Setup** (once per functional block, before Phase 1):
+
+```bash
+git worktree add .claude/worktrees/[block-name] -b worktree-[block-name] staging
+cp CLAUDE.md .claude/worktrees/[block-name]/CLAUDE.md
+[ -f .claude/CLAUDE.local.md ] && cp .claude/CLAUDE.local.md .claude/worktrees/[block-name]/.claude/CLAUDE.local.md
+```
+
+Then use the `EnterWorktree` tool (Claude Code harness) or open `.claude/worktrees/[block-name]/` as a separate project in a new Claude Code session.
+
+**Hard rules**:
+- Always base the new branch on `staging`, never `main`.
+- If the project uses migrations: check numbering against the main repo before writing any migration inside a worktree.
+- Never merge two unreviewed worktrees to `staging` simultaneously. Serial staging only.
+- Run `ExitWorktree` (or end the worktree session) **before** `git worktree remove`. Removing an active worktree causes CWD loss.
+
+Teardown is in Phase 8.
+
 ## Phase 1 - Requirements ⏸ STOP
 
 - **Rename session file**: once the block name is known, rename `block-new-session.md` → `block-[name].md`. Skip if already named correctly (resumed session).
@@ -311,6 +333,13 @@ Only after explicit confirmation:
    - If the confirmation is ambiguous (partial approval, open questions): ask explicitly - "Confirm session file deletion and block closure?" - then wait for a clear yes.
    - Never delete the session file speculatively.
 1b. **Delete first-session guide** (if it exists): remove `.claude/FIRST_SESSION.md`. This file is a one-time onboarding guide - it is no longer needed after the first block completes.
+1c. **Worktree teardown** *(only if this block ran in a worktree — skip otherwise)*:
+    - Run `ExitWorktree` or close the worktree session first.
+    - `git worktree remove .claude/worktrees/[block-name]`
+    - `git branch -d worktree-[block-name]`
+
+    ***** STOP before teardown if another developer is still active in a sibling worktree. Confirm serial staging is clear before removing. *****
+
 2. Update `docs/implementation-checklist.md`: mark ✅, add Log row.
 3. Update `CLAUDE.md` only if block introduces non-obvious patterns, changes access control rules, or adds a new convention.
 4. Update `docs/requirements.md` if spec changed during implementation.
@@ -359,6 +388,7 @@ Then run `/compact` to free the session context.
 ## Cross-cutting rules
 
 - **Never commit to `main` or `staging` directly.**
+- **Worktree isolation (hard rule)**: use a worktree for every functional block. Never merge two unreviewed worktrees to `staging` simultaneously. Serial staging only.
 - **STOP gates are hard stops** - not suggestions. Never proceed to the next phase without explicit confirmation.
 - **Execution keywords**: `Execute` · `Proceed` · `Confirmed` · `Go ahead` - the only phrases that authorize autonomous action after a STOP gate.
 - **Exception - active Phase 2**: once a plan is confirmed and an execution keyword was given, proceed autonomously through implementation without re-confirming each file edit. The confirmation covers the approved plan, not each step.
