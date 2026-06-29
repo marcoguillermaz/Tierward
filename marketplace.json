@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "tierward",
-  "description": "Tierward governance skills for Claude Code — commit enforcement, audits, code quality.",
+  "description": "Tierward governance skills for Claude Code: commit enforcement, audits, code quality.",
   "owner": {
     "name": "Marco Guillermaz",
     "url": "https://github.com/marcoguillermaz"

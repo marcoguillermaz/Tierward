@@ -14,9 +14,9 @@ npx tierward init
 
 Claude Code is fast. The gap it creates is not in the code; it is in the review. When an AI agent writes autonomously, decisions accumulate faster than anyone can verify them. Tierward closes that gap by enforcing a review contract directly in the development session, not as a prompt Claude may or may not follow, but as a process it cannot bypass.
 
-The Stop hook is a shell command in `.claude/settings.json`. When Claude tries to declare a task done, the hook runs your test suite. If tests fail, Claude is blocked and has to keep working. This is not a rule. It is control flow.
+You stay the decision-maker. STOP gates stop Claude before implementation: it presents its plan and waits for your explicit approval before writing code. A commit gate then blocks `git commit` until that approval is on record, and CODEOWNERS prevents anyone from modifying `.claude/` without a human reviewer.
 
-STOP gates in the pipeline work the same way: Claude stops before implementation, presents its plan, and waits for explicit confirmation before writing any code. CODEOWNERS prevents anyone from modifying `.claude/` without a human reviewer.
+Verification is built in at the same level. The Stop hook is a shell command in `.claude/settings.json`: when Claude tries to declare a task done, it runs your test suite, and if tests fail Claude is blocked and keeps working. It can't skip this step.
 
 ## Quick start
 
