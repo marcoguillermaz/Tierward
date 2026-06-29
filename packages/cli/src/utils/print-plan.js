@@ -81,8 +81,13 @@ export function printNextSteps(config, opts = {}) {
     console.log(
       `  ${step}. ` + chalk.bold('Try it now') + ' - open ' + chalk.cyan('claude') + ' and say:',
     );
-    console.log('       ' + chalk.cyan('"Start a new block: <the first thing you want to build>"'));
-    console.log(chalk.dim('       Watch Claude propose a plan and stop for your go-ahead.'));
+    console.log(
+      '       ' + chalk.cyan('"Start a new block: <the first feature you want to build>"'),
+    );
+    console.log(
+      chalk.dim('       A block is one feature, start to finish. Claude proposes a plan and'),
+    );
+    console.log(chalk.dim('       stops for your go-ahead before writing code.'));
   }
 
   if (mode === 'from-context') {
