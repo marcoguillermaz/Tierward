@@ -69,7 +69,7 @@ export function printNextSteps(config, opts = {}) {
       console.log(
         `  ${step++}. Read ` +
           chalk.cyan('.claude/FIRST_SESSION.md') +
-          " - your team's guide to the first session",
+          ' - pipeline map, STOP gates, and skill commands',
       );
     }
     console.log(
@@ -88,6 +88,9 @@ export function printNextSteps(config, opts = {}) {
       chalk.dim('       A block is one feature, start to finish. Claude proposes a plan and'),
     );
     console.log(chalk.dim('       stops for your go-ahead before writing code.'));
+    if (tier === 'S') {
+      console.log(chalk.dim('       Tip: use a fix/ branch — the Fast Lane activates automatically.'));
+    }
   }
 
   if (mode === 'from-context') {
