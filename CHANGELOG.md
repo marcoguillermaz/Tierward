@@ -11,6 +11,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.34.1] — 2026-06-29
+
+### Added
+
+- **Stale-block reminder** (Tier M/L): at session start, a hook checks whether an open block has been idle for 5 or more days and nudges you to close it or split the work. Keeps scope from silently drifting.
+
+### Fixed
+
+- **Block definition in the wizard close.** The post-scaffold "Try it now" step now explains what a block is, so the first prompt is actionable without prior Tierward context.
+- **Docs link.** All four init flows now point to the documentation site (`marcoguillermaz.github.io/Tierward/`) instead of the bare GitHub repository.
+
+---
+
 ## [1.34.0] — 2026-06-29
 
 ### Added
