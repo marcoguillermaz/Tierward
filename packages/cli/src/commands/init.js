@@ -6,19 +6,12 @@ import { initGreenfield } from './init-greenfield.js';
 import { initFromContext } from './init-from-context.js';
 import { initInPlace } from './init-in-place.js';
 import { validateContextFile } from '../utils/validate-context.js';
+import { printWelcome } from '../utils/brand.js';
 
 const CONTEXT_FILENAME = 'CONTEXT.md';
 
 export async function init(options) {
-  console.log();
-  console.log(
-    chalk.bold('tierward') +
-      chalk.dim(' - rules, workflows, and pipeline templates for Claude Code'),
-  );
-  console.log();
-  console.log(chalk.dim('  Sets up your project so Claude works consistently from day one.'));
-  console.log(chalk.dim('  Takes ~2 minutes. You can edit everything after.'));
-  console.log();
+  printWelcome();
 
   // ── Detect CONTEXT.md and prefer it ─────────────────────────────────
   // When CONTEXT.md exists in cwd, read it and scaffold deterministically

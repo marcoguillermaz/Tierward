@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { execSync } from 'child_process';
 import { NATIVE_STACKS, WEB_STACKS } from '../scaffold/skill-registry.js';
+import { printCloseMasthead } from './brand.js';
 
 const TIER_LABELS = { 0: 'Discovery', S: 'Fast Lane', M: 'Standard', L: 'Full' };
 
@@ -48,6 +49,13 @@ export function printPlan(config) {
 
 export function printNextSteps(config, opts = {}) {
   const mode = config.mode || 'greenfield';
+  const tierUpper = (config.tier || 's').toUpperCase();
+
+  // Coherent frame: the same wordmark closes the experience, plus a one-line,
+  // tier-aware summary of what the developer now holds.
+  printCloseMasthead();
+  console.log('  ' + tierBlurb(tierUpper));
+  console.log();
 
   // 3.4 - adapt doctor command to execution context
   const doctorCmd = getDoctorCmd();
@@ -71,12 +79,10 @@ export function printNextSteps(config, opts = {}) {
         chalk.cyan('.claude/settings.json'),
     );
     console.log(
-      `  ${step}. Run ` +
-        chalk.cyan('claude') +
-        ' - start with ' +
-        chalk.cyan('/arch-audit') +
-        ' to verify setup',
+      `  ${step}. ` + chalk.bold('Try it now') + ' - open ' + chalk.cyan('claude') + ' and say:',
     );
+    console.log('       ' + chalk.cyan('"Start a new block: <the first thing you want to build>"'));
+    console.log(chalk.dim('       Watch Claude propose a plan and stop for your go-ahead.'));
   }
 
   if (mode === 'from-context') {
@@ -132,6 +138,17 @@ export function printNextSteps(config, opts = {}) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+// One-line, tier-aware summary of what the scaffold gave the developer.
+function tierBlurb(tier) {
+  const map = {
+    0: 'Discovery (Tier 0) - a lightweight, guided setup to start building fast.',
+    S: 'Fast Lane (Tier S) - a lightweight workflow for quick, low-risk changes.',
+    M: 'Standard (Tier M) - a phased pipeline with STOP gates you approve, audit skills, and a commit gate.',
+    L: 'Full (Tier L) - the complete phased pipeline for complex, team-scale work, audit skills, and a commit gate.',
+  };
+  return chalk.dim(map[tier] || map.S);
+}
 
 function formatMode(mode) {
   return (
