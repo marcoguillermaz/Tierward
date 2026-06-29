@@ -21,7 +21,31 @@ function captureEnd() {
 }
 
 // Lazy import so the module loads after we've verified exports exist.
-const { printStarCta } = await import('../../src/utils/print-plan.js');
+const { printStarCta, printNextSteps } = await import('../../src/utils/print-plan.js');
+
+describe('printNextSteps - closing brand frame + try-it-now', () => {
+  it('closes with the Tierward wordmark (coherent frame)', () => {
+    captureStart();
+    printNextSteps({ tier: 'm', mode: 'greenfield' });
+    const out = captureEnd();
+    assert.match(out, /TIERWARD/);
+  });
+
+  it('shows a tier-aware one-liner (Tier M = Standard)', () => {
+    captureStart();
+    printNextSteps({ tier: 'm', mode: 'greenfield' });
+    const out = captureEnd();
+    assert.match(out, /Standard \(Tier M\)/);
+  });
+
+  it('greenfield ends with a concrete "Try it now" first action', () => {
+    captureStart();
+    printNextSteps({ tier: 's', mode: 'greenfield' });
+    const out = captureEnd();
+    assert.match(out, /Try it now/);
+    assert.match(out, /Start a new block/);
+  });
+});
 
 describe('printStarCta', () => {
   it('prints the GitHub URL', () => {
