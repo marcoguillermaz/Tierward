@@ -243,7 +243,7 @@ export async function initFromContext(options) {
     chalk.yellow.bold('Important:') +
       ' CONTEXT_IMPORT.md is added to .gitignore - it contains local paths.',
   );
-  console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/tierward'));
+  console.log(chalk.dim('Docs: https://marcoguillermaz.github.io/Tierward/'));
 }
 
 async function appendToGitignore(dir, entries) {

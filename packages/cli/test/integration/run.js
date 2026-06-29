@@ -739,6 +739,12 @@ async function scenarioArchAuditTimestamp() {
         } else {
           fail(`Tier ${tier}: arch-audit nag not gated on completed-block count`);
         }
+        // F-3: stale-block reminder (active block-*.md open >=5 days → scope-creep prompt).
+        if (raw.includes('block-*.md') && raw.includes('has been open')) {
+          pass(`Tier ${tier}: SessionStart wires the stale-block reminder`);
+        } else {
+          fail(`Tier ${tier}: SessionStart missing the stale-block reminder`);
+        }
       }
     }
 

@@ -460,7 +460,7 @@ export async function initInPlace(options) {
   console.log(chalk.bold('Next steps:'));
   printNextSteps(config, { ranDoctor, ranPreCommit });
   console.log();
-  console.log(chalk.dim('Docs: https://github.com/marcoguillermaz/tierward'));
+  console.log(chalk.dim('Docs: https://marcoguillermaz.github.io/Tierward/'));
   console.log();
   printStarCta({ doctorPassed: ranDoctor || undefined });
 }
