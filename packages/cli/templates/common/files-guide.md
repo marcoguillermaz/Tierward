@@ -173,7 +173,7 @@ No `settings.local.json` is currently active - personal overrides are in `~/.cla
 Key settings configured:
 - `attribution.commit/pr: ""` - suppresses automatic Co-Authored-By (pipeline adds it manually in commit heredoc)
 - `includeGitInstructions: false` - removes redundant built-in git instructions from system prompt (pipeline.md covers this); replaces the old `env.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` env var approach
-- `hooks.SessionStart` - checks `.claude/session/last-arch-audit` timestamp in the project directory; if >7 days since last `/arch-audit` **and at least one block has completed** (a dated row in `docs/implementation-checklist.md`), prints a reminder at session open. The completed-block gate means a brand-new project is never nagged about an audit it cannot need yet
+- `hooks.SessionStart` - checks `.claude/session/last-arch-audit` timestamp in the project directory; if >7 days since last `/arch-audit` **and at least one block has completed** (a dated row in `docs/implementation-checklist.md`), prints a reminder at session open. The completed-block gate means a brand-new project is never nagged about an audit it cannot need yet. Also emits a **stale-block reminder** (tier M/L): if the active `.claude/session/block-*.md` has been open ≥5 days, it surfaces a scope-creep prompt (close the block in Phase 8 or split the work)
 - `hooks.InstructionsLoaded` - appends raw hook payload (JSON) to `/tmp/claude-instructions-YYYYMMDD.log` (async, non-blocking); inspect this file to debug which CLAUDE.md or rules files were loaded and when
 
 ---
