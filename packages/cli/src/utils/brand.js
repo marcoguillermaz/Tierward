@@ -19,8 +19,12 @@ export const TAGLINE = 'Build real software with Claude Code — with a process,
 // Canonical positioning statement (single-source). Used in the READMEs and the
 // docs site so all surfaces say the same thing.
 export const POSITIONING =
-  'A development framework that gives Claude Code a governed, phased process — ' +
+  'A development framework that gives Claude Code a governed, phased process, ' +
   'so you build real software consistently and reviewably, from day one.';
+
+// The README front-page hook. Individual contributors AND teams ("you or your
+// team") — Tierward keeps the human as the decision-maker, Claude generates.
+export const HOOK = 'Claude generates. You or your team decides.';
 
 // Masthead for the wizard OPEN: wordmark + hero + one intro paragraph + a light
 // expectation-setter, then the prompts follow.
