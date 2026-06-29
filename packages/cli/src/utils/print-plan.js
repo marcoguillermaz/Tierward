@@ -89,7 +89,9 @@ export function printNextSteps(config, opts = {}) {
     );
     console.log(chalk.dim('       stops for your go-ahead before writing code.'));
     if (tier === 'S') {
-      console.log(chalk.dim('       Tip: use a fix/ branch — the Fast Lane activates automatically.'));
+      console.log(
+        chalk.dim('       Tip: use a fix/ branch — the Fast Lane activates automatically.'),
+      );
     }
   }
 
