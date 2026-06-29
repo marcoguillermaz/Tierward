@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createPatch } from 'diff';
 import { violatesMinTier } from '../utils/team-settings.js';
+import { printStarCta } from '../utils/print-plan.js';
 import { loadTeamSettingsOrExit } from '../utils/team-settings-cli.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -206,6 +207,7 @@ async function runStandardUpgrade(cwd, options) {
   console.log(chalk.green('Upgrade complete.'));
   console.log(chalk.dim('Review the manual-review files above to pick up any improvements.'));
   console.log();
+  printStarCta();
 }
 
 /**
