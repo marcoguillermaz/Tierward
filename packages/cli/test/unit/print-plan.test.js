@@ -45,6 +45,22 @@ describe('printNextSteps - closing brand frame + try-it-now', () => {
     assert.match(out, /Try it now/);
     assert.match(out, /Start a new block/);
   });
+
+  it('Tier M/L greenfield: FIRST_SESSION.md pointer names what is inside', () => {
+    captureStart();
+    printNextSteps({ tier: 'm', mode: 'greenfield' });
+    const out = captureEnd();
+    assert.match(out, /FIRST_SESSION\.md/);
+    assert.match(out, /pipeline map/);
+  });
+
+  it('Tier S greenfield: includes fix/ branch tip (no FIRST_SESSION.md in Tier S)', () => {
+    captureStart();
+    printNextSteps({ tier: 's', mode: 'greenfield' });
+    const out = captureEnd();
+    assert.match(out, /fix\//);
+    assert.match(out, /Fast Lane/);
+  });
 });
 
 describe('printStarCta', () => {
