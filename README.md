@@ -46,7 +46,7 @@ If your team uses other AI coding tools alongside Claude Code, Tierward governs 
 
 **3. Run audit skills on demand.** Skills like `/security-audit`, `/arch-audit`, and `/systematic-debugging` are multi-step programs that run inside Claude Code. Call them when you need them: before a deploy, when a test fails, after a migration wave. Each produces a structured report.
 
-**4. Your team decides.** STOP gates pause Claude and present findings. CODEOWNERS guards `.claude/`. The Stop hook enforces test passage mechanically. No autonomous merges.
+**4. You or your team decides.** STOP gates pause Claude to present its plan, and a commit gate blocks `git commit` until you have approved. CODEOWNERS guards `.claude/`. A Stop hook also verifies your tests pass before a task can close. No autonomous merges.
 
 ---
 

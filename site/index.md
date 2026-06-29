@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: "Tierward"
-  text: "Governance skills for Claude Code"
+  text: "A governed process for building with Claude Code"
   tagline: "Claude generates. You or your team decides. A governed, phased process for building with Claude Code, tier by tier."
   actions:
     - theme: brand
@@ -16,7 +16,7 @@ hero:
 features:
   - icon: 🔒
     title: Mechanical enforcement
-    details: The Stop hook blocks Claude from declaring done until your tests pass. Not a reminder. A hard block at the OS level.
+    details: Claude can't commit until you approve the plan. STOP gates and a commit gate enforce that mechanically. A Stop hook also blocks task completion until your tests pass. These are hard blocks in the control flow, not configuration you tune.
   - icon: 📋
     title: 26 audit skills
     details: Executable multi-step programs that run inside Claude Code. Security, performance, architecture, accessibility, compliance. Each produces a structured report.
