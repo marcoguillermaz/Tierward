@@ -119,7 +119,7 @@ Using hook documentation fetched in Step 1 (`https://code.claude.com/docs/en/hoo
 
 **H1a - Event name currency**
 Check: every event name in `settings.json` hooks matches the current official event list.
-Run: `grep -o '"SessionStart"\|"SessionEnd"\|"UserPromptSubmit"\|"UserPromptExpansion"\|"PreToolUse"\|"PostToolUse"\|"PostToolUseFailure"\|"Stop"\|"StopFailure"\|"PermissionRequest"\|"PermissionDenied"\|"SubagentStart"\|"SubagentStop"\|"TaskCreated"\|"TaskCompleted"\|"TeammateIdle"\|"FileChanged"\|"CwdChanged"\|"ConfigChange"\|"PreCompact"\|"PostCompact"\|"InstructionsLoaded"\|"Notification"\|"Elicitation"\|"ElicitationResult"\|"WorktreeCreate"\|"WorktreeRemove"' .claude/settings.json | sort -u`
+Run: `grep -o '"SessionStart"\|"Setup"\|"UserPromptSubmit"\|"UserPromptExpansion"\|"PreToolUse"\|"PostToolUse"\|"PostToolUseFailure"\|"PostToolBatch"\|"MessageDisplay"\|"Stop"\|"StopFailure"\|"PermissionRequest"\|"PermissionDenied"\|"SubagentStart"\|"SubagentStop"\|"TaskCreated"\|"TaskCompleted"\|"TeammateIdle"\|"FileChanged"\|"CwdChanged"\|"ConfigChange"\|"PreCompact"\|"PostCompact"\|"InstructionsLoaded"\|"Notification"\|"Elicitation"\|"ElicitationResult"\|"WorktreeCreate"\|"WorktreeRemove"' .claude/settings.json | sort -u`
 Pass: all events appear in the Step 1 documentation. Any unrecognized event → RECOMMEND removal or rename.
 
 **H1b - JSON response field compliance (prompt hooks)**
