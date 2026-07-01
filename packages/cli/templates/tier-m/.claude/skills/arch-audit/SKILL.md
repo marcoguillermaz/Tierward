@@ -175,9 +175,12 @@ Also flag any of the following new events from recent Claude Code releases that 
 - `Elicitation` / `ElicitationResult` - MCP server user-input request interception
 - `ConfigChange` - config source change detection
 - `CwdChanged` - working directory change handling
-- `SessionEnd` - session teardown / final logging
 - `UserPromptExpansion` - intercept prompt after macro/template expansion
 - `TeammateIdle` - multi-agent coordination (notify when a teammate agent is idle)
+- `Setup` - one-time initialization on `--init` / `--maintenance` / `--init-only`
+- `PostToolBatch` - after a full batch of parallel tool calls resolves
+- `MessageDisplay` - while assistant message text is displayed
+- `StopFailure` - the turn ends due to an API error
 - Hook type `type: "mcp_tool"` (v2.1.118+) - hooks can invoke MCP tools directly
   These are RECOMMEND, not AUTO-FIX.
 
