@@ -92,13 +92,35 @@ describe('capture-approval hook (UserPromptSubmit)', () => {
     assert.match(sessionContent, /requirements_approved:\s*false/);
   });
 
-  it('never blocks the prompt (always exits 0, no stdout decision)', () => {
+  it('never blocks the prompt (always exits 0, never emits a decision JSON)', () => {
     const { stdout } = runHook(
       CAPTURE,
       { prompt: 'Proceed' },
       { sessionFrontMatter: 'block: test\nrequirements_approved: false' },
     );
-    assert.equal(stdout.trim(), '', 'capture hook must not emit a block decision');
+    assert.ok(
+      !stdout.includes('"decision"') && !stdout.includes('"permissionDecision"'),
+      'capture hook must not emit a block/deny decision',
+    );
+  });
+
+  it('emits a one-time star CTA on first approval (additionalContext for model)', () => {
+    const { stdout } = runHook(
+      CAPTURE,
+      { prompt: 'Proceed' },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: false' },
+    );
+    assert.ok(stdout.includes('★'), 'star CTA emitted on first approval');
+    assert.ok(stdout.includes('github.com/marcoguillermaz/Tierward'), 'GitHub URL present');
+  });
+
+  it('does not emit star CTA when already approved (idempotent)', () => {
+    const { stdout } = runHook(
+      CAPTURE,
+      { prompt: 'Proceed' },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: true' },
+    );
+    assert.ok(!stdout.includes('★'), 'no star CTA when block was already approved');
   });
 
   it('adds the approval field when the session file front matter lacks it', () => {

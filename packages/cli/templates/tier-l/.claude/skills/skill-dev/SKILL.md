@@ -366,3 +366,4 @@ Each entry **must** include a `Regression risk` field:
 
 - Do NOT make any code changes.
 - After producing the report, ask: "Should I implement the High/Critical priority fixes identified?"
+- To run audit checks in parallel or chain this skill into a multi-phase Workflow pipeline, see `AGENT_PATTERN.md` in this directory.

@@ -110,7 +110,7 @@ You can always override the selection. The Tier 2 sweep adds EARS-style analysis
 |---|---|
 | `/arch-audit` | Audits governance files vs. latest Anthropic docs (run weekly) |
 | `/security-audit` | Reviews API routes and auth guards |
-| `/skill-dev` | Code quality and tech debt audit |
+| `/skill-dev` | Code quality and tech debt audit — see `.claude/skills/skill-dev/AGENT_PATTERN.md` to run checks in parallel or chain into a Workflow pipeline |
 | `/compact` | Frees context window (run at Phase 8.5) |
 | `npx tierward doctor` | Checks your scaffold setup |
 
