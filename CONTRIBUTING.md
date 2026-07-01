@@ -281,7 +281,7 @@ Tierward ships two test layers:
 
 **Integration tests** (`packages/cli/test/integration/run.js`) scaffold full projects to a tmp directory and assert on file structure, content, and CLI behavior. Uses a custom `pass()` / `fail()` reporter (no test framework). Total: 1170 checks across ~118 scenarios. Run via `npm test --prefix packages/cli`.
 
-**Fixtures** for full CLI execution via `--answers` live in `packages/cli/test/integration/fixtures/`. Each fixture is a JSON file matching the wizard prompt schema. Used by `scenarioWizardCoverage`.
+**Fixtures** for full CLI execution via `--answers` live in `packages/cli/test/fixtures/wizard-answers/`. Each fixture is a JSON file matching the wizard prompt schema. Used by `scenarioWizardCoverage`.
 
 **Output directory** for integration scaffolds is `packages/cli/test/integration/output/` — gitignored. Cleared at the start of every run.
 
