@@ -229,7 +229,7 @@ Read-only tools exposed:
 
 *Note: The legacy `cdk_*` tool names remain available as deprecated aliases for backwards compatibility.*
 
-The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.33.0.
+The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.34.1.
 
 ---
 
@@ -292,7 +292,7 @@ A separate **template-coverage** layer (under `packages/cli/test/template-covera
 
 See [GitHub Milestones](https://github.com/marcoguillermaz/Tierward/milestones) for the 12-month plan.
 
-**Current**: v1.33.4 fixes a critical wizard regression: `npx tierward init` was completely broken on all interactive installs due to an inquirer v14 prompt-type rename (list→select), undetected by the test suite because tests bypass the real prompt layer. Adds a static guard (`prompt-types.test.js`) and a published-package smoke test that drives the installed bins directly, never the source path, catching the class of breakage behind this and the v1.33.3 MCP symlink regression. v1.33.2 added `mcpName`, auto-publishes to the MCP registry on every GitHub Release via OIDC, and ships the Stop hook fix across all four scaffold tiers. v1.33.1 adds an output-style language rule and extends `doctor` validation to tier 0. v1.33.0 adds `/systematic-debugging` (tier S+): root-cause enforcement with a STOP gate between hypothesis and fix.
+**Current**: v1.34.1 adds a stale-block reminder for Tier M/L (idle blocks nudge you to close or split after 5+ days) and fixes the post-scaffold "Try it now" step and docs links in all four init flows. v1.34.0 ships branded wizard onboarding, a human-approval commit gate for Tier M/L, Go support across the audit skill portfolio, and a greenfield 0-to-1 activation fix. v1.33.4 fixed `npx tierward init` being completely broken on all interactive installs due to an inquirer v14 prompt-type rename. v1.33.2 added `mcpName` and auto-publish to the MCP registry via OIDC. v1.33.1 introduces an output-style language rule and extends `doctor` validation to tier 0. v1.33.0 brings `/systematic-debugging` (tier S+): root-cause enforcement with a STOP gate between hypothesis and fix.
 
 **Next**: `/arch-audit` MCP-aware once the upstream Anthropic spec MCP server lands. `/privacy-audit` re-eval (Issue #97 sub-track 3) when AST tracing matures or a demand signal materializes.
 
