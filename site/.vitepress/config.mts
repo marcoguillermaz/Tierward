@@ -17,7 +17,7 @@ export default defineConfig({
       { text: 'Skills', link: '/skills/' },
       { text: 'Config', link: '/config/doctor' },
       {
-        text: 'v1.33',
+        text: 'v1.34',
         items: [
           { text: 'Changelog', link: 'https://github.com/marcoguillermaz/Tierward/blob/main/CHANGELOG.md' },
           { text: 'GitHub', link: 'https://github.com/marcoguillermaz/Tierward' },

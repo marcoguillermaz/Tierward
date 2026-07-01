@@ -27,6 +27,7 @@ credentials/
 
 # Claude Code — project context (local, never commit)
 CLAUDE.md
+AGENTS.md
 
 # Claude Code — workspace config (used to develop Tierward, not part of the product)
 .claude/rules/
