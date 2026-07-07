@@ -111,17 +111,17 @@ Major (N)
 Minor (N) — to append to docs/refactoring-backlog.md if user proceeds
 - <one-liner>
 
-Decision needed: integrate fix · fix branch · proceed merge?
+Decision needed (default: **integrate** for a fix on this open PR): integrate fix · fix branch · proceed merge?
 ```
 
 If zero Critical and zero Major: omit those sections, list Minor in ≤ 2 lines, recommend `proceed merge` directly.
 
 ## Step 7 — Wait for user decision
 
-Three valid responses:
+Three valid responses (**`integrate` is the default** for fixing findings on the PR under review):
 
-1. **integrate** — apply the fix in the current branch, run `/commit`, push, re-run `gh pr checks --watch`, then re-invoke `/pr-review <N>` to confirm.
-2. **fix branch** — open `fix/<short-desc>` from the base branch, apply, full pipeline. Reference the original PR in the description.
+1. **integrate** *(default)* — apply the fix in the current branch, run `/commit`, push, re-run `gh pr checks --watch`, then re-invoke `/pr-review <N>` to confirm. This is the right choice for a Critical/Major found on this PR: the fix lands on the same branch/PR.
+2. **fix branch** — open `fix/<short-desc>` from the base branch, apply, full pipeline. Reference the original PR in the description. **Not for fixing this PR**: a branch cut from the base cannot contain this open PR's own changes, so it only makes sense as a deliberately deferred, decoupled follow-up (e.g. a separate refactor), never as the default for resolving a finding on the current PR.
 3. **proceed** — user runs `gh pr merge` themselves. Append unresolved Minor findings to `docs/refactoring-backlog.md` with the appropriate ID prefix (`PERF-`, `DEV-`, `SEC-`, `DB-`, `A-`, `S-`, `T-`, `N-`).
 
 Never call `gh pr merge` from this skill — merge is always the user's decision. The pipeline.md Phase 8 (Tier M/L) or FL-2 (Tier S) is the canonical merge location, and it's a human gate.

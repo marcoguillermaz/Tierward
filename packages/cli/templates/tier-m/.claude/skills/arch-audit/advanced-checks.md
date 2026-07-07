@@ -74,10 +74,24 @@ Expected: at least 1 match in the Step 1 section. Missing = FAIL.
 AUTO-FIX: add `(model: haiku)` to the research agent invocation in Step 1.
 
 **T2 - Haiku model on all Explore subagents across skills**
-Check: every "Launch ... Explore subagent" instruction in all SKILL.md files must explicitly name `model: haiku`.
-Batch command: `grep -rn "Explore subagent" .claude/skills/*/SKILL.md | grep -v "model.*haiku\|haiku"`
-Expected: 0 matches (all invocations already name haiku). Any match = FAIL.
-AUTO-FIX: append `(model: haiku)` to the invocation description in each failing line.
+Check: every "Launch ... Explore subagent" instruction in all SKILL.md files must explicitly name `model: haiku`. The model directive may appear on the anchor line OR in the next few lines of the same invocation block (a step header names the subagent, the model directive follows in the instruction body). A same-line-only grep misses that layout and produces false negatives.
+Batch command (windowed lookahead - buffers each file, then for each anchor checks the anchor line plus the next 5 lines for `haiku`, case-insensitive):
+```bash
+for f in .claude/skills/*/SKILL.md; do
+  awk 'BEGIN{IGNORECASE=1} {L[NR]=$0} END{
+    for(i=1;i<=NR;i++){
+      if(L[i] ~ /Explore (sub)?agent/){
+        hay=0
+        for(j=i;j<=i+5 && j<=NR;j++){ if(L[j] ~ /haiku/) hay=1 }
+        if(!hay) print FILENAME":"i": "L[i]
+      }
+    }
+  }' "$f"
+done
+```
+Expected: 0 matches (every launch names haiku on or near its anchor line). Any match = FAIL.
+Known-benign: a line that clearly back-references an already-launched agent (e.g. "the Explore subagent from Step 1") rather than a fresh launch - treat as benign, not a FAIL.
+AUTO-FIX: append `(model: haiku)` to the invocation description in each genuinely failing launch.
 
 **T3 - Phase 5d Playwright concurrency note**
 Check: does pipeline.md Phase 5d document that `/ui-audit` (static, no Playwright by default) can run concurrently with Playwright-based skills, and that `/visual-audit`, `/ux-audit`, `/responsive-audit` must run sequentially (shared MCP Playwright session)?
