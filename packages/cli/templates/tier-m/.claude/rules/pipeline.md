@@ -307,7 +307,7 @@ Apply any fix before moving to the next check.
 
 This message is **non-negotiable** - never skip it, even if the block was small or the session is long.
 
-Then run `/compact` to free the session context.
+Then the developer may run `/compact` to free the session context — optional, nothing downstream depends on it, and `/compact` is a CLI command only the user can run (no agent tool performs it).
 
 ---
 
@@ -321,6 +321,6 @@ Then run `/compact` to free the session context.
 - **Conventional commits**: `feat(scope):`, `fix(scope):`, `docs:`, `chore:` - imperative, under 72 chars.
 - **No unrequested changes**: implement only what was approved in Phase 1.
 - **Dependency scan is mandatory**: always run `/dependency-scan` in Phase 1. Never produce a file list without first running the full scan.
-- **Context hygiene**: if context window reaches ~50% during Phase 2, run `/compact [keep: current implementation state and open TODOs]` before continuing.
+- **Context hygiene**: if you notice the context window approaching ~50% during Phase 2, ask the user to run `/compact [keep: current implementation state and open TODOs]` before continuing (`/compact` is a CLI command only the user can run — no agent tool performs it).
 - **Secret hygiene**: never commit `.env*` files, tokens, or credentials.
 - **Read-only ops are always free**: `Read`, `Grep`, `Glob`, `git status/log/diff` may run without prior confirmation - no STOP gate needed for these.

@@ -92,8 +92,8 @@ Apply this test to every line: **"Would removing this cause Claude to make mista
 - **`InstructionsLoaded` hook**: use exclusively for debugging CLAUDE.md/rules load order - not for general logic. *(Source: 2)*
 - **Conditional `if` field** (v2.1.85+): `"if": "Bash(git *)"` uses permission rule syntax to filter hook activations. *(Source: 3)*
 
-**Available hook events (as of v2.1.118):**
-`SessionStart` · `SessionEnd` · `UserPromptSubmit` · `UserPromptExpansion` · `PreToolUse` · `PostToolUse` · `PostToolUseFailure` · `PermissionRequest` · `PermissionDenied` · `Stop` · `StopFailure` · `SubagentStart` · `SubagentStop` · `TaskCreated` · `TaskCompleted` · `InstructionsLoaded` · `CwdChanged` · `FileChanged` · `PreCompact` · `PostCompact` · `WorktreeCreate` · `WorktreeRemove` · `ConfigChange` · `Notification` · `Elicitation` · `ElicitationResult` · `TeammateIdle`
+**Available hook events (as of v2.1.199 — 30 events):**
+`SessionStart` · `Setup` · `UserPromptSubmit` · `UserPromptExpansion` · `PreToolUse` · `PermissionRequest` · `PermissionDenied` · `PostToolUse` · `PostToolUseFailure` · `PostToolBatch` · `Notification` · `MessageDisplay` · `SubagentStart` · `SubagentStop` · `TaskCreated` · `TaskCompleted` · `Stop` · `StopFailure` · `TeammateIdle` · `InstructionsLoaded` · `ConfigChange` · `CwdChanged` · `FileChanged` · `WorktreeCreate` · `WorktreeRemove` · `PreCompact` · `PostCompact` · `Elicitation` · `ElicitationResult` · `SessionEnd`
 
 ---
 

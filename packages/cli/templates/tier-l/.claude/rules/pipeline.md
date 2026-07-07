@@ -70,7 +70,7 @@ Then use the `EnterWorktree` tool (Claude Code harness) or open `.claude/worktre
 - Always base the new branch on `staging`, never `main`.
 - If the project uses migrations: check numbering against the main repo before writing any migration inside a worktree.
 - Never merge two unreviewed worktrees to `staging` simultaneously. Serial staging only.
-- Run `ExitWorktree` (or end the worktree session) **before** `git worktree remove`. Removing an active worktree causes CWD loss.
+- Run `ExitWorktree({action: "keep"})` (or end the worktree session) **before** `git worktree remove`. Use `action: "keep"`, not `"remove"`: `ExitWorktree` only removes worktrees it created itself via `name:` — a worktree pre-created by the `git worktree add` Setup step above and entered via `path:` is never eligible for `"remove"`, so that call always fails. Filesystem removal is done by the `git worktree remove` line that follows. Removing an active worktree before exiting causes CWD loss.
 
 Teardown is in Phase 8.
 
@@ -188,7 +188,7 @@ Teardown is in Phase 8.
 - Use `EnterPlanMode` to present the complete approved plan in locked form.
 - Prompt user to enable **auto-accept edits** before proceeding.
 - Call `ExitPlanMode` once confirmed.
-- Run `/compact` to reset context before Phase 2 implementation.
+- ***** STOP - context reset required before Phase 2. `/compact` is a CLI command only the developer can run; no agent tool performs it. Tell the user: "Plan locked. Run `/compact` now to reset context, then reply to continue into Phase 2." Do NOT begin Phase 2 until the user confirms the compaction — starting without it defeats the reset before the most expensive phase. *****
 
 ## Phase 2 - Implementation
 
@@ -334,7 +334,7 @@ Only after explicit confirmation:
    - Never delete the session file speculatively.
 1b. **Delete first-session guide** (if it exists): remove `.claude/FIRST_SESSION.md`. This file is a one-time onboarding guide - it is no longer needed after the first block completes.
 1c. **Worktree teardown** *(only if this block ran in a worktree — skip otherwise)*:
-    - Run `ExitWorktree` or close the worktree session first.
+    - Run `ExitWorktree({action: "keep"})` first (never `"remove"` — the tool only removes worktrees it created via `name:`, not ones entered via `path:`; `"remove"` always fails here). Or close the worktree session.
     - `git worktree remove .claude/worktrees/[block-name]`
     - `git branch -d worktree-[block-name]`
 
@@ -381,7 +381,7 @@ Apply any fix before moving to the next check.
 
 This message is non-negotiable - never skip it, even for small blocks.
 
-Then run `/compact` to free the session context.
+Then the developer may run `/compact` to free the session context — optional, nothing downstream depends on it, and `/compact` is a CLI command only the user can run (no agent tool performs it).
 
 ---
 
@@ -396,7 +396,7 @@ Then run `/compact` to free the session context.
 - **Conventional commits**: `feat(scope):`, `fix(scope):`, `docs:`, `chore:` - imperative, under 72 chars.
 - **No unrequested changes**: implement only what was approved in Phase 1.
 - **Dependency scan is mandatory**: always run `/dependency-scan` in Phase 1. Never produce a file list without first running the full scan. An incomplete scan is a process error.
-- **Context hygiene**: if context window reaches ~50% during Phase 2, run `/compact [keep: current implementation state and open TODOs]` before continuing. Re-read `.claude/CLAUDE.local.md` after compact to restore active overrides.
+- **Context hygiene**: if you notice the context window approaching ~50% during Phase 2, ask the user to run `/compact [keep: current implementation state and open TODOs]` before continuing (`/compact` is a CLI command only the user can run — no agent tool performs it). After they confirm the compaction, re-read `.claude/CLAUDE.local.md` to restore active overrides.
 - **Secret hygiene**: never commit `.env*` files, tokens, or credentials.
 - **Immediate migration**: every migration file must be applied to the remote DB immediately after writing.
 - **Read-only ops are always free**: `Read`, `Grep`, `Glob`, `git status/log/diff` may run without prior confirmation.
