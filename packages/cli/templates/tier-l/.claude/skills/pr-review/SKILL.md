@@ -1,11 +1,11 @@
 ---
 name: pr-review
-description: Autonomous local PR review. Fetches the PR diff via `gh`, spawns a dedicated review subagent with universal + stack-specific severity criteria, posts the review as a comment on the PR (audit trail), and asks for a merge decision. Stack-aware via sibling PATTERNS.md (node-ts, python, swift in v1; agnostic body fallback for others). Severity rules configurable via `team-settings.json` `prReviewSeverity` (Option β); hard-coded universal defaults when absent (Option α). Default model is sonnet; `--deep` escalates to opus. Skill never modifies code, never auto-merges — merge is always the user's decision.
+description: Autonomous local code review. Reviews either an open PR's diff (via `gh`) or the local working diff against a base branch (`--local`, auto-selected when no PR exists yet), spawns a dedicated review subagent with universal + stack-specific severity criteria, posts the review as a comment on the PR (audit trail; skipped in local mode), and asks for a decision. Stack-aware via sibling PATTERNS.md (node-ts, python, swift in v1; agnostic body fallback for others). Severity rules configurable via `team-settings.json` `prReviewSeverity` (Option β); hard-coded universal defaults when absent (Option α). Default model is sonnet; `--deep` escalates to opus. Skill never modifies code, never auto-merges — merge is always the user's decision.
 user-invocable: true
 model: sonnet
 context: fork
-allowed-tools: Bash(gh pr view:*) Bash(gh pr list:*) Bash(gh pr diff:*) Bash(gh pr comment:*) Bash(gh repo view:*) Bash(git branch:*) Bash(git rev-parse:*) Read Glob Grep Agent
-argument-hint: [PR_NUMBER] [--deep] [--with-context]
+allowed-tools: Bash(gh pr view:*) Bash(gh pr list:*) Bash(gh pr diff:*) Bash(gh pr comment:*) Bash(gh repo view:*) Bash(git branch:*) Bash(git rev-parse:*) Bash(git diff:*) Bash(git merge-base:*) Read Glob Grep Agent
+argument-hint: [PR_NUMBER] [--local] [--base <branch>] [--deep] [--with-context]
 ---
 
 Run an autonomous PR review locally. Classify findings by severity, post the review as a comment for audit trail, and surface a merge decision to the user. Read-only: the skill orchestrates a review; it does not modify code, does not push, does not merge.
@@ -24,6 +24,8 @@ Parse `$ARGUMENTS`:
 | Arg | Behavior |
 |---|---|
 | `<PR_NUMBER>` (positional, optional) | Integer. If absent, detect from current branch in Step 1. |
+| `--local` | Review the local working diff (`git diff <base>...HEAD`) instead of a PR. Use before the PR exists to catch findings pre-push. **Auto-selected** in Step 1 when no PR is found for the branch, so an explicit flag is only needed to force local mode while an open PR also exists. |
+| `--base <branch>` | Base branch for `--local` diff (default: the repo's default branch, resolved in Step 1). Ignored in PR mode (the PR carries its own base). |
 | `--deep` | Escalate the review subagent from `sonnet` to `opus`. Use for changes touching auth, money, migrations, or shared utilities. Adds ~30-60s latency. |
 | `--with-context` | Pass the active session file (`.claude/session/block-*.md` if present) to the review subagent. Default OFF — review stays diff-pure and unbiased by prior decisions. |
 
@@ -31,20 +33,40 @@ Examples:
 
 - `/pr-review 122`
 - `/pr-review 122 --deep`
-- `/pr-review --deep` (resolves PR from current branch)
+- `/pr-review --deep` (resolves PR from current branch; falls back to local diff if none open)
+- `/pr-review --local` (review the working diff against the default base, before opening a PR)
+- `/pr-review --local --base staging`
 
-## Step 1 — Resolve PR number
+## Step 1 — Resolve PR number, or select local-diff mode
 
-If `PR_NUMBER` was passed, use it. Otherwise:
+**Mode selection:**
+
+- If `--local` was passed → **local mode** (skip PR resolution entirely).
+- Else if `PR_NUMBER` was passed → **PR mode** with that number.
+- Else detect a PR for the current branch:
+
+  ```bash
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  gh pr list --repo "$REPO" --head "$BRANCH" --state open --json number -q '.[0].number'
+  ```
+
+  If empty, retry with `--state merged` to catch a recently-merged PR. If a number is found → **PR mode**. If still nothing → **auto-fall back to local mode** (do NOT stop): there is no PR yet, so review the local diff. Announce: `No open PR for branch <X> — reviewing the local diff instead (run again after opening the PR for the audit-trail comment).`
+
+**Local mode — resolve the base branch and confirm there is a diff:**
 
 ```bash
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-gh pr list --repo "$REPO" --head "$BRANCH" --state open --json number -q '.[0].number'
+# --base <branch> if given; otherwise the repo default branch.
+BASE="${BASE_ARG:-$(gh repo view --repo "$REPO" --json defaultBranchRef -q .defaultBranchRef.name)}"
+git rev-parse --verify "$BASE" >/dev/null 2>&1 || BASE="origin/$BASE"
+git merge-base --is-ancestor "$BASE" HEAD 2>/dev/null; git rev-list --count "$BASE...HEAD"
 ```
 
-If empty, retry with `--state merged` to catch a recently-merged PR. If still nothing: respond `"No PR found for branch <X>. Pass a PR number explicitly: /pr-review <N>."` and stop.
+If the branch IS the base branch, or `git diff "$BASE"...HEAD` is empty: respond `"No local changes vs <BASE> to review. Commit or stage work first, or pass --base <branch>."` and stop. The diff uses three-dot `<BASE>...HEAD` (changes introduced on HEAD since it diverged from base) — the same set a PR against `<BASE>` would show.
 
-## Step 2 — Fetch PR metadata + diff
+## Step 2 — Fetch metadata + diff
+
+**PR mode:**
 
 ```bash
 gh pr view "$PR_NUMBER" --repo "$REPO" \
@@ -53,6 +75,18 @@ gh pr view "$PR_NUMBER" --repo "$REPO" \
 
 gh pr diff "$PR_NUMBER" --repo "$REPO" > /tmp/pr-review-${PR_NUMBER}.diff
 ```
+
+**Local mode** (no PR number — key the temp files off the branch name):
+
+```bash
+SLUG=$(echo "$BRANCH" | tr '/' '-')
+git diff "$BASE"...HEAD > /tmp/pr-review-local-${SLUG}.diff
+git diff "$BASE"...HEAD --stat | tail -1        # summary line for the stats field
+```
+
+Build the metadata fields from git rather than `gh pr view`: `title` = latest commit subject (`git log -1 --format=%s`), `state` = `LOCAL (no PR yet)`, `headRefName` = `$BRANCH`, `baseRefName` = `$BASE`, additions/deletions/changedFiles from `git diff "$BASE"...HEAD --shortstat`.
+
+In both modes, `<DIFF_PATH>` is the file written above.
 
 If the diff is over 50 000 lines: warn the user and ask whether to proceed. A very large diff produces shallow review; default proceed but flag in the report.
 
@@ -88,15 +122,21 @@ The subagent returns a structured markdown review.
 
 ## Step 5 — Post the review as a PR comment
 
+**PR mode:**
+
 ```bash
 gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file /tmp/pr-review-${PR_NUMBER}-output.md
 ```
 
 Always post — even on LGTM clean reviews — to maintain a permanent audit trail. The comment is the canonical record; the in-conversation summary in Step 6 is for the maintainer's terminal.
 
+**Local mode:** there is no PR to comment on, so skip `gh pr comment`. Write the report to `/tmp/pr-review-local-${SLUG}-output.md` and tell the user the audit-trail comment is **deferred** — re-run `/pr-review <N>` once the PR is open to post the canonical record. The local pass is a pre-push gate, not the audit trail.
+
 ## Step 6 — Synthesize for the user
 
-Parse the subagent output. Produce a compact in-terminal summary:
+Parse the subagent output. Produce a compact in-terminal summary.
+
+**PR mode:**
 
 ```
 PR #<N> — <TITLE>
@@ -116,6 +156,8 @@ Decision needed (default: **integrate** for a fix on this open PR): integrate fi
 
 If zero Critical and zero Major: omit those sections, list Minor in ≤ 2 lines, recommend `proceed merge` directly.
 
+**Local mode:** replace the header with `Local review — branch <BRANCH> vs <BASE> · Review model: <sonnet|opus> · Comment: deferred until PR opens`. Keep the Critical/Major/Minor sections identical. Replace the decision line with `Decision needed (default: **fix** before opening the PR): fix now · open PR as-is?` — see Step 7.
+
 ## Step 7 — Wait for user decision
 
 Three valid responses (**`integrate` is the default** for fixing findings on the PR under review):
@@ -123,6 +165,13 @@ Three valid responses (**`integrate` is the default** for fixing findings on the
 1. **integrate** *(default)* — apply the fix in the current branch, run `/commit`, push, re-run `gh pr checks --watch`, then re-invoke `/pr-review <N>` to confirm. This is the right choice for a Critical/Major found on this PR: the fix lands on the same branch/PR.
 2. **fix branch** — open `fix/<short-desc>` from the base branch, apply, full pipeline. Reference the original PR in the description. **Not for fixing this PR**: a branch cut from the base cannot contain this open PR's own changes, so it only makes sense as a deliberately deferred, decoupled follow-up (e.g. a separate refactor), never as the default for resolving a finding on the current PR.
 3. **proceed** — user runs `gh pr merge` themselves. Append unresolved Minor findings to `docs/refactoring-backlog.md` with the appropriate ID prefix (`PERF-`, `DEV-`, `SEC-`, `DB-`, `A-`, `S-`, `T-`, `N-`).
+
+**Local mode** — no PR exists yet, so the choice is whether to fix before opening it:
+
+1. **fix** *(default)* — apply the fix on the current branch, run `/commit`. No push/PR round-trip is spent on the finding. This is the whole point of the local pass: resolve Critical/Major *before* CI and reviewers see the PR.
+2. **open PR as-is** — the user opens the PR themselves; unresolved Minor findings are appended to `docs/refactoring-backlog.md` with the appropriate ID prefix. Re-run `/pr-review <N>` after the PR opens to post the audit-trail comment.
+
+Never open, push, or merge from this skill in either mode — those are the user's actions. The canonical merge gate stays pipeline.md Phase 8 (Tier M/L) or FL-2 (Tier S).
 
 Never call `gh pr merge` from this skill — merge is always the user's decision. The pipeline.md Phase 8 (Tier M/L) or FL-2 (Tier S) is the canonical merge location, and it's a human gate.
 
@@ -244,7 +293,7 @@ Produce a single markdown document. This is what gets posted as a PR comment.
 
 - **Never call `gh pr merge`**. Merge is the user's decision; this skill only reviews.
 - **Never modify code**. The subagent has read-only access; the orchestrator never patches.
-- **Always post the comment**. Even on LGTM clean reviews — the audit trail is the value.
+- **Always post the comment in PR mode**. Even on LGTM clean reviews — the audit trail is the value. Local mode has no PR to comment on: it writes the report to disk and defers the canonical comment to the later PR-mode pass.
 - **Never trust `--with-context` to absolve findings**. Session context informs the review; it does not override security or correctness signals.
 - **Never paste 50 000-line diffs into the subagent prompt**. Pass the path; the subagent reads from disk.
 
