@@ -109,6 +109,8 @@ For each skill, verify `model:` frontmatter fits the task's reasoning requiremen
 - `model: sonnet` appropriate for: cross-file judgment, complex analysis, fix application, multi-dimension scoring
 - `model: opus` appropriate for: screenshot-based visual reasoning, multi-role journey simulation, live aesthetic scoring - requires vision + deep analysis
 
+**Normative baseline:** the tier definitions above and the expected-state table below are the *enforcement* of the model/effort selection policy in `docs/model-effort-policy.md` (fast/balanced/frontier → haiku/sonnet/opus, plus the 5-dimension scoring rubric). That file is the source of truth for *why* a skill sits in a tier; this table is *what* is enforced. If the policy and this table disagree for a skill, reconcile them in the same change - never let them drift into two schemes. Currency check: compare the policy's `Last verified` date against today; if > 30 days old, RECOMMEND a review. If `docs/model-effort-policy.md` is absent (e.g. Tier S, which skips it), use the table below directly.
+
 Current expected state:
 | Skill | Expected | Rationale |
 |---|---|---|

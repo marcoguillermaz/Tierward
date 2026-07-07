@@ -64,21 +64,26 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
     'files-guide.md': '.claude/files-guide.md',
     'pipeline-standards.md': 'docs/pipeline-standards.md',
     'claudemd-standards.md': 'docs/claudemd-standards.md',
+    'model-effort-policy.md': 'docs/model-effort-policy.md',
   };
 
-  // Tier S (Fast Lane): skip informational docs not needed for quick fixes
-  if (tier.toLowerCase() === 's') {
-    for (const key of [
-      'adr-template.md',
-      'files-guide.md',
-      'pipeline-standards.md',
-      'claudemd-standards.md',
-    ]) {
-      delete commonFileMap[key];
-    }
-  }
+  // Tier S (Fast Lane): skip informational docs not needed for quick fixes.
+  // Exclude via skipFiles (7th arg), NOT by deleting from the map: an unmapped
+  // common file is still copied — to the project root under its raw source name
+  // (destName falls back to entry.name). Deleting the map entry therefore
+  // relocates the file to root instead of skipping it.
+  const commonSkipFiles =
+    tier.toLowerCase() === 's'
+      ? [
+          'adr-template.md',
+          'files-guide.md',
+          'pipeline-standards.md',
+          'claudemd-standards.md',
+          'model-effort-policy.md',
+        ]
+      : [];
 
-  await copyTemplateDir(commonDir, targetDir, config, commonFileMap, config, ['rules']);
+  await copyTemplateDir(commonDir, targetDir, config, commonFileMap, config, ['rules'], commonSkipFiles);
 
   // Copy tier-specific files (includes tier rules/ like pipeline.md)
   // CLAUDE.md is skipped - generated separately by generateClaudeMd()
@@ -341,6 +346,7 @@ export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
       'files-guide.md': '.claude/files-guide.md',
       'pipeline-standards.md': 'docs/pipeline-standards.md',
       'claudemd-standards.md': 'docs/claudemd-standards.md',
+      'model-effort-policy.md': 'docs/model-effort-policy.md',
     },
     config,
     ['rules'],
