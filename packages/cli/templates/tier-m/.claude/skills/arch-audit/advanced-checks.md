@@ -127,6 +127,21 @@ Batch command: `grep -A1 "^name:" .claude/skills/*/SKILL.md | grep "model:"` - c
 FAIL: any skill using `model: haiku` as top-level model (only Explore _subagents within_ skills should use haiku, not the skill itself).
 WARN: any skill using `model: opus` **unless** it is one of the intentional Opus skills: `visual-audit`, `ux-audit`, `responsive-audit` (screenshot-based visual reasoning) or `skill-db` (deep schema normalization + RLS policy reasoning). All other skills should use sonnet.
 
+**T7 - Target-scoping completeness (comparative-check protection)**
+A skill that accepts a `target:`/scope argument must not silently narrow a *comparative* check to the target subset. A comparative check derives a project-wide convention by counting usage across the whole codebase (e.g. "the most-used param name IS the convention"); run on a partial sample it computes a false convention and flags conforming code as deviations - a false positive by construction. Each check in a target-accepting skill must therefore be either (a) independent - it evaluates one route/file in isolation and safely honors the filter, or (b) annotated as full-project - it runs across the whole inventory regardless of the target.
+Batch command (list *scope-narrowing* skills that carry no comparative-vs-independent annotation). Key on the CDK's scope-narrowing tokens (`target:section:` / `target:role:`), NOT on bare `$ARGUMENTS` - almost every skill parses `$ARGUMENTS` for mode flags, and matching it floods the check with false positives on skills that never narrow scope:
+```bash
+for f in .claude/skills/*/SKILL.md; do
+  if grep -qiE 'target:section:|target:role:' "$f"; then
+    if ! grep -qiE 'COMPARATIVE|full-project by design|full route inventory' "$f"; then
+      echo "$f: narrows scope via target: but documents no comparative-vs-independent scoping"
+    fi
+  fi
+done
+```
+Expected: 0 matches once every scope-narrowing skill is annotated. Any match = WARN. On first run this legitimately flags each scope-narrowing audit that has not yet declared its scoping (api-design is the reference example); each flag is a one-time RECOMMEND that clears permanently once the skill is annotated - it is not recurring noise.
+RECOMMEND if failing: add a "Target scoping" note to the skill that lists its comparative checks and states they run full-project even when a target is given. Never auto-fix by narrowing a check's coverage - the remedy is the annotation, and narrowing a security-relevant check's scope must never be proposed automatically.
+
 ## Step H1 - Hook compliance check
 
 Using hook documentation fetched in Step 1 (`https://code.claude.com/docs/en/hooks`) and `settings.json` read in Step 2, verify the project's hook configuration against current Anthropic spec.
