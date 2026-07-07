@@ -285,7 +285,7 @@ If the project is CLI-only, backend-only, or native-standalone without a UI laye
 **Severity handling - all tracks**:
 - **Critical**: fix before Phase 6. Do not proceed with open Critical issues.
 - **Major**: flag in Phase 6 checklist with planned resolution sprint.
-- **Minor**: append to `docs/refactoring-backlog.md` - assign ID prefix (`PERF-`, `API-`, `DB-`, `MIG-`, `SEC-`, `A11Y-`, `DEV-`, `UX-`, `TEST-`).
+- **Minor**: persist per the **backlog write-once protocol** (`.claude/rules/backlog-protocol.md`) - inside this block, each audit appends its approved Minor findings to the session scratch `.claude/session/refactoring-findings.md`; the shared `docs/refactoring-backlog.md` gets a single consolidated write at Phase 8 closure. Assign ID prefix (`PERF-`, `API-`, `DB-`, `MIG-`, `SEC-`, `A11Y-`, `DEV-`, `UX-`, `TEST-`).
 - Output per skill: one-paragraph summary only.
 
 ## Phase 6 - Outcome checklist ⏸ STOP
@@ -328,6 +328,7 @@ If the project is CLI-only, backend-only, or native-standalone without a UI laye
 ## Phase 8 - Block closure
 
 Only after explicit confirmation:
+0. **Flush the backlog scratch** (per `.claude/rules/backlog-protocol.md`): if `.claude/session/refactoring-findings.md` exists, consolidate its entries into `docs/refactoring-backlog.md` in a **single** write - dedupe against existing entries, assign contiguous IDs per prefix - then delete the scratch. This is the block's one consolidated backlog write; the Phase 5d audits appended here instead of writing mid-block. If the scratch is absent or empty, skip. Do this before deleting the session file (the scratch lives under `.claude/session/`).
 1. **Delete session file**: remove `.claude/session/block-[name].md`.
    - Proceed only if the user's confirmation unambiguously closes the block.
    - If the confirmation is ambiguous (partial approval, open questions): ask explicitly - "Confirm session file deletion and block closure?" - then wait for a clear yes.

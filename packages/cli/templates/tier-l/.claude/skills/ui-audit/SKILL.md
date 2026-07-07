@@ -204,7 +204,7 @@ Output in this exact format:
 **High ([N])** - flag in Phase 6 checklist:
 [file:line - check# - excerpt - recommended fix]
 
-**Medium/Low ([N])** - append to docs/refactoring-backlog.md:
+**Medium/Low ([N])** - persist via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`; session scratch in a block, direct standalone):
 [file:line - check# - excerpt - recommended fix]
 
 ### ✅ Passing checks ([N] total)
@@ -224,7 +224,7 @@ If all checks pass: output `UI Audit CLEAN - [DATE]. No violations found.`
 - Do NOT make any code changes during this skill. Audit only.
 - Do NOT re-read files already in context from Step 1.
 - The Explore agent in Step 2 handles all grep work. Do not duplicate searches in the main context.
-- **Pipeline integration**: Critical findings block Phase 6 progression per pipeline.md severity handling. Medium/Low findings go directly to `docs/refactoring-backlog.md`.
+- **Pipeline integration**: Critical findings block Phase 6 progression per pipeline.md severity handling. Medium/Low findings are persisted to `docs/refactoring-backlog.md` via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`).
 - **Concurrent execution**: when invoked from pipeline.md Phase 5d Track A, this skill launches concurrently with the first browser-based skill. It is fully static - no dev server required.
 - **Complementary skill**: run `/accessibility-audit` alongside `/ui-audit` for any UI change. It owns axe-core WCAG 2.2 scan, APCA contrast, and static a11y patterns (aria-label, tabindex, form labels, focus visibility, keyboard accessibility). These checks were migrated from this skill during the v2 review cycle.
 

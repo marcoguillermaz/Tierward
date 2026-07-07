@@ -326,7 +326,7 @@ After the report:
 > "Want to dig into a specific finding? I can:
 > - **Heuristic deep-dive**: analyse a specific heuristic across all pages (e.g. H5 on all flows with destructive actions)
 > - Compare two specific sections for consistency
-> - Generate a fix checklist to integrate into the backlog (`docs/refactoring-backlog.md`)"
+> - Generate a fix checklist to integrate into the backlog (`docs/refactoring-backlog.md`) via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`)"
 
 **Do NOT apply code changes directly.** UX findings must be validated with the user before implementation - they often require design decisions, not just code fixes.
 

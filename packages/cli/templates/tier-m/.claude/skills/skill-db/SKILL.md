@@ -39,7 +39,7 @@ Announce: `Running skill-db - scope: [FULL | target: <resolved>]`
 - `docs/db-map.md` is the authoritative schema reference. Read it first - do NOT query the live DB to discover schema unless verifying a specific detail. If `docs/db-map.md` does not exist, derive the schema from the ORM's schema definition file (e.g. `schema.prisma`, `models.py`, migration files) or from live DB introspection in Step 4. Announce: `No db-map.md found - deriving schema from [source].`
 - `[SITEMAP_OR_ROUTE_LIST]` provides the API route inventory for query pattern checks.
 - Do NOT make schema changes. Audit only.
-- All findings go to `docs/refactoring-backlog.md`.
+- All findings are persisted to `docs/refactoring-backlog.md` via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`).
 
 ---
 

@@ -10,7 +10,7 @@ argument-hint: [target:section:<section>|target:role:<role>|mode:audit|mode:reme
 **Scope**: endpoint naming, HTTP verbs, resource modeling, response shapes, error codes, field naming, filtering/sorting conventions, pagination, validation, auth/authz boundary clarity.
 **Out of scope**: auth implementation → `/security-audit` | performance → `/perf-audit` | DB schema → `/skill-db`.
 **Default mode**: audit (no code changes). Modes: `audit` | `remediation` (propose plan, no changes) | `apply` (make focused fixes).
-**All audit findings go to `docs/refactoring-backlog.md`.**
+**All audit findings are persisted to `docs/refactoring-backlog.md` via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`).**
 
 ### Configuration
 
