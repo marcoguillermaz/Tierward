@@ -52,12 +52,12 @@ Generate the report using this template. Fill each section with findings from St
 | R3 | Error message verbosity | ✅/❌ | |
 | R5 | Rate limiting on high-value endpoints | ✅/❌ | |
 
-### RLS - Code-level check
+### Row-level access control - Code-level check
 | # | Check | Tables flagged | Verdict |
 |---|---|---|---|
-| RLS-1 | Tables without row-level access control | N | ✅/❌ |
-| RLS-2 | Access control enabled but zero policies | N | ✅/❌ |
-| RLS-3 | Write-side policy checks missing | N | ✅/❌ |
+| AC-1 | Tables without row-level access control | N | ✅/❌ |
+| AC-2 | Access control declared but not enforced | N | ✅/❌ |
+| AC-3 | Write-side ownership checks missing | N | ✅/❌ |
 
 ### Native Application Security (if applicable)
 | # | Check | Matches | Severity | Verdict |
@@ -119,7 +119,7 @@ After applying fixes, verify:
 
 ## Severity guide
 
-- **Critical**: unauthenticated route exposing or modifying data; row-level access bypass; privileged credentials in client code; client-exposed env var secret; cron route with no secret check; raw input in queries; DB advisor critical-level finding; table missing row-level access control on sensitive data (RLS-1); hardcoded secrets in source code (NS1); signing credentials committed to repo (NS6); unsafe block without safety justification in Rust (NS4)
-- **High**: admin route without role check; sensitive PII/financial field exposed to non-owner; export route without role check; public URL on private storage asset; open redirect; mass assignment; horizontal AC / IDOR on sensitive records (A13); state machine bypass on financial/status transitions (A14); missing write-side policy checks (RLS-3); DB advisor warning-level finding; critical/high CVE in production dependency (NS2); unvalidated external input at system boundary (NS3); sensitive data written without platform encryption (NS5); disabled code signing (NS6)
-- **Medium**: missing validation on write route body; unvalidated path param or query param used in DB filter (A3); error message leaking DB internals; missing security header; no rate limiting on high-value endpoints; access control enabled but zero policies (RLS-2); sensitive data in log output (NS5)
+- **Critical**: unauthenticated route exposing or modifying data; row-level access bypass; privileged credentials in client code; client-exposed env var secret; cron route with no secret check; raw input in queries; DB advisor critical-level finding; table missing row-level access control on sensitive data (AC-1); hardcoded secrets in source code (NS1); signing credentials committed to repo (NS6); unsafe block without safety justification in Rust (NS4)
+- **High**: admin route without role check; sensitive PII/financial field exposed to non-owner; export route without role check; public URL on private storage asset; open redirect; mass assignment; horizontal AC / IDOR on sensitive records (A13); state machine bypass on financial/status transitions (A14); missing write-side ownership checks (AC-3); DB advisor warning-level finding; critical/high CVE in production dependency (NS2); unvalidated external input at system boundary (NS3); sensitive data written without platform encryption (NS5); disabled code signing (NS6)
+- **Medium**: missing validation on write route body; unvalidated path param or query param used in DB filter (A3); error message leaking DB internals; missing security header; no rate limiting on high-value endpoints; access control declared but not enforced (AC-2); sensitive data in log output (NS5)
 - **Low**: header best-practice gap; informational DB advisor finding; moderate/low CVE not directly exploitable; state machine bypass on low-risk status fields
