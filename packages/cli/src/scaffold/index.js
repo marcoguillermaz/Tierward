@@ -83,7 +83,15 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
         ]
       : [];
 
-  await copyTemplateDir(commonDir, targetDir, config, commonFileMap, config, ['rules'], commonSkipFiles);
+  await copyTemplateDir(
+    commonDir,
+    targetDir,
+    config,
+    commonFileMap,
+    config,
+    ['rules'],
+    commonSkipFiles,
+  );
 
   // Copy tier-specific files (includes tier rules/ like pipeline.md)
   // CLAUDE.md is skipped - generated separately by generateClaudeMd()
