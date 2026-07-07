@@ -44,6 +44,11 @@ Parse `$ARGUMENTS` for `target:` and `mode:` tokens.
 
 **STRICT PARSING - mandatory**: derive target ONLY from the explicit text in `$ARGUMENTS`. Do NOT infer target from conversation context, recent work, active block names, or project memory. If `$ARGUMENTS` contains no `target:` token → full audit across ALL API routes at maximum depth. When a target IS provided → act with maximum depth and completeness on that specific scope only.
 
+**Target scoping - comparative vs independent checks (mandatory):** a subset of checks derive a *project-wide convention* by counting usage across the whole route set; the rest evaluate one route or file in isolation.
+- **Comparative checks - full-project by design; the `target:` filter does NOT apply to them:** N3, N4, N11, N12, Step 2b, Step 3 (P1, P2). They MUST run across the FULL route inventory even when a target is given. Narrowing a comparative check to the target subset computes the "convention" from a partial sample, so it flags conforming routes as deviations - a false positive by construction.
+- **Independent checks - target-safe:** every other check (N1, N2, N5, N6, N6b, N8, N9, N10, N13, P3, P4, V1, V2, V3) evaluates a single route/file and safely honors the `target:` filter.
+- When a `target:` is given: apply the filter to the independent checks only; run the comparative checks across all routes and state in the report that they ran full-project by design.
+
 **Mode:**
 | Token | Behavior |
 |---|---|
@@ -86,13 +91,13 @@ Flag mismatches:
 From route file paths, flag:
 - Nested routes that skip a level: e.g. `/api/documents/sign` but also `/api/documents/[id]/sign`
 
-**CHECK N3 - Response shape consistency (success)**
+**CHECK N3 - Response shape consistency (success)** - [COMPARATIVE - full-project baseline; ignores target filter]
 Grep for the framework's JSON response pattern (see PATTERNS.md → N3) across all route files.
 For each route returning a single entity (GET /[id]): check if the top-level key is consistent - e.g. `{ compensation }` vs `{ data }` vs `{ result }` vs naked object. The same entity must use the same wrapper key across all routes.
 For each route returning a list: check if the shape is `{ items, total, page }` or a naked array.
 Flag: any inconsistency in the key name for the same entity type across different routes.
 
-**CHECK N4 - Error response shape consistency**
+**CHECK N4 - Error response shape consistency** - [COMPARATIVE - full-project baseline; ignores target filter]
 Two-pass approach to handle multi-line JSON response calls:
 Pass 1: Grep for non-standard error keys in route files: `\"message\":|\{ message:|'message':|\{ msg:|\{ errors:`
 Flag every match - these are clear violations of the `{ error: string }` project standard.
@@ -142,7 +147,7 @@ Grep for JSON response calls returning an array literal (adapt pattern to the fr
 Flag: any route returning a bare array at the top level of the JSON response.
 Expected: 0 matches. All responses must be wrapped in an object: `{ items: [...] }` not `[...]`. This allows adding `meta`, `pagination`, or `error` fields later without a breaking change.
 
-**CHECK N11 - Filtering and sorting param naming conventions**
+**CHECK N11 - Filtering and sorting param naming conventions** - [COMPARATIVE - full-project baseline; ignores target filter]
 For each match: extract the parameter name string (the string literal argument).
 Step 1 - Inventory: collect ALL query param names used across all routes. Group by semantic role:
 - Pagination: `page`, `pageSize`, `limit`, `offset`, `cursor`
@@ -154,7 +159,7 @@ Step 3 - Flag deviations: any param name in a semantic group that differs from t
 Step 4 - Case style: if the majority of params are camelCase, flag any snake_case param (and vice versa).
 Report the derived convention and list all deviations from it.
 
-**CHECK N12 - Field naming consistency in request/response bodies**
+**CHECK N12 - Field naming consistency in request/response bodies** - [COMPARATIVE - full-project baseline; ignores target filter]
 For each route file: read the validation schema declarations (POST/PATCH body schemas) to extract request field names. For response keys, grep for the framework's JSON response pattern and read up to 40 lines after the opening brace to capture the full response object (stop at the matching closing parenthesis line).
 Extract field names from both sources.
 Flag:
@@ -172,7 +177,7 @@ Count total action-style path segments (non-resource, non-ID segments) vs total 
 
 ---
 
-## Step 2b - Route coverage verification (main context, after both subagents complete)
+## Step 2b - Route coverage verification (main context, after both subagents complete) - [COMPARATIVE - full-project baseline; ignores target filter]
 
 Cross-check: confirm the route inventory from Step 1 (derived from `[SITEMAP_OR_ROUTE_LIST]`) matches the actual filesystem.
 
@@ -189,13 +194,13 @@ Read `[SITEMAP_OR_ROUTE_LIST]`. Select all `GET` routes whose path does NOT cont
 
 For each collection endpoint, read the GET handler. Verify:
 
-**P1 - Consistent pagination shape**
+**P1 - Consistent pagination shape** - [COMPARATIVE - full-project baseline; ignores target filter]
 Target convention: `{ items: T[], total: number, page: number, pageSize: number }`. If the majority of existing paginated endpoints already use a different shape, treat that shape as the project convention and flag deviations from it - do not force a migration to the target convention if the project has established a different consistent standard.
 Flag any list endpoint using a shape that differs from the majority convention.
 Flag any list endpoint returning a bare array (overlap with N10 - flag independently).
 Flag any list endpoint with no pagination at all that returns unbounded results.
 
-**P2 - Pagination parameter names**
+**P2 - Pagination parameter names** - [COMPARATIVE - full-project baseline; ignores target filter]
 Check if all paginated endpoints use the same query param names (`page`, `pageSize` - not `limit`/`offset`).
 Flag inconsistencies.
 
