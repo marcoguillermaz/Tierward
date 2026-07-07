@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: Security audit: auth/authz on API routes, input validation, RLS policies, response shape review, secret exposure, HTTP headers. Native mode checks entitlements and Keychain. MCP-aware (v1.20+): when `mcp-nvd` server is wired, Step 3c queries live CVE data instead of static `npm audit` / `pip-audit` snapshots; falls back to local audit commands when MCP unreachable.
+description: Security audit: auth/authz on API routes, input validation, row-level access control (RLS in Postgres, ORM scopes or app-level guards elsewhere), response shape review, secret exposure, HTTP headers. Native mode checks entitlements and Keychain. MCP-aware (v1.20+): when `mcp-nvd` server is wired, Step 3c queries live CVE data instead of static `npm audit` / `pip-audit` snapshots; falls back to local audit commands when MCP unreachable.
 user-invocable: true
 model: sonnet
 context: fork
@@ -228,18 +228,18 @@ If both the MCP path and the fallback audit command are unavailable, note it exp
 
 Complement Step 3b (DB advisors) with a grep-based check on migration or schema files.
 
-**RLS-1 - Tables without row-level access control**
-Grep migration/schema files for table creation statements. For each table, check if row-level access control is enabled (e.g. `ENABLE ROW LEVEL SECURITY` in PostgreSQL, application-level guards in other stacks).
-Flag: any table storing user-scoped data where row-level access control is absent.
+**AC-1 - Tables without row-level access control**
+Grep migration/schema files for table creation statements. For each table, check if row-level access control is enabled through *some* mechanism (e.g. `ENABLE ROW LEVEL SECURITY` in PostgreSQL, ORM global scopes/query filters, or application-level guards in other stacks).
+Flag: any table storing user-scoped data where row-level access control is absent at every layer.
 Note: tables with only service-role access (e.g. internal log tables) may legitimately skip this - verify from context.
 
-**RLS-2 - Access control enabled but no policies**
-For each table with row-level access control enabled, verify that at least one access policy exists.
-Flag: any table with access control enabled but zero policies. This can cause silent empty results, masking bugs.
+**AC-2 - Access control declared but not enforced**
+For each table where a row-level mechanism is enabled, verify at least one enforcing rule actually exists (a policy in Postgres, a global scope/filter in an ORM, a guard in the access layer).
+Flag: any table where the mechanism is switched on but no rule enforces it. In Postgres this is RLS enabled with zero policies - which causes silent empty results, masking bugs; the equivalent on other stacks is a filter registered but never applied.
 
-**RLS-3 - Missing write-side policy checks**
-For databases with row-level policies: verify that INSERT/UPDATE policies include write-side checks (e.g. `WITH CHECK` in PostgreSQL).
-Flag: policies that control reads but not writes - this allows inserting/updating rows the user cannot see.
+**AC-3 - Missing write-side ownership checks**
+Verify that write paths (INSERT/UPDATE) enforce ownership, not just reads - whatever the mechanism (e.g. `WITH CHECK` on a Postgres policy, a write-side condition in an ORM scope, an ownership assertion in an app-level guard).
+Flag: any table whose read access is guarded but whose writes are not - this lets a user create or modify rows they cannot see.
 
 ---
 

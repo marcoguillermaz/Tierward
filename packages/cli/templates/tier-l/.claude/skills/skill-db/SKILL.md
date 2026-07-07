@@ -1,6 +1,6 @@
 ---
 name: skill-db
-description: Database audit: schema quality, index coverage, RLS completeness, FK cascades, query patterns. Runs live SQL verification. Migration file safety → /migration-audit.
+description: Database audit: schema quality, index coverage, row-level access-control completeness, FK cascades, query patterns. Runs live SQL verification (PostgreSQL instance in PATTERNS.md; other engines verify the equivalent guard). Migration file safety → /migration-audit.
 user-invocable: true
 model: sonnet
 context: fork
@@ -16,7 +16,7 @@ argument-hint: [target:section:<section>|target:table:<table>]
 > - `[ACCESS_CONTROL]` - e.g. `row-level security policies`, `middleware guards`, `model-level scopes`
 > - `[SITEMAP_OR_ROUTE_LIST]` - file listing API routes with method, path, roles (e.g. `docs/sitemap.md`). Required for S1A cross-reference and Step 3 query pattern scope.
 >
-> **Database scope**: live SQL verification queries (Step 4) and checks S4-S5 target PostgreSQL system tables. Non-PostgreSQL databases will skip Step 4 and PostgreSQL-specific checks.
+> **Database scope**: S4 (row-level access-control) states a universal principle; its PostgreSQL instance (RLS verification SQL) lives in `PATTERNS.md`, and non-Postgres engines verify the equivalent guard per S4's inline guidance. The remaining live-SQL checks (Step 4: S1B/S3/S5/S6) still target PostgreSQL system tables - on a non-PostgreSQL engine, adapt them to the engine's catalog or skip with an explicit note (never a silent ✅).
 
 
 ## Step 0 - Target resolution
@@ -27,7 +27,7 @@ Parse `$ARGUMENTS` for a `target:` token.
 |---|---|
 | `target:section:<other>` | Resolve to matching tables in db-map.md whose name contains `<other>` |
 | `target:table:<tablename>` | Focus on a specific table and its direct FKs. |
-| No argument | **Full audit - ALL tables in docs/db-map.md. Maximum depth across every schema, RLS, and query check (S1–S7).** |
+| No argument | **Full audit - ALL tables in docs/db-map.md. Maximum depth across every schema, access-control, and query check (S1–S7).** |
 
 **STRICT PARSING - mandatory**: derive target ONLY from the explicit text in `$ARGUMENTS`. Do NOT infer target from conversation context, recent work, active block names, or project memory. If `$ARGUMENTS` contains no `target:` token → full audit of the entire schema in db-map.md at maximum depth. When a target IS provided → act with maximum depth and completeness on that specific scope only.
 
@@ -54,7 +54,10 @@ Read these files in order before proceeding:
 
 Do not proceed until all five reads are complete.
 
-**Go stacks**: if `Language: Go` is detected in `CLAUDE.md`, also read the sibling `PATTERNS.md` file in this skill directory before Step 2. The Go section contains ORM/driver-specific query patterns for `database/sql`, `pgx`, `sqlx`, and `gorm` (N+1 detection, connection pool, prepared statements, transaction isolation).
+**Stack patterns (mandatory read before Step 2)**: read the sibling `PATTERNS.md` section that matches the project's declared stack in `CLAUDE.md`. This file holds the stack-specific *how* for checks whose principle is stated inline here:
+- `Database: PostgreSQL` (incl. Supabase) → the **PostgreSQL** section: all live SQL for this skill - S4 row-level access-control verification (S4A…S4E) and the schema/performance queries (S1B, S1C, S3, S5, S6, S7). Without this read, the checks below have no runnable query for a Postgres project.
+- `Language: Go` → the **Go** section: ORM/driver query patterns for `database/sql`, `pgx`, `sqlx`, `gorm` (N+1, connection pool, prepared statements, transaction isolation).
+- Any other engine (MySQL, SQLite, MongoDB, or app-level guards) → no stack SQL yet; apply the non-RLS guidance stated inline at S4.
 
 ---
 
@@ -71,34 +74,12 @@ Priority patterns to scan:
 *Part B - FK column coverage*
 For every FK relationship in the FK graph, verify that the **child** FK column is indexed. Parent primary keys are indexed by default - child FK columns must be explicitly indexed. An unindexed FK child column causes sequential scans on every JOIN and on every `ON DELETE` cascade operation.
 
-Run in Step 4 (live DB):
-```sql
-SELECT
-  c.conname AS fk_name,
-  tbl.relname AS table_name,
-  a.attname AS fk_column,
-  EXISTS (
-    SELECT 1 FROM pg_index i
-    WHERE i.indrelid = c.conrelid
-      AND a.attnum = ANY(i.indkey)
-  ) AS is_indexed
-FROM pg_constraint c
-JOIN pg_class tbl ON tbl.oid = c.conrelid
-JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
-WHERE c.contype = 'f'
-  AND tbl.relname NOT LIKE 'pg_%'
-ORDER BY tbl.relname, a.attname;
-```
-Flag as Medium: `is_indexed = false` on lower-traffic tables.
+Verify in Step 4 with the stack's catalog. PostgreSQL: run the **S1B** query from the PostgreSQL section of `${CLAUDE_SKILL_DIR}/PATTERNS.md`. Other engines: introspect the FK/index metadata (e.g. `SHOW INDEX`, ORM schema) and confirm each child FK column is indexed.
+Flag as Medium: an unindexed FK child column on lower-traffic tables.
 
 *Part C - Partial index opportunity on state machine columns*
 
-Run in Step 4 to check distribution - for each state machine table, query the status column distribution:
-```sql
-SELECT '<table_name>' AS tbl, <status_column> AS status, COUNT(*)
-FROM <table_name> GROUP BY <status_column>
-ORDER BY tbl, status;
-```
+Check the status-column distribution in Step 4 (PostgreSQL: **S1C** query in `PATTERNS.md`; other engines: an equivalent `GROUP BY status` count).
 If any active-state subset is < 30% of total rows and no partial index exists on that table, flag as Low with suggested partial index.
 
 *Part D - GIN index for array columns*
@@ -119,18 +100,8 @@ For each: state whether the denormalization has a documented rationale. Only fla
 **S3 - Missing NOT NULL constraints**
 From `db-map.md` Column specs, identify columns that are nullable but should logically never be null in a valid record.
 
-Run in Step 4 - adapt column list from your schema's key ownership, financial, and state columns:
-```sql
-SELECT table_name, column_name, is_nullable
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND is_nullable = 'YES'
-  AND column_name IN (
-    -- Add your key columns: status, owner IDs, financial dates, etc.
-  )
-ORDER BY table_name, column_name;
-```
-For each row returned: evaluate whether null is a valid business state or an oversight.
+Verify in Step 4 (PostgreSQL: **S3** query in `PATTERNS.md`, adapting the column list to your schema's key ownership/financial/state columns; other engines: introspect column nullability from `information_schema.columns` or the ORM schema).
+For each nullable key column: evaluate whether null is a valid business state or an oversight.
 Best practice: the majority of columns should be NOT NULL - err toward NOT NULL unless null has a documented semantic meaning.
 
 **S2b - Constraint completeness (CHECK + composite UNIQUE)**
@@ -153,70 +124,20 @@ Patterns to look for in contracts:
 
 For each: anchor to the business rule from the contract, not to implementation preference. Flag as Medium if the absence would allow duplicate records currently prevented only by application code.
 
-**S4 - RLS completeness and performance**
+**S4 - Row-level access-control completeness** *(universal principle; stack-specific SQL in `PATTERNS.md`)*
 
-*Part A - Policy existence (RBAC cross-reference)*
-From the access control gaps section of `db-map.md`, evaluate each flagged gap against current evidence. Common patterns to check:
-- INSERT policies missing `WITH CHECK` - any authenticated user can insert records for any owner?
-- Tables with financial or sensitive data lacking role-scoped policies
+**Principle:** every table holding owned or sensitive data must enforce access at the row level through *some* mechanism, and that mechanism must be complete. Verify these three completeness properties for each owned/sensitive table, regardless of engine:
+1. **Write-side ownership** - a user cannot insert or update rows for another owner.
+2. **Read-back** - the owner can read rows they just wrote (an UPDATE/write path with no matching read path silently returns null).
+3. **No bypass** - no view, aggregate, or privileged query path returns rows the guard should hide.
 
-*Part B - Function call caching in policies* *(PostgreSQL/Supabase only)*
-If using row-level security with function calls (e.g. `auth.uid()`), verify functions are wrapped in a subselect `(select auth.uid())` to enable per-statement caching instead of per-row evaluation. On tables with thousands of rows, bare function calls are invoked once per row.
+A table with owned data and no enforced row-level guard at any layer is a **High** finding on any stack.
 
-Run in Step 4 (PostgreSQL):
-```sql
-SELECT policyname, tablename,
-  CASE WHEN qual LIKE '%auth.uid()%' AND qual NOT LIKE '%(select auth.uid())%'
-    THEN 'qual' ELSE '' END ||
-  CASE WHEN with_check LIKE '%auth.uid()%' AND with_check NOT LIKE '%(select auth.uid())%'
-    THEN ' with_check' ELSE '' END AS bare_uid_in
-FROM pg_policies
-WHERE schemaname = 'public'
-  AND (
-    (qual LIKE '%auth.uid()%' AND qual NOT LIKE '%(select auth.uid())%')
-    OR
-    (with_check LIKE '%auth.uid()%' AND with_check NOT LIKE '%(select auth.uid())%')
-  );
-```
-Flag as Medium: each policy using bare function calls not wrapped in `(select ...)`. Report table + policy name + which clause is affected.
-
-*Part C - Explicit TO clause*
-Policies without a `TO` clause apply to ALL roles including `anon`, creating unnecessary overhead and surface area.
-
-Run in Step 4:
-```sql
-SELECT tablename, policyname, roles, cmd
-FROM pg_policies
-WHERE schemaname = 'public'
-  AND roles = '{public}';
-```
-Flag as Low: policies applying to `{public}` where `authenticated` or a specific role would be more precise. Exception: policies explicitly intended for unauthenticated access (e.g. public read on announcements).
-
-*Part D - SELECT policy before UPDATE*
-A table with an UPDATE RLS policy but no SELECT policy may cause the client to receive `null` after updates - the row was written but the client cannot read it back.
-
-Run in Step 4:
-```sql
-SELECT DISTINCT tablename
-FROM pg_policies
-WHERE schemaname = 'public' AND cmd = 'UPDATE'
-EXCEPT
-SELECT DISTINCT tablename
-FROM pg_policies
-WHERE schemaname = 'public' AND cmd IN ('SELECT', 'ALL');
-```
-Flag as High: any table returned by this query.
-
-*Part E - Views without security_invoker*
-Views bypass RLS by default in Postgres unless `security_invoker = true` (Postgres 15+). A view over an RLS-protected table exposes all rows to any caller with view access.
-
-Run in Step 4:
-```sql
-SELECT viewname, definition
-FROM pg_views
-WHERE schemaname = 'public';
-```
-For each view: check if the underlying tables have RLS policies. If yes, flag as High unless `security_invoker = true` is explicitly set.
+**Map each property to the concrete check for the detected stack:**
+- **PostgreSQL (incl. Supabase):** RLS policies. Run the **S4A…S4E** verification SQL from the **PostgreSQL** section of `${CLAUDE_SKILL_DIR}/PATTERNS.md` (policy existence + `WITH CHECK`, function-call caching, explicit `TO` clause, SELECT-before-UPDATE, views without `security_invoker`). These execute in Step 4. Property 1 → S4A; property 2 → S4D; property 3 → S4E; S4B/S4C are Postgres performance/precision refinements.
+- **Other relational engines (MySQL, SQLite):** row-level filtering enforced in the data-access layer (ORM global scopes/filters) or app-level guards. For each owned table, confirm every read and write path applies the ownership predicate - a reachable path without it is the equivalent of a missing policy.
+- **Document / NoSQL (MongoDB, etc.):** rules-based access (security rules) or per-collection app-level guards. Verify the same three properties on each collection.
+- **No stack-specific SQL available:** state which of the three properties you could verify and which need manual confirmation - do not report a clean S4 you could not actually check.
 
 **S5 - Data type choices**
 
@@ -227,50 +148,12 @@ Flag questionable data type choices from `db-map.md` Column specs. Source: wiki.
 - **`serial` columns** → should use `IDENTITY` (Postgres 10+). `serial` creates hidden sequences with non-obvious permission and dependency behavior. `GENERATED ALWAYS AS IDENTITY` is the standard.
 - **State machine columns as `text`** → no valid-value contract at DB level. Flag as Medium - consider CHECK constraint (see S2b).
 
-Run in Step 4:
-```sql
--- Detect timestamp without timezone
-SELECT table_name, column_name, data_type
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND data_type = 'timestamp without time zone';
-
--- Detect varchar(n) columns
-SELECT table_name, column_name, character_maximum_length
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND data_type = 'character varying'
-  AND character_maximum_length IS NOT NULL;
-
--- Detect serial (sequences with auto-ownership)
-SELECT s.relname AS seq_name, d.refobjid::regclass AS table_name
-FROM pg_class s
-JOIN pg_depend d ON d.objid = s.oid
-WHERE s.relkind = 'S'
-  AND d.deptype = 'a'
-  AND d.classid = 'pg_class'::regclass;
-```
+The antipatterns above are PostgreSQL-specific (timezone-aware timestamps, `text` over `varchar(n)`, `IDENTITY` over `serial`). Detect them in Step 4 with the **S5** queries in `${CLAUDE_SKILL_DIR}/PATTERNS.md`. On another engine, apply the universal type principle - timezone-aware timestamps, no arbitrary length caps, standard auto-increment - against that engine's own type catalog.
 
 **S6 - FK cascade behavior**
 For each FK in the FK graph, verify delete cascade behavior and evaluate whether it reflects the intended parent-child semantics.
 
-Run in Step 4:
-```sql
-SELECT
-  c.conname,
-  c.confrelid::regclass AS referenced_table,
-  c.conrelid::regclass AS table_name,
-  CASE c.confdeltype
-    WHEN 'a' THEN 'NO ACTION'
-    WHEN 'r' THEN 'RESTRICT'
-    WHEN 'c' THEN 'CASCADE'
-    WHEN 'n' THEN 'SET NULL'
-    WHEN 'd' THEN 'SET DEFAULT'
-  END AS on_delete
-FROM pg_constraint c
-WHERE c.contype = 'f'
-ORDER BY c.conrelid::regclass::text;
-```
+Verify in Step 4 (PostgreSQL: **S6** query in `${CLAUDE_SKILL_DIR}/PATTERNS.md`; other engines: read `ON DELETE` behavior from the FK metadata or ORM relations).
 
 Evaluation criteria for `NO ACTION` results:
 - **Flag as High**: `SET NULL` on a FK column that is NOT NULL - this combination would cause the DELETE to fail at runtime with a constraint violation.
@@ -278,20 +161,7 @@ Evaluation criteria for `NO ACTION` results:
 **S7 - Unused indexes**
 Indexes with zero query planner usage waste write I/O on every INSERT/UPDATE/DELETE.
 
-Run in Step 4:
-```sql
-SELECT
-  tablename,
-  indexname,
-  idx_scan,
-  pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
-  (SELECT reltuples::bigint FROM pg_class WHERE relname = tablename) AS est_row_count
-FROM pg_stat_user_indexes
-WHERE schemaname = 'public'
-  AND idx_scan = 0
-  AND indexname NOT LIKE '%_pkey'
-ORDER BY pg_relation_size(indexrelid) DESC;
-```
+Verify in Step 4 (PostgreSQL: **S7** query in `${CLAUDE_SKILL_DIR}/PATTERNS.md`, which reads `pg_stat_user_indexes`; other engines: use the engine's index-usage statistics view, if available, and skip with a note if not).
 
 ---
 
@@ -341,15 +211,14 @@ Return ALL matches in the MATCH | check_code | file:line | matched_pattern | sev
 
 ## Step 4 - Live DB verification
 
+Runs live SQL against the database. **All stack-specific SQL lives in the PostgreSQL section of `${CLAUDE_SKILL_DIR}/PATTERNS.md`** (access-control S4A…S4E and schema/performance S1B, S1C, S3, S5, S6, S7) - the checks below state the universal intent; PATTERNS.md holds the runnable query. On a non-PostgreSQL engine, adapt each query to that engine's catalog or skip with an explicit note, and verify the S4 access-control properties via the stack's own mechanism (see S4). Never record a silent ✅ for a check you could not run.
+
 1. **S1B** - FK column index coverage
 2. **S1C** - status column row distribution
 3. **S3** - nullable columns on key financial/ownership fields
-4. **S4B** - policies with bare `auth.uid()`
-5. **S4C** - policies without explicit TO clause
-6. **S4D** - UPDATE policies without matching SELECT
-7. **S4E** - views in public schema
-8. **S5** - data type antipatterns (timestamp, varchar(n), serial)
-9. **S6** - FK cascade behavior
+4. **S4A…S4E** *(PostgreSQL)* - row-level access-control verification: run the queries from the PostgreSQL section of `PATTERNS.md` (policy existence + `WITH CHECK`, bare `auth.uid()` caching, explicit `TO`, SELECT-before-UPDATE, views without `security_invoker`)
+5. **S5** - data type antipatterns (timestamp, varchar(n), serial)
+6. **S6** - FK cascade behavior
 
 Additionally, for each state machine table, check for invalid status values:
 ```sql
