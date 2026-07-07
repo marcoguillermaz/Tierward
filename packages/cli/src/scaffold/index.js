@@ -65,6 +65,7 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
     'pipeline-standards.md': 'docs/pipeline-standards.md',
     'claudemd-standards.md': 'docs/claudemd-standards.md',
     'model-effort-policy.md': 'docs/model-effort-policy.md',
+    'backlog-protocol.md': '.claude/rules/backlog-protocol.md',
   };
 
   // Tier S (Fast Lane): skip informational docs not needed for quick fixes.
@@ -72,6 +73,8 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
   // common file is still copied — to the project root under its raw source name
   // (destName falls back to entry.name). Deleting the map entry therefore
   // relocates the file to root instead of skipping it.
+  // backlog-protocol.md is skipped too: Tier S has no Phase-8 closure, so its
+  // skills always take the standalone (direct-write) branch and never reference it.
   const commonSkipFiles =
     tier.toLowerCase() === 's'
       ? [
@@ -80,6 +83,7 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
           'pipeline-standards.md',
           'claudemd-standards.md',
           'model-effort-policy.md',
+          'backlog-protocol.md',
         ]
       : [];
 
@@ -355,6 +359,7 @@ export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
       'pipeline-standards.md': 'docs/pipeline-standards.md',
       'claudemd-standards.md': 'docs/claudemd-standards.md',
       'model-effort-policy.md': 'docs/model-effort-policy.md',
+      'backlog-protocol.md': '.claude/rules/backlog-protocol.md',
     },
     config,
     ['rules'],

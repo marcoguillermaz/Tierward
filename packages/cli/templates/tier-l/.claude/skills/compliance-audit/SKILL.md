@@ -262,7 +262,7 @@ Reply with numbers to include (e.g. "1 2 4"), "all", or "none".
 
 **Wait for explicit user response before writing anything.**
 
-Write approved entries to `docs/refactoring-backlog.md`:
+Persist approved entries via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`) — session scratch in an active block, direct to `docs/refactoring-backlog.md` standalone:
 - Assign ID: `GDPR-[n]` (next available; when SOC 2 / HIPAA enable, they get `SOC2-[n]` / `HIPAA-[n]` prefixes)
 - Add row to priority index
 - Add full detail: issue, evidence, fix, effort, risk, regulatory reference (GDPR Article N)

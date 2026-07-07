@@ -76,7 +76,7 @@ Recommendation: [keep current if consistent | standardize to { error, status } m
 
 ## Backlog writing rules
 
-For each **High/Critical** finding, append to `docs/refactoring-backlog.md`:
+For each **High/Critical** finding, persist via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`; session scratch in a block, direct to `docs/refactoring-backlog.md` standalone):
 - Assign ID: `API-[n]`
 - Add to priority index table
 - Add full detail section: `### API-[n] - [title]` with description, impacted files, fix.
