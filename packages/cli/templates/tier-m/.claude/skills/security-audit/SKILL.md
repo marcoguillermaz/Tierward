@@ -16,7 +16,7 @@ allowed-tools: Bash Read Glob Grep WebFetch Agent mcp__mcp-nvd__get_cve mcp__mcp
 **Scope**: API routes, middleware/proxy, row-level access control policies, data validation, response shapes, environment variables, database configuration, dependencies. For native stacks: secrets management, platform security (Keychain/Keystore/entitlements), input validation, signing credentials, sensitive data protection.
 **Out of scope**: SEO, robots.txt, public crawlability, OpenGraph, sitemap.xml.
 **Do NOT make code changes. Audit only.**
-**All findings go to `docs/refactoring-backlog.md`.**
+**All findings are persisted to `docs/refactoring-backlog.md` via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`).**
 
 ---
 
@@ -347,7 +347,7 @@ Reply with numbers to include (e.g. "1 2 4"), "all", or "none".
 
 **Wait for explicit user response before writing anything.**
 
-Then write ONLY the approved entries to `docs/refactoring-backlog.md`:
+Then persist ONLY the approved entries via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`) — in an active block append them to the session scratch; standalone, write them directly to `docs/refactoring-backlog.md`. Use the same entry format either way:
 - Assign ID: `SEC-[n]`
 - Add to priority index
 - Add full detail section with exploit scenario and recommended fix

@@ -331,7 +331,7 @@ Reply with numbers to include (e.g. "1 2 4"), "all", or "none".
 
 **Wait for explicit user response before writing anything.**
 
-Then write ONLY the approved entries to `docs/refactoring-backlog.md`.
+Then persist ONLY the approved entries via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`): session scratch in an active block, direct to `docs/refactoring-backlog.md` standalone.
 - Check existing entries first to avoid duplicates - assign `DEV-[n]` incrementing from the last DEV entry.
 - Add row to the Priority Index table.
 - Add full detail section using the format:

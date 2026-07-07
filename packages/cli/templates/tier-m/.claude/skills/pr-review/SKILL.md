@@ -164,12 +164,12 @@ Three valid responses (**`integrate` is the default** for fixing findings on the
 
 1. **integrate** *(default)* — apply the fix in the current branch, run `/commit`, push, re-run `gh pr checks --watch`, then re-invoke `/pr-review <N>` to confirm. This is the right choice for a Critical/Major found on this PR: the fix lands on the same branch/PR.
 2. **fix branch** — open `fix/<short-desc>` from the base branch, apply, full pipeline. Reference the original PR in the description. **Not for fixing this PR**: a branch cut from the base cannot contain this open PR's own changes, so it only makes sense as a deliberately deferred, decoupled follow-up (e.g. a separate refactor), never as the default for resolving a finding on the current PR.
-3. **proceed** — user runs `gh pr merge` themselves. Append unresolved Minor findings to `docs/refactoring-backlog.md` with the appropriate ID prefix (`PERF-`, `DEV-`, `SEC-`, `DB-`, `A-`, `S-`, `T-`, `N-`).
+3. **proceed** — user runs `gh pr merge` themselves. Persist unresolved Minor findings via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`) — session scratch in an active block, direct to `docs/refactoring-backlog.md` standalone — with the appropriate ID prefix (`PERF-`, `DEV-`, `SEC-`, `DB-`, `A-`, `S-`, `T-`, `N-`).
 
 **Local mode** — no PR exists yet, so the choice is whether to fix before opening it:
 
 1. **fix** *(default)* — apply the fix on the current branch, run `/commit`. No push/PR round-trip is spent on the finding. This is the whole point of the local pass: resolve Critical/Major *before* CI and reviewers see the PR.
-2. **open PR as-is** — the user opens the PR themselves; unresolved Minor findings are appended to `docs/refactoring-backlog.md` with the appropriate ID prefix. Re-run `/pr-review <N>` after the PR opens to post the audit-trail comment.
+2. **open PR as-is** — the user opens the PR themselves; unresolved Minor findings are persisted via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`; session scratch in a block, direct standalone) with the appropriate ID prefix. Re-run `/pr-review <N>` after the PR opens to post the audit-trail comment.
 
 Never open, push, or merge from this skill in either mode — those are the user's actions. The canonical merge gate stays pipeline.md Phase 8 (Tier M/L) or FL-2 (Tier S).
 

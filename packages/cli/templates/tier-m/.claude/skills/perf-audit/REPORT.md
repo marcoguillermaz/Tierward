@@ -94,7 +94,7 @@ Reply with numbers to include (e.g. "1 2 4"), "all", or "none".
 
 **Wait for explicit user response before writing anything.**
 
-Then write ONLY the approved entries to `docs/refactoring-backlog.md`:
+Then persist ONLY the approved entries via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`) — in an active block append them to the session scratch; standalone, write them directly to `docs/refactoring-backlog.md`. Use the same entry format either way:
 - Assign ID: `PERF-[n]` (increment from last PERF entry)
 - Add row to the priority index table with columns: `| PERF-N | check# | file:line | Severity | Description |`
 - Add full detail section: `### PERF-N - [check label]` with sub-sections: **File**, **Issue**, **Impact**, **Suggested fix**
@@ -173,7 +173,7 @@ Reply with numbers to include (e.g. "1 2 4"), "all", or "none".
 
 **Wait for explicit user response before writing anything.**
 
-Then write approved entries to `docs/refactoring-backlog.md` using the same ID format (`PERF-[n]`).
+Then persist approved entries via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`; session scratch in a block, direct standalone), using the same ID format (`PERF-[n]`).
 
 ---
 

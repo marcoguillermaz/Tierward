@@ -14,6 +14,8 @@ argument-hint: [target:section:<section>|target:page:<route>|mode:audit|mode:app
 > - `[SITEMAP_OR_ROUTE_LIST]` - e.g. `docs/sitemap.md`
 > - `[API_ROUTES_PATH]` - e.g. `routes/`, `src/handlers/`, `api/`
 > - `[BUNDLE_TOOL]` - e.g. `@next/bundle-analyzer`, `vite-bundle-visualizer`, `webpack-bundle-analyzer`
+> - `[PERF_TOOL]` - profiling tool for native/backend stacks - e.g. `Instruments` (Swift), `Android Profiler` (Kotlin), `perf` / `flamegraph` (Rust/Go), `cProfile` (Python), `dotnet-trace` (.NET). If not configured, the skill runs static analysis only and recommends profiling setup.
+> - `[PROFILER_COMMAND]` - command to generate a profile - e.g. `xcrun xctrace record --template 'Time Profiler'`, `go tool pprof`, `cargo flamegraph`, `python -m cProfile -o profile.out`. If not configured, the skill skips the profiling step and proceeds with static analysis.
 > - Note: if this is a **public-facing** app, remove the "Out of scope" restriction on Core Web Vitals
 
 ## Applicability check
@@ -82,11 +84,10 @@ Read `docs/refactoring-backlog.md` - note existing `PERF-` entries to avoid dupl
 
 Launch a **single Explore subagent** (model: haiku) with all page, component, and lib files from Step 1:
 
-"Run all 9 checks below. For each: state total match count, list every match as `file:line - excerpt`, and state PASS or FAIL. Adapt grep patterns to the project's framework - the concepts are universal, the specific APIs vary.
+"Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` for framework-specific grep patterns. Run all 9 checks below. For each: state total match count, list every match as `file:line - excerpt`, and state PASS or FAIL.
 
 **CHECK B1 - Unnecessary client-side rendering scope**
-Find components or pages marked for client-side rendering that do not actually use browser APIs (event handlers, state, refs, browser-only hooks).
-- For SSR frameworks (Next.js, Nuxt, SvelteKit): grep for client-side directives (`'use client'`, `<script>` with `client:only`, etc.) and check if the file uses any browser-specific API.
+Find components or pages marked for client-side rendering that do not actually use browser APIs (event handlers, state, refs, browser-only hooks). See PATTERNS.md → B1 for client-side directives per framework.
 - Flag A: any client-marked file that uses NONE of: state management, event handlers, refs, or browser APIs. It may be renderable on the server.
 - Flag B: any client-marked layout or provider file that imports 5+ child components - if only a small interactive portion requires client rendering, extracting it into an island would let the layout render on the server.
 
@@ -99,7 +100,7 @@ Grep for imports of known-heavy libraries in client-rendered files. Flag any imp
 Flag: each import with the library name and whether a server-side pattern exists.
 
 **CHECK B3 - Client-side data fetching that defeats server rendering**
-Find client-rendered components that fetch data in lifecycle hooks (e.g. `useEffect`, `onMounted`, `onMount`) instead of using server-side data loading.
+Find client-rendered components that fetch data in lifecycle hooks (see PATTERNS.md → B3) instead of using server-side data loading.
 Flag: data fetching in client lifecycle hooks - these defeat server rendering and add a loading waterfall. Use server-side data loading with streaming/suspense, or a client-side cache library with proper revalidation.
 
 **CHECK B4 - Unstable callback references defeating memoization**
@@ -130,20 +131,16 @@ Flag: each occurrence. Verify from context whether intentional (auth-dependent, 
 
 **CHECK B9 - Missing lazy loading for heavy client components**
 Find imports of heavy libraries (rich text editors, chart libraries, complex UI components) that are statically imported without lazy loading.
-Flag: any file where a heavy component is eagerly imported without using the framework's dynamic/lazy import mechanism (e.g. `React.lazy`, `next/dynamic`, `defineAsyncComponent`, dynamic `import()`)."
+Flag: any file where a heavy component is eagerly imported without using the framework's dynamic/lazy import mechanism (see PATTERNS.md → B9)."
 
 ---
 
 ## Step 3 - Bundle composition check (main context)
 
-Read the framework configuration file (e.g. `next.config.ts`, `vite.config.ts`, `webpack.config.js`, `nuxt.config.ts`).
+Read the framework configuration file.
 
 **P1 - Bundle analyzer availability**
-Check if a bundle analyzer is configured or available for the project's build tool:
-- Webpack: `webpack-bundle-analyzer` or `@next/bundle-analyzer`
-- Vite: `rollup-plugin-visualizer`
-- Next.js 16+: `npx next experimental-analyze` (built-in)
-- Other: check for any bundle analysis tooling in devDependencies
+Check if a bundle analyzer is configured or available for the project's build tool (see PATTERNS.md → P1 for tool names per build system).
 If no analyzer is configured or documented, flag as Medium - developers cannot easily audit bundle composition.
 
 **P2 - Server-only package exclusion**
@@ -166,8 +163,8 @@ Flag: any package with 100+ exports where only a subset is used, not covered by 
 Flag: each collection query without pagination bounds. Exception: export routes that intentionally fetch all for CSV/XLSX - verify from context.
 
 **CHECK Q2 - Select * (over-fetching columns)**
-Grep for select-all patterns in route handlers (e.g. `.select('*')`, `SELECT *`, `.findAll()` without field projection, `.all()` without `only()`).
-Flag: each match. Fetching all columns is a performance and security risk - columns with large values (e.g. `body`, `content`, blob URLs) are sent over the wire unnecessarily.
+Grep for select-all patterns in route handlers (see PATTERNS.md → Q2 for ORM-specific patterns).
+Flag: each match. Fetching all columns is a performance and security risk - columns with large values are sent over the wire unnecessarily.
 
 **CHECK Q3 - N+1 patterns**
 Pattern A: database query calls inside `.map(`, `for`, or `forEach` loops.
@@ -237,86 +234,25 @@ Flag:
 
 ### Step 6b - Stack-specific checks (main context)
 
-Read the 10 largest source files by line count. Apply the checks relevant to the project language. Each check includes grep patterns - run them, then read flagged files for context.
-
-**Swift**:
-- Main-thread work: grep for `DispatchQueue.main.sync` outside UI layer files - synchronous dispatch on main blocks the UI. Also grep for `URLSession.shared.data` without `Task { }` wrapper in non-async contexts.
-- Image downsampling: grep for `UIImage(named:` or `NSImage(named:` in collection view / table view code - flag if no `preparingThumbnail` or `CGImageSource` downsampling nearby.
-- Core Data batch size: grep for `NSFetchRequest` - flag if `fetchBatchSize` is 0 or not set (default fetches all objects into memory).
-- Retain cycles: grep for closures capturing `self` - flag `{ self.` or `{ [self]` without `[weak self]` in long-lived contexts (completion handlers, observers, timers).
-- Allocation spikes: grep for object creation inside `for`/`while` loops (e.g. `= String(`, `= Data(`, `= NSMutableAttributedString(`).
-
-**Kotlin**:
-- Main-thread DB: grep for `Room` or `SQLite` calls outside `Dispatchers.IO` or `withContext(Dispatchers.IO)`.
-- RecyclerView recycling: grep for `onBindViewHolder` - flag if view inflation (`inflate(`) happens inside bind instead of `onCreateViewHolder`.
-- Bitmap memory: grep for `BitmapFactory.decode` - flag if no `inSampleSize` option is set (loads full-resolution bitmaps).
-- Coroutine leaks: grep for `GlobalScope.launch` - flag each occurrence (no lifecycle-aware cancellation).
-- StrictMode: grep for `StrictMode` in Application class - flag if absent in debug build (disk/network violations on main thread go undetected).
-
-**Rust**:
-- Unnecessary clone: grep for `.clone()` - flag if the value is only read after cloning (borrow would suffice).
-- Hot-path allocation: grep for `Vec::new()`, `String::new()`, `Box::new(` inside loop bodies - flag if the allocation could be hoisted or reused.
-- Dynamic dispatch: grep for `Box<dyn` - flag if the trait has a single implementor (generics avoid vtable overhead).
-- Missing inline: grep for `pub fn` in hot-path modules with body < 5 lines - consider `#[inline]` for small frequently-called functions.
-
-**Go**:
-- Goroutine creation in loops: grep for `go func` or `go ` inside `for` - flag if no semaphore/pool limits the concurrency.
-- Channel sizing: grep for `make(chan` - flag unbuffered channels (`make(chan T)`) in producer-consumer patterns (causes blocking).
-- Defer in loops: grep for `defer` inside `for` - deferred calls accumulate until the function returns, not the loop iteration.
-- Escape analysis: recommend running `go build -gcflags='-m' 2>&1 | grep 'escapes to heap'` on hot-path packages.
-
-**Python**:
-- Regex in loops: grep for `re.compile` or `re.search`/`re.match` with literal pattern inside `for`/`while` - flag if pattern is constant (compile once outside loop).
-- List vs generator: grep for list comprehensions `[... for ... in ...]` passed to `sum(`, `max(`, `min(`, `any(`, `all(` - generator expression avoids materializing the full list.
-- Deep copies: grep for `copy.deepcopy` - flag in hot paths (extremely expensive).
-- GIL contention: grep for `threading.Thread` doing CPU-bound work - flag (use `multiprocessing` or `concurrent.futures.ProcessPoolExecutor` instead).
-
-**Ruby**:
-- N+1 queries: grep for `.each` followed by association access (e.g. `user.company`) - flag if no `.includes(` or `.eager_load(` on the parent query.
-- String allocation: grep for string interpolation `"#{` inside loops - flag if the string could be built with `StringIO` or array join.
-- GC pressure: grep for `.map { |x| x.` patterns creating intermediate arrays - flag if `.lazy.map` or `.each_with_object` would avoid allocation.
-
-**Java**:
-- Autoboxing: grep for `Integer`, `Long`, `Double` in loop variable declarations - flag (use primitive types `int`, `long`, `double`).
-- String concat in loops: grep for `+=` on String variables inside loops - flag (use `StringBuilder`).
-- Connection pool: grep for `DriverManager.getConnection` - flag if no connection pool (HikariCP, c3p0) is configured.
-- Stream overhead: grep for `.stream().` on small collections (< 10 items) - traditional loop may be faster due to stream pipeline overhead.
-
-**dotnet**:
-- LINQ allocations: grep for `.Select(`, `.Where(`, `.ToList()` chains - flag if intermediate `.ToList()` materializes unnecessarily before final consumption.
-- String concatenation: grep for `+=` on string inside loops - flag (use `StringBuilder` or `string.Join`).
-- LOH fragmentation: grep for `new byte[` with size > 85000 - flag (Large Object Heap allocations are expensive to collect).
-- Async overhead: grep for `async` methods that contain only a single `await` with no branching - flag as candidates for removing async wrapper (avoids state machine overhead).
+Read the 10 largest source files by line count. Apply the checks relevant to the project language using grep patterns from PATTERNS.md → Step 6b (organized by language). Run the patterns, then read flagged files for context.
 
 ---
 
 ### Step 6c - Resource footprint checks (main context)
 
 **CHECK NR1 - Launch / startup weight**
-Identify the application entry point:
-- Swift: `@main` struct or `AppDelegate.didFinishLaunchingWithOptions`
-- Kotlin: `Application.onCreate` or `MainActivity.onCreate`
-- Rust/Go/Python/Ruby/Java/dotnet: `main()` function or entry module
-
-Grep for heavy operations in the entry point: database initialization, network calls, large file reads, complex object graph construction. Flag any operation that could be deferred (lazy initialization) or moved to a background thread/task.
+Identify the application entry point (see PATTERNS.md → NR1 for per-language markers). Grep for heavy operations in the entry point: database initialization, network calls, large file reads, complex object graph construction. Flag any operation that could be deferred (lazy initialization) or moved to a background thread/task.
 
 **CHECK NR2 - Memory management patterns**
-- Swift: grep for missing `autoreleasepool` in batch processing loops. Grep for `NSCache` or `Dictionary` used as cache without size limit.
-- Kotlin: grep for `static` or `companion object` holding Activity/Context references (memory leak). Check `onDestroy` for missing listener/observer cleanup.
-- Rust: grep for `Vec` that grows via `push` in a loop without `with_capacity` pre-allocation.
-- Go: grep for `sync.Map` or map growth without periodic cleanup - flag unbounded maps.
-- All: grep for large static/global collections that persist for the process lifetime.
+Grep for per-language memory antipatterns from PATTERNS.md → NR2. Key categories: missing autorelease pools in batch loops, unbounded caches, leaked references, pre-allocation misses. Also flag large static/global collections that persist for the process lifetime.
 
 **CHECK NR3 - Energy and background patterns** (mobile stacks only)
-- Swift: grep for `Timer.scheduledTimer` or `DispatchSource.makeTimerSource` - flag if no `tolerance` set (tight timers prevent CPU sleep). Grep for `CLLocationManager` with `startUpdatingLocation` - flag if `startMonitoringSignificantLocationChanges` would suffice.
-- Kotlin: grep for `AlarmManager.setRepeating` or `Handler.postDelayed` in loops - flag excessive wake-ups. Grep for `LocationRequest` with high frequency updates.
-- Flag: any background polling pattern (repeated network calls on a timer) that could use push notifications or event-driven updates instead.
+Grep for per-language energy antipatterns from PATTERNS.md → NR3. Key categories: tight timers without tolerance, high-frequency location updates, excessive wake-ups. Flag any background polling pattern that could use push notifications or event-driven updates instead.
 
 **CHECK NR4 - Binary / artifact size**
 - Grep for large embedded assets in source directories (images > 1MB, bundled databases, embedded fonts). Flag if assets could be downloaded on demand.
-- Swift: check for `DEBUG` conditional code that may leak into release builds (grep for `#if DEBUG` blocks containing large test fixtures or mock data).
-- Kotlin: check for `debugImplementation` dependencies accidentally in `implementation` (grep `build.gradle` for heavy debug-only libraries in the wrong configuration).
-- All: grep for unused imports at module/package level - flag files importing modules they don't use (increases link time and potentially binary size).
+- Check for debug-only code or dependencies leaking into release builds.
+- Grep for unused imports at module/package level - flag files importing modules they don't use.
 
 ---
 
