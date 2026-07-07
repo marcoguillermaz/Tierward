@@ -57,13 +57,42 @@ Score five dimensions, each **0–2**. Sum is 0–10.
 - the same step fails twice, or confidence is low on a level-2-risk output;
 - the work reveals more ambiguity or blast radius than the initial score assumed.
 
-**De-escalate** only for **pure discovery** subagents — enumerate-and-report work with no judgment (the classic `fast`-tier Explore subagent). A cost-driven de-escalation of a **judgment-tier** step is not trusted on cost grounds alone: validate it first with a head-to-head probe against a known-answer defect (see the model-tiering house rule / W3.4). If the cheaper tier misses the known defect, keep the higher tier.
+**De-escalate** only for **pure discovery** subagents — enumerate-and-report work with no judgment (the classic `fast`-tier Explore subagent). De-escalating a **judgment-tier** step on cost grounds is governed by the **Model-tiering house rule** below: it is not trusted until a head-to-head probe confirms the cheaper tier catches a known-answer defect.
+
+---
+
+## Model-tiering house rule
+
+The one rule the tiers and rubric above serve: **discovery runs cheap, judgment runs capable.**
+
+- A subagent that only **enumerates and reports** — greps, lists, extracts, collects candidates and returns them with no verdict of its own — runs at the `fast` tier (the classic Explore subagent).
+- A step that **judges** — decides, scores, applies a fix, rules a finding in or out — runs at its rubric-derived tier and is never dropped below it to save cost without evidence.
+
+Locate a task on this rule with the capability-tier table and the scoring rubric; this section is the principle, those are how you apply it. Do not re-encode either here — one scheme, not two.
+
+### Probe before you trust a cheaper judgment tier
+
+Cost is not evidence of fitness. Before running a judgment-tier step at a lower tier to save money, validate the cheaper tier head-to-head against a known-answer defect:
+
+1. Pick a **planted-bug fixture** — a defect the higher tier is known to catch, at a known severity, representative of what this step actually judges.
+2. Run the cheaper tier on it, same input, head-to-head with the higher tier.
+3. Ask: does the cheaper tier surface the **same defect at the same severity**? Not "roughly similar output" — the specific finding.
+4. **Misses it → keep the higher tier.** **Matches → the de-escalation is trusted**, and you record a dated note (below) so the next reader sees the evidence, not just the cheaper choice.
+
+This is a review-time discipline, not an automated gate — there is no probe runner (that would depend on the per-phase metrics of W4.2, which has not shipped). `arch-audit` T5 checks that any expected tier lowered below its rubric tier cites one of these notes.
+
+### Probe log
+
+Record each probe as a dated line, same convention as the calibration notes:
+`YYYY-MM-DD — <skill/step>: probed <cheaper tier> vs <higher tier> on <fixture>, <same defect found? y/n>, decision <keep higher / downgrade>.`
+
+_(none yet)_
 
 ---
 
 ## Alignment with arch-audit T5
 
-T5 enforces a per-skill expected model. This policy is the *why* behind that table; the table is its *enforcement*. They must not drift into two schemes. Applying the rubric to a skill's dominant task should reproduce its T5 tier:
+T5 enforces a per-skill expected model, and — per the house rule above — flags any expected-state entry set below its rubric tier that does not cite a probe note. This policy is the *why* behind that table; the table is its *enforcement*. They must not drift into two schemes. Applying the rubric to a skill's dominant task should reproduce its T5 tier:
 - mechanical Explore subagents inside skills → **fast** (`haiku`);
 - cross-file judgment audits (arch-audit, security-audit, api-design, perf-audit, skill-dev, ui-audit) → **balanced** (`sonnet`);
 - visual/screenshot skills (visual-audit, ux-audit, responsive-audit) and deep schema/access-model reasoning (skill-db) → **frontier** (`opus`), via the Verification/Ambiguity floors.
