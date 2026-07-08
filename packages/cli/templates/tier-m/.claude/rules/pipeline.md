@@ -146,6 +146,8 @@ A skip is a legitimate outcome. Silent degradation is not.
 
 ***** STOP - wait for design confirmation before writing code. *****
 
+**Persist the approved scope** (before Phase 2): write the confirmed file list (from the dependency scan) to the session file front matter as a `files_in_scope:` YAML list — repo-relative paths, POSIX separators, no leading `./`. The `file-list-guard` PreToolUse hook reads this to block Phase 2 edits to files outside the approved scope; until it is written the guard stays inactive (self-arming). If scope legitimately expands mid-block, add the file to `files_in_scope` before editing it. (Docs, `.claude/`, and repo-root `README`/`CHANGELOG`/`*.md` are always allowed — closure edits never need listing.)
+
 ## Phase 2 - Implementation
 
 - Update `docs/requirements.md` with the approved plan before writing any code.
