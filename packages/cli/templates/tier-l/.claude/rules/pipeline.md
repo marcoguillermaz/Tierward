@@ -359,6 +359,8 @@ Only after explicit confirmation:
    - **Commit 2 - docs**: `docs/` changes + `README.md` if updated - separate commit.
    - **Commit 3 - context** (only if updated): `CLAUDE.md` and/or `MEMORY.md` - never mixed with code or docs.
 9. **PR review** (recommended): once the PR is open and CI is green, run `/pr-review <PR_NUMBER>` for an autonomous local code review. The review is posted as a PR comment for audit trail and surfaces a merge decision (`integrate` / `fix branch` / `proceed`). Use `--deep` for changes touching auth, money paths, or migrations.
+
+   **Merge barrier (auto-mode-safe):** step 10 runs on `/pr-review`'s *returned* verdict, never on its *launch*. If you gate the merge on the review, promote only after `/pr-review` has returned an explicit `integrate` / `proceed` (or a human decision on `fix branch`). A null / empty / errored / crashed return is **not** a clean verdict — a review that did not complete counts as *not reviewed*: do not promote, re-run or review manually. The launch acknowledgment is not the verdict.
 10. Promote to production: `git checkout main && git merge staging --no-ff && git push origin main`
 
 ## Phase 8.5 - Context review + compact
