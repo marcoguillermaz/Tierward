@@ -5,7 +5,7 @@ user-invocable: true
 model: sonnet
 context: fork
 argument-hint: [static|full|wcag] [target:route:<path>|target:file:<glob>|target:role:<role>]
-allowed-tools: Read Glob Grep Bash(curl:*) mcp__playwright__browser_navigate mcp__playwright__browser_evaluate mcp__playwright__browser_wait_for
+allowed-tools: Read Glob Grep Bash(curl:*) mcp__playwright__browser_navigate mcp__playwright__browser_evaluate mcp__playwright__browser_wait_for Agent Edit Write
 ---
 
 ## Configuration (fill in before first run)
