@@ -196,6 +196,7 @@ Teardown is in Phase 8.
 - Use `EnterPlanMode` to present the complete approved plan in locked form.
 - Prompt user to enable **auto-accept edits** before proceeding.
 - Call `ExitPlanMode` once confirmed.
+- **Persist the approved scope**: write the confirmed file list (from the dependency scan) to the session file front matter as a `files_in_scope:` YAML list — repo-relative paths, POSIX separators, no leading `./`. The `file-list-guard` PreToolUse hook reads this to block Phase 2 edits to files outside the approved scope; until it is written the guard stays inactive (self-arming). If scope legitimately expands mid-block, add the file to `files_in_scope` before editing it. (Docs, `.claude/`, and repo-root `README`/`CHANGELOG`/`*.md` are always allowed — closure edits never need listing.)
 - ***** STOP - context reset required before Phase 2. `/compact` is a CLI command only the developer can run; no agent tool performs it. Tell the user: "Plan locked. Run `/compact` now to reset context, then reply to continue into Phase 2." Do NOT begin Phase 2 until the user confirms the compaction — starting without it defeats the reset before the most expensive phase. *****
 
 ## Phase 2 - Implementation

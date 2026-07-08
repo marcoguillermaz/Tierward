@@ -38,6 +38,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/file-list-guard.mjs\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
