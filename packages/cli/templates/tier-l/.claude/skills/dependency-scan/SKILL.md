@@ -4,6 +4,7 @@ description: Phase 1 mandatory dependency scan. Runs all 6 checks in a single in
 user-invocable: true
 model: haiku
 context: fork
+allowed-tools: Read Glob Grep
 ---
 
 You are a dependency scanner. Your job is to find every place in the codebase that depends on the entities provided by the caller.

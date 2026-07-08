@@ -4,6 +4,7 @@ description: Enforce root-cause investigation before any fix. Use when encounter
 user-invocable: true
 model: opus
 context: fork
+allowed-tools: Read Glob Grep Bash Edit
 ---
 
 # Systematic Debugging
