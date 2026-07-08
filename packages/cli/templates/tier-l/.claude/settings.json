@@ -48,6 +48,15 @@
             "model": "haiku"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "IN=$(cat 2>/dev/null); [ \"$(printf '%s' \"$IN\" | jq -r '.stop_hook_active // false' 2>/dev/null)\" = \"true\" ] && exit 0; CWD=$(printf '%s' \"$IN\" | jq -r '.cwd // empty' 2>/dev/null); { [ -n \"$CWD\" ] && cd \"$CWD\" 2>/dev/null; } || cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null || exit 0; git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0; CRE='sk_live_[a-zA-Z0-9]{10,}|api_key.*=.*[a-zA-Z0-9]{10,}|password.*=.*[a-zA-Z0-9]{8,}|token.*=.*[a-zA-Z0-9]{10,}'; DEF=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null); [ -z \"$DEF\" ] && for c in origin/main origin/master main master; do git rev-parse -q --verify \"$c\" >/dev/null 2>&1 && { DEF=$c; break; }; done; RANGE=\"\"; [ -n \"$DEF\" ] && git rev-parse -q --verify \"$DEF\" >/dev/null 2>&1 && RANGE=\"$DEF...HEAD\"; DIFF=$(git diff HEAD 2>/dev/null; [ -n \"$RANGE\" ] && git diff \"$RANGE\" 2>/dev/null); HIT=$(printf '%s\\n' \"$DIFF\" | grep -aE '^\\+[^+]' | grep -aiE \"$CRE\" | grep -avEi '[.][.][.]|example|placeholder|xxxx|your_|<[a-z]|changeme|dummy|redacted' | head -1); if [ -n \"$HIT\" ]; then jq -nc --arg r \"Closure blocked: credential-like pattern in the block diff (same check as context-review C1). Review and remove before completing.\" '{decision:\"block\",reason:$r}'; exit 0; fi; LIM=5242880; FILES=$(git diff HEAD --name-only 2>/dev/null; [ -n \"$RANGE\" ] && git diff \"$RANGE\" --name-only 2>/dev/null); BIG=$(printf '%s\\n' \"$FILES\" | sort -u | while read -r f; do sz=\"\"; [ -n \"$f\" ] && [ -f \"$f\" ] && sz=$(wc -c <\"$f\" 2>/dev/null); [ -n \"$sz\" ] && [ \"$sz\" -gt \"$LIM\" ] && echo \"$f\"; done | head -1); if [ -n \"$BIG\" ]; then jq -nc --arg r \"Closure blocked: a file added in this block exceeds the 5MB size cap ($BIG). Confirm this belongs in the repo before completing.\" '{decision:\"block\",reason:$r}'; exit 0; fi; exit 0",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "PreToolUse": [

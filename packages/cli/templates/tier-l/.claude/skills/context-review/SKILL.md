@@ -24,6 +24,8 @@ sk_live_[a-zA-Z0-9]{10,}|api_key.*=.*[a-zA-Z0-9]{10,}|password.*=.*[a-zA-Z0-9]{8
 
 Note: `must_change_password`, `password: string`, property names in code examples are NOT credentials - the grep targets actual value strings.
 
+Note: the tier-l `Stop` closure hook (`.claude/settings.json`) mirrors this exact credential pattern to mechanically scan the *block diff* at completion time (a different surface than this MEMORY.md scan). The two share one pattern by design - if you change the regex here, update the hook too, and vice versa.
+
 ---
 
 ## C2 - Unresolved placeholders in active files
