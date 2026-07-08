@@ -2,7 +2,8 @@
 name: skill-db
 description: Database audit: schema quality, index coverage, row-level access-control completeness, FK cascades, query patterns. Runs live SQL verification (PostgreSQL instance in PATTERNS.md; other engines verify the equivalent guard). Migration file safety → /migration-audit.
 user-invocable: true
-model: sonnet
+model: opus
+effort: high
 context: fork
 argument-hint: [target:section:<section>|target:table:<table>]
 ---
