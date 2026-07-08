@@ -30,7 +30,7 @@ Your development scaffold is ready. This guide walks through setup and your firs
 - Coding conventions: any non-obvious rules for your codebase
 
 **Sections removed to save context tokens** - add them back to `CLAUDE.md` when you have real content:
-- `## RBAC / Roles` - role/permission table (copy from tier template or write your own)
+- `## RBAC / Roles` - role/permission table (copy from tier template or write your own). **Treat it as the single source of truth for role × permission: `## Navigation by Role`, `docs/contracts/` and `docs/sitemap.md` derive from it - each holds only its own slice (pages / fields / routes) and must not restate a role's capabilities. On any role change, update this table first; the others reference it, they do not duplicate it.**
 - `## Key Workflows` - state machines, approval flows, document lifecycle
 - `## Navigation by Role` - role-to-page mapping table
 - `## Known Patterns` - non-obvious gotchas discovered during development
