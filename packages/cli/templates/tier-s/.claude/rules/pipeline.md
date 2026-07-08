@@ -54,6 +54,7 @@ A skip is a legitimate outcome. Silent degradation is not.
 
 - Update `docs/implementation-checklist.md` only if the fix closes a tracked item (if the file exists).
 - Update `CLAUDE.md` only if the fix reveals a non-obvious pattern worth documenting.
+- If the fix touched **state transitions, role permissions, or routes**, update the matching doc (contract / RBAC table / sitemap) - or explicitly state no doc impact. Zero cost when inapplicable; prevents silent Fast-Lane doc drift.
 - **Delete session file**: remove `.claude/session/fix-[description].md`.
   - Proceed only if the fix is confirmed working in production.
   - If outcome is ambiguous: ask explicitly before deleting.

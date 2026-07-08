@@ -114,6 +114,30 @@ Also read `CLAUDE.md` (project conventions). Pass it to the subagent so project-
 
 ## Step 4 — Spawn the review subagent
 
+**PR mode — reuse a same-commit pre-PR review (confirmatory short-circuit).** Before spawning, check whether a local pre-PR review already covers this exact commit *and* base:
+
+```bash
+read -r PR_HEAD_SHA HEAD_REF PR_BASE < <(gh pr view "$PR_NUMBER" --repo "$REPO" \
+  --json headRefOid,headRefName,baseRefName -q '"\(.headRefOid) \(.headRefName) \(.baseRefName)"')
+SLUG=$(echo "$HEAD_REF" | tr '/' '-')
+LOCAL_REPORT=/tmp/pr-review-local-${SLUG}-output.md
+```
+
+Reuse the local report (skip the subagent) **only when all** of these hold:
+- `$LOCAL_REPORT` exists and its `Reviewed-SHA` == `$PR_HEAD_SHA` (head unchanged since the local pass);
+- its `Reviewed-Base` == `$PR_BASE` (same three-dot diff scope — a local review taken against a different base covers a different change set and must not be reused);
+- its Verdict is `✅ LGTM` **or** findings are Minor-only (no Critical, no Major);
+- the current invocation is **not** `--deep`, unless the local report's `Reviewed-Model` is already `opus` (an explicit deep request is never satisfied by a shallower pass).
+
+When all hold, write the reused body to the PR output path with a reuse banner prepended, carry the local report's verdict to Step 6, and **skip the rest of Step 4**:
+
+```bash
+{ printf '> Reused from same-commit pre-PR local review — second review run skipped (head and base unchanged since the local pass).\n\n'; cat "$LOCAL_REPORT"; } \
+  > /tmp/pr-review-${PR_NUMBER}-output.md
+```
+
+Otherwise **re-review** (spawn below). This is the conservative default: no local report, a `Reviewed-SHA`/`Reviewed-Base` mismatch, a Critical/Major in the local report, a `--deep` request against a shallow report, or a maintainer choosing a fresh pass after seeing CI at Step 7 — all lead here. The skill does not query CI status itself; that judgment is the maintainer's at Step 7.
+
 Use the **Agent tool** (`subagent_type: general-purpose`). Model: `sonnet` by default, `opus` if `--deep`.
 
 Compose the subagent prompt by substituting these placeholders into the template under "Review subagent prompt" below: `<REPO>`, `<N>`, `<TITLE>`, `<HEAD_REF>`, `<BASE_REF>`, `<DIFF_PATH>` (do NOT inline the diff content; pass the path so the subagent reads it from disk), `<META_JSON>`, `<CLAUDE_MD>`, `<STACK_PATTERNS>` (contents of PATTERNS.md or "(no stack-specific patterns for this project)"), `<TEAM_SEVERITY>` (parsed `prReviewSeverity` JSON or `null`), and `<SESSION_FILE_CONTENT>` (only if `--with-context`).
@@ -128,9 +152,21 @@ The subagent returns a structured markdown review.
 gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file /tmp/pr-review-${PR_NUMBER}-output.md
 ```
 
-Always post — even on LGTM clean reviews — to maintain a permanent audit trail. The comment is the canonical record; the in-conversation summary in Step 6 is for the maintainer's terminal.
+Always post — even on LGTM clean reviews, and even on the Step 4 reuse path — to maintain a permanent audit trail. Reuse skips the *second review run*, never this comment: it posts the reused report written to the same `/tmp/pr-review-${PR_NUMBER}-output.md` path. The comment is the canonical record; the in-conversation summary in Step 6 is for the maintainer's terminal.
 
-**Local mode:** there is no PR to comment on, so skip `gh pr comment`. Write the report to `/tmp/pr-review-local-${SLUG}-output.md` and tell the user the audit-trail comment is **deferred** — re-run `/pr-review <N>` once the PR is open to post the canonical record. The local pass is a pre-push gate, not the audit trail.
+**Local mode:** there is no PR to comment on, so skip `gh pr comment`. Write the report to `/tmp/pr-review-local-${SLUG}-output.md`, then prepend a provenance header so a later PR-mode run can safely detect a same-commit pre-PR review:
+
+```bash
+{
+  printf 'Reviewed-SHA: %s\n'  "$(git rev-parse HEAD)"
+  printf 'Reviewed-Base: %s\n' "${BASE#origin/}"      # normalized: strip origin/ so it matches a PR's baseRefName
+  printf 'Reviewed-Model: <sonnet|opus>\n\n'          # the model chosen in Step 4 (opus when --deep)
+  cat /tmp/pr-review-local-${SLUG}-output.md
+} > /tmp/pr-review-local-${SLUG}-output.md.tmp \
+  && mv /tmp/pr-review-local-${SLUG}-output.md.tmp /tmp/pr-review-local-${SLUG}-output.md
+```
+
+Tell the user the audit-trail comment is **deferred** — re-run `/pr-review <N>` once the PR is open to post the canonical record. The local pass is a pre-push gate, not the audit trail; the provenance header lets the PR-mode run reuse this review only if the PR's head commit **and** base branch both match (see Step 4).
 
 ## Step 6 — Synthesize for the user
 
@@ -140,7 +176,7 @@ Parse the subagent output. Produce a compact in-terminal summary.
 
 ```
 PR #<N> — <TITLE>
-Status: CI <state> · Review model: <sonnet|opus> · Comment posted: <URL>
+Status: CI <state> · Review model: <sonnet|opus, or "reused (same-commit pre-PR)"> · Comment posted: <URL>
 
 Critical (N)
 - <file:line> — <finding> → <action>
@@ -294,6 +330,7 @@ Produce a single markdown document. This is what gets posted as a PR comment.
 - **Never call `gh pr merge`**. Merge is the user's decision; this skill only reviews.
 - **Never modify code**. The subagent has read-only access; the orchestrator never patches.
 - **Always post the comment in PR mode**. Even on LGTM clean reviews — the audit trail is the value. Local mode has no PR to comment on: it writes the report to disk and defers the canonical comment to the later PR-mode pass.
+- **Reuse only a same-commit, same-base pre-PR review**. The Step 4 short-circuit skips the second review run only when head SHA and base branch both match and no Critical/Major was found; it still posts the audit-trail comment, and it never reuses across a moved HEAD, a different base, or an explicit `--deep` request.
 - **Never trust `--with-context` to absolve findings**. Session context informs the review; it does not override security or correctness signals.
 - **Never paste 50 000-line diffs into the subagent prompt**. Pass the path; the subagent reads from disk.
 
