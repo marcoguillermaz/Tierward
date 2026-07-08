@@ -5,7 +5,7 @@ user-invocable: true
 model: opus
 context: fork
 argument-hint: [flow:<flow-id>|role:<role>|full] [target:page:<route>|target:role:<role>|target:section:<section>]
-allowed-tools: Read Glob Grep Bash mcp__playwright__browser_navigate mcp__playwright__browser_take_screenshot mcp__playwright__browser_snapshot mcp__playwright__browser_type mcp__playwright__browser_click mcp__playwright__browser_wait_for mcp__playwright__browser_evaluate mcp__playwright__browser_fill_form mcp__playwright__browser_press_key
+allowed-tools: Read Glob Grep Bash(rm:*) mcp__playwright__browser_navigate mcp__playwright__browser_take_screenshot mcp__playwright__browser_snapshot mcp__playwright__browser_type mcp__playwright__browser_click mcp__playwright__browser_wait_for mcp__playwright__browser_evaluate mcp__playwright__browser_fill_form mcp__playwright__browser_press_key
 ---
 
 ## Configuration (fill in before first run)
@@ -334,7 +334,7 @@ After the report:
 
 ## Step 10 - Screenshot cleanup
 
-After the report is delivered, delete any screenshots taken during analysis. Run unconditionally at session end.
+After the report is delivered, delete any screenshots taken during analysis with `rm`. Run unconditionally at session end.
 
 ---
 
