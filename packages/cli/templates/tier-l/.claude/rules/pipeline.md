@@ -41,7 +41,15 @@ A skip is a legitimate outcome. Silent degradation is not.
   ---
   ```
 
-  Below the front matter, add the current date and a placeholder skeleton. Rename to `block-[name].md` in Phase 1 once the block name is known.
+  Below the front matter, add the current date and a placeholder skeleton, including a **Phase log** table (read by the Phase 8 metrics collect step). Rename to `block-[name].md` in Phase 1 once the block name is known.
+
+  ```
+  ## Phase log
+  | phase | model | effort | elapsed | findings |
+  |---|---|---|---|---|
+  ```
+
+  At each phase boundary, append one row: `model` = capability tier used (`fast`/`balanced`/`frontier`, or its provider instance), `effort` = `low`/`medium`/`high`/`xhigh`, `elapsed` = wall-clock for the phase, `findings` = count surfaced. Cost is proxied by **elapsed + model/effort**, never token counts. Keep every cell inside its vocabulary — a free-text value makes the log non-aggregable.
 - The session file must exist before any other Phase 0 action runs.
 - **Do not edit `requirements_approved` yourself.** The `tierward-capture-approval` hook sets it to `true` when YOU (the developer) reply at the Phase 1 STOP gate with a **bare** execution keyword — reply with just `Proceed` (or `Execute` / `Confirmed` / `Go ahead`), on its own. A keyword inside a longer sentence ("Proceed to the next file") does not arm approval — this is deliberate, so a casual imperative never authorizes a commit. The `tierward-governance-gate` hook then allows `git commit`. This is governance enforced from your approval, not Claude's self-assertion.
 
@@ -329,6 +337,7 @@ If the project is CLI-only, backend-only, or native-standalone without a UI laye
 
 Only after explicit confirmation:
 0. **Flush the backlog scratch** (per `.claude/rules/backlog-protocol.md`): if `.claude/session/refactoring-findings.md` exists, consolidate its entries into `docs/refactoring-backlog.md` in a **single** write - dedupe against existing entries, assign contiguous IDs per prefix - then delete the scratch. This is the block's one consolidated backlog write; the Phase 5d audits appended here instead of writing mid-block. If the scratch is absent or empty, skip. Do this before deleting the session file (the scratch lives under `.claude/session/`).
+0b. **Collect phase metrics**: consolidate the session file's **Phase log** rows into `docs/metrics/phase-log.md` (create it with the same header if absent) in a single append — one block's rows per closure. Drop or fix any row whose value falls outside its column vocabulary (`model`/`effort` enums; numeric `elapsed`/`findings`) so the persistent log stays aggregable; never invent values for missing cells. Do this before deleting the session file (the Phase log lives in it). Cost is elapsed + model/effort, never tokens; keep this file as raw data — no automatic threshold-fitting. **Unvalidated:** if `docs/metrics/phase-log.md` is still empty after ~2 closed blocks, per-phase logging is not holding — simplify it rather than carry dead ceremony.
 1. **Delete session file**: remove `.claude/session/block-[name].md`.
    - Proceed only if the user's confirmation unambiguously closes the block.
    - If the confirmation is ambiguous (partial approval, open questions): ask explicitly - "Confirm session file deletion and block closure?" - then wait for a clear yes.

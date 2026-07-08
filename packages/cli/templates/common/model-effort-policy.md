@@ -101,10 +101,10 @@ When T5's table and this rubric disagree for a skill, one of them is wrong — r
 
 ---
 
-## Calibration (stub — depends on W4.2)
+## Calibration (stub — data source live, calibration pending)
 
-The score→tier thresholds above are **heuristic**. Principled calibration needs per-phase cost/outcome data, which the per-phase metrics instrumentation (W4.2) does not yet produce. Until that exists:
+The score→tier thresholds above are **heuristic**. Principled calibration needs per-phase cost/outcome data. The per-phase metrics instrumentation now records it to **`docs/metrics/phase-log.md`** (Phase 8 collect step): `phase`, `model`, `effort`, `elapsed`, `findings`. Until enough blocks accumulate:
 - treat the thresholds as a starting point, not a measured optimum;
 - adjust by hand when a tier consistently under-serves (rework, missed defects) or over-serves (cost with no quality gain) a given task class, and note the change here with a date.
 
-Once W4.2 ships, calibrate the thresholds against observed rework / change-failure rate per tier, and replace this stub with the data-driven procedure.
+The phase-log feeds the **cost / over-serve** side (elapsed + model/effort vs findings) once ≥ a handful of blocks are logged. The **rework / under-serve** side (change-failure rate per tier) needs post-block outcome tracking that is not collected yet — pending. Do not auto-fit thresholds on a few rows (fit-on-noise); replace this stub with a data-driven procedure only once the log has real volume.
