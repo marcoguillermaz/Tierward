@@ -5,7 +5,7 @@ user-invocable: true
 model: opus
 context: fork
 argument-hint: [quick|full] [target:page:<route>|target:role:<role>|target:section:<section>]
-allowed-tools: Read Glob Grep Bash mcp__playwright__browser_navigate mcp__playwright__browser_take_screenshot mcp__playwright__browser_snapshot mcp__playwright__browser_click mcp__playwright__browser_type mcp__playwright__browser_wait_for mcp__playwright__browser_resize mcp__playwright__browser_evaluate
+allowed-tools: Read Glob Grep Bash(rm:*) mcp__playwright__browser_navigate mcp__playwright__browser_take_screenshot mcp__playwright__browser_snapshot mcp__playwright__browser_click mcp__playwright__browser_type mcp__playwright__browser_wait_for mcp__playwright__browser_resize mcp__playwright__browser_evaluate
 ---
 
 ## Configuration (fill in before first run)

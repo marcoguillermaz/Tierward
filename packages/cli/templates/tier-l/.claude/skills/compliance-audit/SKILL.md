@@ -5,7 +5,7 @@ user-invocable: true
 model: sonnet
 context: fork
 argument-hint: [target:path:<dir>|profile:gdpr|mode:all]
-allowed-tools: Read Glob Grep Bash
+allowed-tools: Read Glob Grep
 ---
 
 ## Scope for v1
