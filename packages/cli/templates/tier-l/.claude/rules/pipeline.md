@@ -363,7 +363,6 @@ Only after explicit confirmation:
 7. **Canonical doc updates** (conditional - only update docs that exist in the project):
    - If `docs/sitemap.md` exists and the block added/removed routes: update it now.
    - If `docs/db-map.md` exists and the block changed the schema: update it now.
-   - If `docs/prd/prd.md` exists: update it to reflect this block's outcomes.
    - If `docs/contracts/` exists and the block modified a domain entity: update the relevant contract.
    - If test counts changed in this block (integration, unit, E2E): update every place the totals appear - README shields.io badges, inline counts in README Testing section, and CLAUDE.md mentions. Stale counts signal an unmaintained project.
 8. **Commit sequence** - up to 3 commits, never mixed:
