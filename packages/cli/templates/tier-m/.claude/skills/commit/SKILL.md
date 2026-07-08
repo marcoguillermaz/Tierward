@@ -6,9 +6,17 @@ model: haiku
 context: fork
 ---
 
+**When invoked, immediately execute Steps 1-6 below against the currently staged changes — do not ask what to work on, do not wait for a further instruction, do not treat this as reference material. Your job is to commit the already-staged work now. If nothing is staged, stop with the Step 1 message.**
+
 ## Step 1 - Read staged changes
 
-If output is empty: respond "No staged files. Run `git add <files>` first." and stop.
+Run:
+
+```bash
+git diff --cached --stat && git diff --cached
+```
+
+If the output is empty (nothing staged): respond "No staged files. Run `git add <files>` first." and stop.
 
 ## Step 2 - Determine commit type
 
