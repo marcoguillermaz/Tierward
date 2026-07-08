@@ -5,7 +5,7 @@ user-invocable: true
 model: sonnet
 context: fork
 argument-hint: [target:section:<section-name>]
-allowed-tools: Read Glob Grep
+allowed-tools: Read Glob Grep Agent Edit Write
 ---
 
 ## Configuration (fill in before first run)
