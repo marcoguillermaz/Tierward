@@ -5,6 +5,7 @@ user-invocable: true
 model: opus
 effort: high
 context: fork
+allowed-tools: Read Glob Grep Bash Agent Edit Write
 argument-hint: [target:section:<section>|target:table:<table>]
 ---
 

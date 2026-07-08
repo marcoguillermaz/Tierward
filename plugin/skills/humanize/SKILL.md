@@ -8,6 +8,7 @@ description: >
 user-invocable: true
 model: sonnet
 context: fork
+allowed-tools: Read Glob Grep Edit
 ---
 
 # Humanize

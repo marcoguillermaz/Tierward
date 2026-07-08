@@ -4,6 +4,7 @@ description: Classify staged changes, generate conventional commit message (type
 user-invocable: true
 model: haiku
 context: fork
+allowed-tools: Read Glob Grep Bash
 ---
 
 **When invoked, immediately execute Steps 1-6 below against the currently staged changes — do not ask what to work on, do not wait for a further instruction, do not treat this as reference material. Your job is to commit the already-staged work now. If nothing is staged, stop with the Step 1 message.**

@@ -4,6 +4,7 @@ description: Stack-aware migration safety audit: data loss risks, destructive op
 user-invocable: true
 model: sonnet
 context: fork
+allowed-tools: Read Glob Grep Edit Write
 argument-hint: [target:file:<filename>|target:range:<from>-<to>|mode:all]
 ---
 

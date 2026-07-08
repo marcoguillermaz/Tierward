@@ -4,6 +4,7 @@ description: Security scan for Claude Code skills using SkillSpector. Detects 64
 user-invocable: true
 model: sonnet
 context: fork
+allowed-tools: Read Glob Grep Bash
 effort: medium
 argument-hint: [<path>|--llm]
 ---
