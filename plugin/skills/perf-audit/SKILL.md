@@ -4,6 +4,7 @@ description: Performance audit: bundle size, lazy loading, data fetching, cachin
 user-invocable: true
 model: sonnet
 context: fork
+allowed-tools: Read Glob Grep Bash Agent Edit Write
 argument-hint: [target:section:<section>|target:page:<route>|mode:audit|mode:apply]
 ---
 

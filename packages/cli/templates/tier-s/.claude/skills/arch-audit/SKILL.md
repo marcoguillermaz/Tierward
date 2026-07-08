@@ -4,6 +4,7 @@ description: Audit Claude Code architecture files against Anthropic docs and rel
 user-invocable: true
 model: sonnet
 context: fork
+allowed-tools: Read Glob Grep Bash Agent Edit
 ---
 
 ## Step 1 - Fetch latest Anthropic documentation

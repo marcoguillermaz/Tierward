@@ -4,6 +4,7 @@ description: API design audit: endpoint naming, HTTP verbs, response shapes, err
 user-invocable: true
 model: sonnet
 context: fork
+allowed-tools: Read Glob Grep Edit Write
 argument-hint: [target:section:<section>|target:role:<role>|mode:audit|mode:remediation|mode:apply]
 ---
 
