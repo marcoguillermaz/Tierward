@@ -121,13 +121,22 @@ read -r PR_HEAD_SHA HEAD_REF PR_BASE < <(gh pr view "$PR_NUMBER" --repo "$REPO" 
   --json headRefOid,headRefName,baseRefName -q '"\(.headRefOid) \(.headRefName) \(.baseRefName)"')
 SLUG=$(echo "$HEAD_REF" | tr '/' '-')
 LOCAL_REPORT=/tmp/pr-review-local-${SLUG}-output.md
+
+# Read provenance from the HEADER BLOCK ONLY (the first lines, up to the blank line that
+# closes it) — never a body/diff line that happens to quote "Reviewed-SHA:". `sed` quits at
+# the first blank line, and `^Reviewed-…:` is anchored to the line start.
+if [ -f "$LOCAL_REPORT" ]; then
+  REVIEWED_SHA=$(sed -n '/^$/q; s/^Reviewed-SHA: *//p'   "$LOCAL_REPORT")
+  REVIEWED_BASE=$(sed -n '/^$/q; s/^Reviewed-Base: *//p'  "$LOCAL_REPORT")
+  REVIEWED_MODEL=$(sed -n '/^$/q; s/^Reviewed-Model: *//p' "$LOCAL_REPORT")
+fi
 ```
 
 Reuse the local report (skip the subagent) **only when all** of these hold:
-- `$LOCAL_REPORT` exists and its `Reviewed-SHA` == `$PR_HEAD_SHA` (head unchanged since the local pass);
-- its `Reviewed-Base` == `$PR_BASE` (same three-dot diff scope — a local review taken against a different base covers a different change set and must not be reused);
-- its Verdict is `✅ LGTM` **or** findings are Minor-only (no Critical, no Major);
-- the current invocation is **not** `--deep`, unless the local report's `Reviewed-Model` is already `opus` (an explicit deep request is never satisfied by a shallower pass).
+- `$LOCAL_REPORT` exists and `$REVIEWED_SHA` == `$PR_HEAD_SHA` (head unchanged since the local pass);
+- `$REVIEWED_BASE` == `$PR_BASE` (same three-dot diff scope — a local review taken against a different base covers a different change set and must not be reused);
+- the report has **zero Critical and zero Major** findings — key the skip on the finding *counts*, never on the verdict line: a soft or mis-generated `✅ LGTM` that still carries a Major must **not** ride the skip (count the entries under the report's `### Critical (N)` / `### Major (N)` sections; `N=0` on both is the only pass);
+- the current invocation is **not** `--deep`, unless `$REVIEWED_MODEL` is already `opus` (an explicit deep request is never satisfied by a shallower pass).
 
 When all hold, write the reused body to the PR output path with a reuse banner prepended, carry the local report's verdict to Step 6, and **skip the rest of Step 4**:
 
