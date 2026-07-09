@@ -1159,6 +1159,80 @@ async function scenarioNativeStackCommandDefaults() {
   }
 }
 
+/**
+ * Case-insensitive residual scan: no `staging` reference may survive in a
+ * no-remote-governance scaffold. The only allowed carrier is the
+ * `[STAGING_DB_URL]` placeholder token (branch-agnostic DB config name).
+ */
+function assertNoStagingResiduals(dir, label) {
+  const ALLOWED_LINE = /\[STAGING_DB_URL\]/;
+  const hits = [];
+  for (const f of walkFiles(dir)) {
+    const content = fs.readFileSync(f, 'utf8');
+    if (!/staging/i.test(content)) continue;
+    content.split('\n').forEach((line, i) => {
+      if (/staging/i.test(line) && !ALLOWED_LINE.test(line)) {
+        hits.push(`${path.relative(dir, f)}:${i + 1}`);
+      }
+    });
+  }
+  if (hits.length === 0) {
+    pass(`${label}: no staging residuals in scaffold output`);
+  } else {
+    fail(`${label}: ${hits.length} staging residual(s)`, hits.slice(0, 10).join(', '));
+  }
+}
+
+async function scenarioNoRemoteGovernanceResiduals() {
+  section('No-remote-governance profile - zero staging residuals on native scaffolds');
+
+  for (const tier of ['s', 'm', 'l']) {
+    const config = {
+      ...BASE,
+      tier,
+      techStack: 'swift',
+      testCommand: 'swift test',
+      devCommand: 'swift run',
+      buildCommand: 'swift build',
+      installCommand: 'swift package resolve',
+      typeCheckCommand: '',
+      isDiscovery: false,
+    };
+    const dir = await scaffold(`no-remote-gov-swift-${tier}`, tier, config);
+    assertNoStagingResiduals(dir, `no-remote-gov[swift/${tier}]`);
+  }
+
+  const rustDir = await scaffold('no-remote-gov-rust-m', 'm', {
+    ...BASE,
+    tier: 'm',
+    techStack: 'rust',
+    testCommand: 'cargo test',
+    devCommand: 'cargo run',
+    buildCommand: 'cargo build',
+    installCommand: 'cargo build',
+    typeCheckCommand: '',
+    isDiscovery: false,
+  });
+  assertNoStagingResiduals(rustDir, 'no-remote-gov[rust/m]');
+
+  // Sanity guard: the remote-governance (web) profile must KEEP staging references.
+  const webDir = await scaffold('remote-gov-web-m', 'm', {
+    ...BASE,
+    tier: 'm',
+    isDiscovery: false,
+  });
+  const webPipeline = fs.readFileSync(path.join(webDir, '.claude/rules/pipeline.md'), 'utf8');
+  const webHook = fs.readFileSync(
+    path.join(webDir, '.claude/hooks/tierward-governance-gate.mjs'),
+    'utf8',
+  );
+  if (/staging/.test(webPipeline) && /staging/.test(webHook)) {
+    pass('remote-gov[web/m]: staging governance intact (no over-strip)');
+  } else {
+    fail('remote-gov[web/m]: staging references missing - profile over-stripped');
+  }
+}
+
 async function scenarioWizardCoverage() {
   section('Wizard coverage - full CLI execution via --answers');
 
@@ -4102,6 +4176,7 @@ async function main() {
   await scenarioNewRuleFiles();
   await scenarioNewStacks();
   await scenarioNativeStackCommandDefaults();
+  await scenarioNoRemoteGovernanceResiduals();
   await scenarioSecurityVariants();
   await scenarioPlaceholderNoiseReduction();
   await scenarioInPlaceClaudeMdGeneration();
