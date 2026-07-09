@@ -66,6 +66,11 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
     'claudemd-standards.md': 'docs/claudemd-standards.md',
     'model-effort-policy.md': 'docs/model-effort-policy.md',
     'backlog-protocol.md': '.claude/rules/backlog-protocol.md',
+    'requirements.md': 'docs/requirements.md',
+    'implementation-checklist.md': 'docs/implementation-checklist.md',
+    'refactoring-backlog.md': 'docs/refactoring-backlog.md',
+    'sitemap.md': 'docs/sitemap.md',
+    'db-map.md': 'docs/db-map.md',
   };
 
   // Tier S (Fast Lane): skip informational docs not needed for quick fixes.
@@ -84,6 +89,11 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
           'claudemd-standards.md',
           'model-effort-policy.md',
           'backlog-protocol.md',
+          'requirements.md',
+          'implementation-checklist.md',
+          'refactoring-backlog.md',
+          'sitemap.md',
+          'db-map.md',
         ]
       : [];
 
@@ -347,9 +357,23 @@ export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
       'claudemd-standards.md': 'docs/claudemd-standards.md',
       'model-effort-policy.md': 'docs/model-effort-policy.md',
       'backlog-protocol.md': '.claude/rules/backlog-protocol.md',
+      'requirements.md': 'docs/requirements.md',
+      'implementation-checklist.md': 'docs/implementation-checklist.md',
+      'refactoring-backlog.md': 'docs/refactoring-backlog.md',
+      'sitemap.md': 'docs/sitemap.md',
+      'db-map.md': 'docs/db-map.md',
     },
     config,
     ['rules'],
+    tier.toLowerCase() === 's'
+      ? [
+          'requirements.md',
+          'implementation-checklist.md',
+          'refactoring-backlog.md',
+          'sitemap.md',
+          'db-map.md',
+        ]
+      : [],
   );
 
   // CLAUDE.md is skipped - generated separately by generateClaudeMd()
