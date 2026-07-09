@@ -381,7 +381,7 @@ Only after explicit confirmation (it covers the closure steps below, never the s
     - `git worktree remove .claude/worktrees/[block-name]`
     - `git branch -d worktree-[block-name]`
 
-2. Update `docs/implementation-checklist.md`: mark ✅, add Log row.
+2. Update `docs/implementation-checklist.md`: mark the block ✅.
 3. Update `CLAUDE.md` only if block introduces non-obvious patterns, changes access control rules, or adds a new convention.
 4. Update `docs/requirements.md` if spec changed during implementation.
 5. If Mode A was used: move `docs/specs/[block-name].md` → `docs/specs/archive/[block-name].md` and mark as `Status: IMPLEMENTED`.
