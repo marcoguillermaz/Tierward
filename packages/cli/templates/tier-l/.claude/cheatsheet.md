@@ -40,6 +40,7 @@ Run these on demand. Each skill reads the codebase, produces a structured report
 | `/skill-security` | Security scan for Claude Code skills using SkillSpector: prompt injection, data exfiltration, MCP tool poisoning, supply chain, taint tracking | Before installing any third-party skill |
 | `/skill-dev` | Coupling, duplication, dead code, magic strings, oversized components | Before major refactoring; quarterly review |
 | `/systematic-debugging` | Root-cause investigation before any fix: reproduce consistently, write the hypothesis, verify against evidence, then fix the root cause — not the symptom | When a bug, test failure, or unexpected behavior surfaces |
+| `/repo-hygiene` | Orphaned merged branches, stale worktrees, stale session files, doc orphans (report-only) | Periodically, after several closed blocks |
 | `/skill-db` | Missing indexes, access control gaps, constraint completeness, N+1 queries | After migration waves; before production releases |
 | `/migration-audit` | Migration file safety: lock-heavy DDL, missing rollback, data loss, unsafe ALTER TYPE | After writing a migration, before applying to staging |
 | `/api-design` | HTTP verb correctness, URL structure, response shape, error codes, pagination | After adding 3+ new routes; quarterly |

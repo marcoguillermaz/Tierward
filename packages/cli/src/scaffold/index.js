@@ -1004,6 +1004,8 @@ function interpolate(content, config) {
     );
     // Tier L settings.json push permission
     result = result.replace(/^\s*"Bash\(git push origin staging\*\)",\n/m, '');
+    // repo-hygiene scan script: protected-branch list
+    result = result.replace('PROTECTED_BRANCHES="main staging"', 'PROTECTED_BRANCHES="main"');
     // Tier L CLAUDE.md worktree example comment
     result = result.replace(
       /prefix `worktree-`, base `staging`\./,
