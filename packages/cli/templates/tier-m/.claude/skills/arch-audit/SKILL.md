@@ -50,7 +50,7 @@ Read these files in parallel while the Step 1 agent runs:
 - `CLAUDE.md`
 - `.claude/rules/pipeline.md`
 - `.claude/rules/context-review.md`
-- `.claude/rules/claudemd-standards.md` ← normative baseline for P1–P5 compliance checks
+- `docs/claudemd-standards.md` ← normative baseline for P1–P5 compliance checks
 - `.claude/rules/pipeline-standards.md` ← normative baseline for Step 3e pipeline compliance checks
 - `.claude/settings.json`
 - `.claude/files-guide.md`
@@ -93,7 +93,7 @@ Every RECOMMEND must include: (1) specific file path(s) to modify, (2) section o
 | Skill model ID deprecated                                                 | `.claude/skills/<name>/SKILL.md` (`model:` frontmatter)                                                               | AUTO-FIX                                                                              |
 | Skill missing `context: fork`                                             | `.claude/skills/<name>/SKILL.md` (frontmatter)                                                                        | AUTO-FIX                                                                              |
 | Skill missing `allowed-tools`                                             | `.claude/skills/<name>/SKILL.md` (frontmatter)                                                                        | AUTO-FIX                                                                              |
-| claudemd-standards.md outdated                                            | `.claude/rules/claudemd-standards.md` (relevant section + `Last verified` date)                                       | RECOMMEND                                                                             |
+| claudemd-standards.md outdated                                            | `docs/claudemd-standards.md` (relevant section + `Last verified` date)                                       | RECOMMEND                                                                             |
 | pipeline-standards.md outdated                                            | `.claude/rules/pipeline-standards.md` (relevant section + `Last verified` date)                                       | RECOMMEND                                                                             |
 
 ## Step 3b - Internal ecosystem consistency checks
@@ -227,7 +227,7 @@ AUTO-FIX: for each failing skill, read the `mcp__*` tool names from its body and
 
 See [advanced-checks.md](advanced-checks.md) for the full content of these steps. Execute them before Step 3e.
 
-- **Step 3c** - Anthropic Prompting Guide compliance against `CLAUDE.md`, `pipeline.md`, `context-review.md` + normative baseline `.claude/rules/claudemd-standards.md`. Covers P1 (content type inclusion test), P2 (instruction clarity), P3 (redundancy across instruction files), P4 (pipeline complexity proportionality), P5 (long context scannability). All judgment-based, PASS/WARN only, RECOMMEND never AUTO-FIX.
+- **Step 3c** - Anthropic Prompting Guide compliance against `CLAUDE.md`, `pipeline.md`, `context-review.md` + normative baseline `docs/claudemd-standards.md`. Covers P1 (content type inclusion test), P2 (instruction clarity), P3 (redundancy across instruction files), P4 (pipeline complexity proportionality), P5 (long context scannability). All judgment-based, PASS/WARN only, RECOMMEND never AUTO-FIX.
 - **Step 3d** - Token & subagent optimization. Covers T1 (research agent haiku in Step 1), T2 (Explore subagent haiku across skills), T3 (Playwright concurrency note in Phase 5d), T5 (skill model fitness table). Mix of mechanical grep and judgment.
 
 ## Step 3e - Pipeline.md compliance check

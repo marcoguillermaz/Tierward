@@ -4,9 +4,9 @@ Reference file for `arch-audit`. Contains Step 3c (Anthropic Prompting Guide com
 
 ## Step 3c - Anthropic Prompting Guide compliance
 
-Using the prompting guide content fetched in Step 1 **and the normative baseline in `.claude/rules/claudemd-standards.md`** (read in Step 2), evaluate `CLAUDE.md`, `pipeline.md`, and `context-review.md` against best practices. The standards file is the local stable reference - use it as the primary benchmark; live-fetched docs confirm it's still current. These checks are judgment-based - classify each as PASS or WARN (not hard FAIL), and always RECOMMEND, never auto-fix.
+Using the prompting guide content fetched in Step 1 **and the normative baseline in `docs/claudemd-standards.md`** (read in Step 2), evaluate `CLAUDE.md`, `pipeline.md`, and `context-review.md` against best practices. The standards file is the local stable reference - use it as the primary benchmark; live-fetched docs confirm it's still current. These checks are judgment-based - classify each as PASS or WARN (not hard FAIL), and always RECOMMEND, never auto-fix.
 
-**Standards file currency check (run first)**: compare the `Last verified` date in `.claude/rules/claudemd-standards.md` against today's date. If > 30 days old AND Step 1 fetched new material changes → flag as RECOMMEND to update the standards file. If ≤ 30 days → skip.
+**Standards file currency check (run first)**: compare the `Last verified` date in `docs/claudemd-standards.md` against today's date. If > 30 days old AND Step 1 fetched new material changes → flag as RECOMMEND to update the standards file. If ≤ 30 days → skip.
 
 **P1 - CLAUDE.md content type (Anthropic's inclusion test)**
 Anthropic's rule: CLAUDE.md should contain ONLY non-obvious information Claude cannot infer by reading the code. Apply Anthropic's own test to every section: _"Would removing this cause Claude to make mistakes?"_
