@@ -37,6 +37,11 @@ Parse `$ARGUMENTS` for a `target:` token.
 
 **STRICT PARSING - mandatory**: derive target ONLY from the explicit text in `$ARGUMENTS`. Do NOT infer target from conversation context, recent work, active block names, or project memory. If `$ARGUMENTS` contains no `target:` token → full audit, all routes.
 
+**Target scoping - comparative vs independent checks (mandatory):** some audit skills contain *comparative* checks that derive a project-wide convention by counting usage across the whole inventory - those must ignore the `target:` filter. This skill has none: every check flags matches against a fixed design-system rule, with no adoption-rate denominator or majority-usage count.
+- **Comparative checks - full-project by design; the `target:` filter does NOT apply to them:** none. No check derives its baseline by counting across the page inventory.
+- **Independent checks - target-safe:** all checks (CHECK 1-12, S1-S4) evaluate individual files in isolation and safely honor the `target:` filter.
+- When a `target:` is given: apply the filter to the page and component file list in Step 1 - with one input exception: S1 and S4 inspect shared layout/navigation files that render on every route, so keep those files in scope even when they fall outside the target path. This is an input-scoping detail, not a comparative baseline.
+
 Announce at start: `Running ui-audit - scope: [FULL | target resolved to: N pages]`
 
 Apply the resolved target to Steps 1–3 below - include only the matching page and component files.

@@ -91,6 +91,11 @@ Parse `$ARGUMENTS` for a `target:` token.
 
 **STRICT PARSING - mandatory**: derive target ONLY from the explicit text in `$ARGUMENTS`. Do NOT infer target from conversation context, recent work, active block names, or project memory. If `$ARGUMENTS` contains no `target:` token → full codebase audit at maximum depth. When a target IS provided → act with maximum depth and completeness on that specific scope only.
 
+**Target scoping - comparative vs independent checks (mandatory):** a subset of checks derive a *project-wide relation or baseline* (coupling graph, duplication counts, dead-symbol reference search, churn quantiles); the rest evaluate one file in isolation.
+- **Comparative checks - full-project by design; the `target:` filter does NOT apply to them:** D1, D2, D4, D5, J2, J3, J4, J5, and the Step 3b hotspot matrix. They MUST run across the FULL codebase even when a target is given. Coupling edges, duplicate instances, symbol consumers, and churn quartiles live outside the target subset - narrowing them computes the relation from a partial sample, marking live symbols dead and clean files as duplicates (or vice versa) by construction.
+- **Independent checks - target-safe:** every other check (D3, D6, D7, D8, D9, D10, DL1, J1) evaluates a single file and safely honors the `target:` filter.
+- When a `target:` is given: apply the filter to the independent checks only; run the comparative checks across the full codebase and state in the report that they ran full-project by design.
+
 Announce: `Running skill-dev - scope: [FULL | target: <resolved>]`
 Apply the target filter to the file list in Step 1.
 
