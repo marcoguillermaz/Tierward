@@ -1307,7 +1307,7 @@ Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user
 }
 ```
 
-The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.33.1. A read-write surface remains a future-minor decision contingent on adoption signal.
+The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.34.1. A read-write surface remains a future-minor decision contingent on adoption signal.
 
 ### Adding team-specific rules
 
