@@ -43,6 +43,11 @@ Parse `$ARGUMENTS` for a `target:` token.
 | `target:section:<other>` | Read `[SITEMAP_OR_ROUTE_LIST]` - find rows matching the section keyword, resolve to API routes and related route files |
 | No argument | Full audit - all API routes |
 
+**Target scoping - comparative vs independent checks (mandatory):** a subset of checks verify *coverage completeness or a project-global surface* (auth perimeter, secret exposure, dependencies, headers, middleware); the rest evaluate one route in isolation.
+- **Comparative checks - full-project by design; the `target:` filter does NOT apply to them:** A1, A2, A6, A7, A8, A9, Step 3b, Step 3c, Step 3d (AC-1-AC-3), Step 3e (NS1-NS6), Step 4, Step 5. They MUST run across the FULL route inventory and codebase even when a target is given. A single unauthenticated route, leaked credential, or unguarded table outside the target is total exposure - narrowing a coverage check to the target subset reads as "perimeter clean" while the hole sits one section over.
+- **Independent checks - target-safe:** every other check (A3, A4, A5, A10, A11, A12, A13, A14, R1-R5) evaluates a single route/file and safely honors the `target:` filter.
+- When a `target:` is given: apply the filter to the independent checks only; run the comparative checks across all routes and state in the report that they ran full-project by design.
+
 Announce: `Running security-audit - scope: [FULL | target: <resolved>]`
 Apply the target filter to the route inventory built in Step 1.
 

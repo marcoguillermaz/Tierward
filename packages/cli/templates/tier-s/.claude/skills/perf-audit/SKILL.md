@@ -62,6 +62,11 @@ Parse `$ARGUMENTS` for `target:` and `mode:` tokens.
 
 **STRICT PARSING - mandatory**: derive target ONLY from the explicit text in `$ARGUMENTS`. Do NOT infer target from conversation context, recent work, active block names, or project memory. If `$ARGUMENTS` contains no `target:` token → full audit across ALL files from sitemap.md at maximum depth. When a target IS provided → act with maximum depth and completeness on that specific scope only.
 
+**Target scoping - comparative vs independent checks (mandatory):** a subset of checks evaluate a *project-wide property* (build configuration, client bundle composition, launch entry point, release artifact); the rest evaluate one file or route in isolation.
+- **Comparative checks - full-project by design; the `target:` filter does NOT apply to them:** P1, P2, P3 (web) and NR1, NR4 (native). They MUST run against the full project even when a target is given. The client bundle, build configuration, entry point, and release artifact are global - narrowing them to the target subset hides cross-cutting exposure (a heavy package bundled by a non-targeted page still ships to every user).
+- **Independent checks - target-safe:** every other check (B1-B9, Q1-Q3, NP1-NP4, Step 6b, NR2, NR3) evaluates a single file/route and safely honors the `target:` filter. Layout/shell files stay in scope regardless of target (Step 1).
+- When a `target:` is given: apply the filter to the independent checks only; run the comparative checks across the full project and state in the report that they ran full-project by design.
+
 Announce: `Running perf-audit - scope: [FULL | target: <resolved>] - mode: [audit | apply]`
 Apply the target filter to the file list in Step 1.
 

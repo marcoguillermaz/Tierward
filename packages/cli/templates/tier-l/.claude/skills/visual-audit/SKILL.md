@@ -36,6 +36,11 @@ Parse `$ARGUMENTS`:
 - `target:section:<name>` → routes whose path contains `<name>`
 - No target → NO filter - use ALL pages from the mode roster per `[SITEMAP_OR_ROUTE_LIST]`
 
+**Target scoping - comparative vs independent checks (mandatory):** some audit skills contain *comparative* checks that derive a project-wide convention by counting usage across the whole inventory - those must ignore the `target:` filter. This skill has none: every dimension is scored per page against the absolute anchors in `DIMENSIONS.md`, never relative to other pages.
+- **Comparative checks - full-project by design; the `target:` filter does NOT apply to them:** none. No check derives its pass/fail baseline by counting across the page inventory.
+- **Independent checks - target-safe:** all checks (Step 5a code inspection, Step 5c computed checks, dimensions V1-V7 and V9-V11) evaluate one page in isolation and safely honor the `target:` filter.
+- When a `target:` is given: apply the filter to the working roster for all steps. Step 7 (cross-page pattern analysis) then aggregates only the audited subset - its "systemic issues", "best-in-class", and "worst offenders" labels are scope-relative under a target, and the report MUST qualify them as such rather than present them as project-wide claims.
+
 Mode and target are **independent** - `quick target:role:<role_name>` means "run quick mode but limit to that role's routes".
 
 **STRICT PARSING - mandatory**: derive mode and target ONLY from the explicit text in `$ARGUMENTS`. Do NOT infer target from conversation context, recent work, active block names, or project memory. If `$ARGUMENTS` contains no `target:` token → apply NO filter (use all pages from the mode roster per `[SITEMAP_OR_ROUTE_LIST]`).

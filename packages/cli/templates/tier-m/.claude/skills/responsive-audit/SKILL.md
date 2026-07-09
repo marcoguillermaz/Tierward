@@ -38,6 +38,11 @@ Parse `$ARGUMENTS`:
 
 **STRICT PARSING - mandatory**: derive mode and target ONLY from the explicit text in `$ARGUMENTS`. Do NOT infer target from conversation context, recent work, active block names, or project memory. If `$ARGUMENTS` contains no `target:` token → apply NO filter (all R-flagged routes per the selected mode).
 
+**Target scoping - comparative vs independent checks (mandatory):** some audit skills contain *comparative* checks that derive a project-wide convention by counting usage across the whole inventory - those must ignore the `target:` filter. This skill has none: every check tests a route, breakpoint, or file against an absolute threshold (WCAG 1.4.10 reflow at 320px, 44px tap targets, 8px spacing, WCAG 1.4.4 at 200%).
+- **Comparative checks - full-project by design; the `target:` filter does NOT apply to them:** none. No check derives its baseline by counting across the route inventory.
+- **Independent checks - target-safe:** all checks (S1-S3 static pre-checks, R1-R9 breakpoint checks, VR1-VR6 visual checks, Step 5b WCAG 1.4.4) evaluate one route/file in isolation and safely honor the `target:` filter.
+- When a `target:` is given: apply the filter to the working route list (Step 1) and to the static pre-check file scope; no check runs outside the target scope, and the report states the audited scope explicitly.
+
 Announce at start:
 `Running responsive-audit in [QUICK | FULL | WCAG] mode - scope: [FULL | target: <resolved description>]`
 

@@ -33,9 +33,14 @@ Parse `$ARGUMENTS` for a `target:` token.
 
 **STRICT PARSING - mandatory**: derive target ONLY from the explicit text in `$ARGUMENTS`. Do NOT infer target from conversation context, recent work, active block names, or project memory. If `$ARGUMENTS` contains no `target:` token → full audit of the entire schema in db-map.md at maximum depth. When a target IS provided → act with maximum depth and completeness on that specific scope only.
 
+**Target scoping - comparative vs independent checks (mandatory):** a subset of checks verify a *schema-wide surface* that cannot be partitioned by table; the rest evaluate one table, column, FK, or route file in isolation.
+- **Comparative checks - full-project by design; the `target:` filter does NOT apply to them:** S4 property 3 (no-bypass) and its live verification S4E (views without `security_invoker`). They MUST run across the FULL schema even when a target is given. A view or aggregate defined outside the targeted tables can still return rows the guard should hide - narrowing the bypass scan to the target subset reads as "no bypass" while the leaking view sits elsewhere in the schema.
+- **Independent checks - target-safe:** every other check (S1A-S1D, S2, S2b, S3, S4A-S4D, S5, S6, S7, and Step 3 Q1-Q5) evaluates a single table/column/FK/route and safely honors the `target:` filter per the Target filter semantics below.
+- When a `target:` is given: apply the filter to the independent checks only; run the comparative checks across the full schema and state in the report that they ran full-project by design.
+
 Announce: `Running skill-db - scope: [FULL | target: <resolved>]`
 
-**Target filter semantics**: apply the filter in Steps 2–4 as follows - S1 (only indexes on targeted tables and their FK children), S2/S3/S2b (only columns of targeted tables), S4 (only policies on targeted tables), S5/S6/S7 (only targeted tables).
+**Target filter semantics**: apply the filter in Steps 2–4 as follows - S1 (only indexes on targeted tables and their FK children), S2/S3/S2b (only columns of targeted tables), S4 (S4A-S4D on targeted tables; the S4E no-bypass view scan stays full-schema per the scoping note above), S5/S6/S7 (only targeted tables).
 
 **Critical constraints**:
 - `docs/db-map.md` is the authoritative schema reference. Read it first - do NOT query the live DB to discover schema unless verifying a specific detail. If `docs/db-map.md` does not exist, derive the schema from the ORM's schema definition file (e.g. `schema.prisma`, `models.py`, migration files) or from live DB introspection in Step 4. Announce: `No db-map.md found - deriving schema from [source].`

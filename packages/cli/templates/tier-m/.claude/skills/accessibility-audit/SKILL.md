@@ -48,6 +48,11 @@ Parse `$ARGUMENTS` for an optional mode keyword and a `target:` token.
 
 **STRICT PARSING - mandatory**: derive mode and target ONLY from explicit text in `$ARGUMENTS`. Do NOT infer from conversation context, recent blocks, or memory. Unknown tokens → treat as absent and announce ignored args in the banner.
 
+**Target scoping - comparative vs independent checks (mandatory):** some audit skills contain *comparative* checks that derive a project-wide convention by counting usage across the whole inventory - those must ignore the `target:` filter. This skill has none: every check evaluates a single file, element, or page against an absolute WCAG/APCA rule.
+- **Comparative checks - full-project by design; the `target:` filter does NOT apply to them:** none. No check in this skill derives its baseline by counting across the file inventory, so no check needs to escape the target filter.
+- **Independent checks - target-safe:** all checks (A1-A8 static, C1-C3 APCA contrast, X1-X3 axe-core) evaluate a single file/route in isolation and safely honor the `target:` filter.
+- When a `target:` is given: apply the filter to the entire check set; no check runs outside the target scope, and the report states the audited scope explicitly.
+
 Announce: `Running accessibility-audit in [STATIC | FULL | WCAG] mode - scope: [FULL | target: <resolved>]`
 
 ---

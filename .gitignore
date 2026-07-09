@@ -41,6 +41,8 @@ AGENTS.md
 .claude/skills/*
 !.claude/skills/external-review/
 !.claude/skills/external-review/**
+!.claude/skills/repo-hygiene/
+!.claude/skills/repo-hygiene/**
 .claude/cheatsheet.md
 .claude/files-guide.md
 .claude/commands/
