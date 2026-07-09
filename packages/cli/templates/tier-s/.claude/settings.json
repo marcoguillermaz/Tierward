@@ -31,6 +31,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-governance-gate.mjs\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "Stop": [
@@ -61,7 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "LAST=$(cat \"$CLAUDE_PROJECT_DIR/.claude/session/last-arch-audit\" 2>/dev/null || echo 0); NOW=$(date +%s); DIFF=$((NOW - LAST)); if [ $DIFF -gt 604800 ]; then DAYS=$((DIFF / 86400)); LAST_DATE=$([ $LAST -eq 0 ] && echo 'never' || date -r $LAST '+%Y-%m-%d' 2>/dev/null || date -d \"@$LAST\" '+%Y-%m-%d' 2>/dev/null || echo 'unknown'); echo \"⚠️  Arch audit overdue — last run: $LAST_DATE (${DAYS}d ago). Run /arch-audit to check compliance with latest Anthropic docs.\"; fi",
+            "command": "LAST=$(cat \"$CLAUDE_PROJECT_DIR/.claude/session/last-arch-audit\" 2>/dev/null || echo 0); NOW=$(date +%s); DIFF=$((NOW - LAST)); if [ $DIFF -gt 604800 ]; then DAYS=$((DIFF / 86400)); LAST_DATE=$([ $LAST -eq 0 ] && echo 'never' || date -r $LAST '+%Y-%m-%d' 2>/dev/null || date -d \"@$LAST\" '+%Y-%m-%d' 2>/dev/null || echo 'unknown'); echo \"\u26a0\ufe0f  Arch audit overdue \u2014 last run: $LAST_DATE (${DAYS}d ago). Run /arch-audit to check compliance with latest Anthropic docs.\"; fi",
             "async": true
           }
         ]
@@ -72,7 +82,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -f .claude/CLAUDE.local.md ] && echo '📌 CLAUDE.local.md exists — re-read it to restore active overrides.' || true",
+            "command": "[ -f .claude/CLAUDE.local.md ] && echo '\ud83d\udccc CLAUDE.local.md exists \u2014 re-read it to restore active overrides.' || true",
             "async": true
           }
         ]
@@ -85,6 +95,17 @@
             "type": "command",
             "command": "cat >> /tmp/claude-instructions-$(date +%Y%m%d).log 2>/dev/null || true",
             "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-capture-approval.mjs\"",
+            "timeout": 5
           }
         ]
       }

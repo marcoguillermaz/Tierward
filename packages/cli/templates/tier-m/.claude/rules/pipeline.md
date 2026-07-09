@@ -30,7 +30,7 @@ A skip is a legitimate outcome. Silent degradation is not.
 
 - **FIRST**: check for `CONTEXT_IMPORT.md` in the project root. If it exists and contains `Status: PENDING_DISCOVERY`, run the Discovery Workflow inside that file **before any other work**. Do not proceed to Phase 1 until discovery is marked `COMPLETE`.
 - **Session file - non-negotiable**: check `.claude/session/` for existing `block-*.md` files.
-  - If one exists: read it immediately - a previous session was interrupted. Resume from the recorded state. Do NOT create a new file.
+  - If one exists: read it immediately - a previous session was interrupted. Resume from the recorded state. Do NOT create a new file. Exception: if its front matter contains `block_closed: true`, the block was closed and the file kept on purpose at the Phase 8 cleanup gate - treat it as archive, do not resume, create a new file.
   - If none exists: create `.claude/session/block-new-session.md` starting with this machine-readable front matter (a Tierward hook reads it — keep the keys exact):
 
     ```
@@ -50,7 +50,7 @@ A skip is a legitimate outcome. Silent degradation is not.
 
     At each phase boundary, append one row: `model` = capability tier used (`fast`/`balanced`/`frontier`, or its provider instance), `effort` = `low`/`medium`/`high`/`xhigh`, `elapsed` = wall-clock for the phase, `findings` = count surfaced. Cost is proxied by **elapsed + model/effort**, never token counts. Keep every cell inside its vocabulary — a free-text value makes the log non-aggregable.
   - The session file must exist before any other Phase 0 action runs.
-  - **Do not edit `requirements_approved` yourself.** The `tierward-capture-approval` hook sets it to `true` when YOU (the developer) reply at the Phase 1 STOP gate with a **bare** execution keyword — reply with just `Proceed` (or `Execute` / `Confirmed` / `Go ahead`), on its own. A keyword inside a longer sentence ("Proceed to the next file") does not arm approval — this is deliberate, so a casual imperative never authorizes a commit. The `tierward-governance-gate` hook then allows `git commit`. This is governance enforced from your approval, not Claude's self-assertion.
+  - **Do not edit `requirements_approved` yourself.** The `tierward-capture-approval` hook sets it to `true` when YOU (the developer) reply at the Phase 1 STOP gate with a **bare** execution keyword — reply with just `Proceed` (or `Execute` / `Confirmed` / `Go ahead`), on its own. A keyword inside a longer sentence ("Proceed to the next file") does not arm approval — this is deliberate, so a casual imperative never authorizes a commit. The `tierward-governance-gate` hook then allows `git commit`. This is governance enforced from your approval, not Claude's self-assertion. The hook arms on the first bare keyword of the session, wherever given. Promotion is a separate signal: the bare keyword `Promote` (and only that) arms `promotion_approved`, which the gate consumes on each push to `staging`/`main` - an execution keyword never authorizes a promotion, and `Promote` never arms requirements approval.
 - Read `.claude/CLAUDE.local.md` to confirm active overrides (if file exists).
 - Read `MEMORY.md` (project root): Active plan + relevant Lessons.
 - If context was compressed: read `docs/implementation-checklist.md` to re-align on current state.
@@ -101,7 +101,7 @@ A skip is a legitimate outcome. Silent degradation is not.
   - If **yes** and `[E2E_COMMAND]` is configured: ask the user to list numbered UAT scenarios (1–5). Claude tests exactly those - no invented scenarios.
   - If **no** or `[E2E_COMMAND]` is `# not configured`: Phase 4 is skipped. State this explicitly.
 
-  Compose one `AskUserQuestion` with all open items from the sweep. Do NOT proceed to the dependency scan until an execution keyword is received.
+  Compose one `AskUserQuestion` with all open items from the sweep; its answers close the sweep - do NOT run the dependency scan until they arrive. (No separate keyword wait here: the Phase 1 STOP below is the gate.)
 
 - **Dependency scan** (mandatory - always run `/dependency-scan`):
   Run `/dependency-scan` with the full list of affected routes/screens/commands, components/views, types/utilities, and data models/DB tables. Every file listed under "Mandatory additions" must be in the file list before the STOP gate.
@@ -135,7 +135,11 @@ A skip is a legitimate outcome. Silent degradation is not.
 
 - **Path B - Scope-confirm**: output feature summary + complete file list verified by dependency scan. Present for confirmation.
 
-***** STOP - Path A: spec review. Path B: requirements summary. Wait for explicit confirmation before Phase 2. *****
+***** STOP — Requirements approval *****
+- WHY we stopped: approving here locks the block's scope - implementation starts from this file list and spec, and your keyword arms the commit gate (`requirements_approved`).
+- WHAT to do: review Path A's spec (or Path B's summary + complete file list); flag gaps now - scope changes later require re-approval.
+- NEXT after action: reply with a bare execution keyword (`Execute` · `Proceed` · `Confirmed` · `Go ahead`) and the pipeline proceeds to Phase 1.5 (or Phase 2 if design review is skipped).
+*****
 
 ## Phase 1.5 - Design review *(blocks touching >5 files or new patterns)*
 
@@ -144,7 +148,11 @@ A skip is a legitimate outcome. Silent degradation is not.
 - Skip for simple blocks (≤3 files, no shared types, no migration, no new patterns).
 - **All clarification questions arising during design review must use the `AskUserQuestion` tool** - no inline open questions.
 
-***** STOP - wait for design confirmation before writing code. *****
+***** STOP — Design confirmation *****
+- WHY we stopped: code written on an unconfirmed design is rework risk - this is the last gate before implementation.
+- WHAT to do: review the data flow, data structures, trade-offs and discarded alternatives presented above.
+- NEXT after action: reply with a bare execution keyword and Phase 2 starts; implementation then proceeds autonomously under the approved plan (active-Phase-2 exception).
+*****
 
 **Persist the approved scope** (before Phase 2): write the confirmed file list (from the dependency scan) to the session file front matter as a `files_in_scope:` YAML list — repo-relative paths, POSIX separators, no leading `./`. The `file-list-guard` PreToolUse hook reads this to block Phase 2 edits to files outside the approved scope; until it is written the guard stays inactive (self-arming). If scope legitimately expands mid-block, add the file to `files_in_scope` before editing it. (Docs, `.claude/`, and repo-root `README`/`CHANGELOG`/`*.md` are always allowed — closure edits never need listing.)
 
@@ -205,11 +213,18 @@ If either condition is false: **skip this phase and state so explicitly** - do n
 ## Phase 5c - Staging deploy + smoke test
 
 - Bring up the staging context appropriate for the project — web: dev server `[DEV_COMMAND]` and declare the endpoint; native: build and run on simulator/emulator; CLI: install the binary in a test sandbox; library: prepare a consumer test harness. Skip explicitly with a one-line statement if not applicable.
+
+***** STOP — Promotion authorization (staging) *****
+- WHY we stopped: the next command writes to the protected `staging` branch and deploys the block to the staging environment. No prior approval (Phase 1 keyword, design confirmation, active-Phase-2 exception) covers a promotion push.
+- WHAT to do: confirm you want exactly this to run: `git checkout staging && git merge feature/block-name --no-ff && git push origin staging`. If no staging branch or remote is configured for this project: state `[SKIP] no staging target — promotion gate not applicable`, do not invent a target, and do not mark the gate passed.
+- NEXT after action: reply with the bare keyword `Promote` to authorize this ONE push; the merge+push runs, then the smoke test below.
+*****
+
 - Merge to staging: `git checkout staging && git merge feature/block-name --no-ff && git push origin staging`
 - Wait for the staging context to be ready, then verify the main flow in 3–5 steps using a test account on the appropriate surface (staging URL for web, simulator session for native, terminal session for CLI, consumer test for libraries).
 - For blocks with UI changes: verify in both light and dark mode.
 - Output: "smoke test OK" or describe the problem and fix before proceeding.
-- Fix issues on `feature/` branch, re-merge if needed.
+- Fix issues on `feature/` branch, re-merge if needed - re-merging repeats the Promotion authorization gate above (each authorization covers one push).
 
 ## Phase 5d - Block-scoped quality audit *(blocks with UI or API changes)*
 
@@ -270,18 +285,24 @@ Present this checklist with actual results:
 - path/to/file - description
 ```
 
-***** STOP - do not declare complete, do not update docs, until explicit confirmation. *****
+***** STOP — Outcome sign-off *****
+- WHY we stopped: your confirmation closes the build phase and authorizes the Phase 8 closure steps (backlog flush, metrics, cleanup gate, docs) - it does NOT authorize the production promotion, which has its own gate at step 10.
+- WHAT to do: verify the checklist above against reality - build, tests, implemented features, manual verification steps.
+- NEXT after action: reply with a bare execution keyword and Phase 8 closure begins; nothing is declared complete and no docs are updated before that.
+*****
 
 ## Phase 8 - Block closure
 
-Only after explicit confirmation:
-0. **Flush the backlog scratch** (per `.claude/rules/backlog-protocol.md`): if `.claude/session/refactoring-findings.md` exists, consolidate its entries into `docs/refactoring-backlog.md` in a **single** write - dedupe against existing entries, assign contiguous IDs per prefix - then delete the scratch. This is the block's one consolidated backlog write; the Phase 5d audits appended here instead of writing mid-block. If the scratch is absent or empty, skip. Do this before deleting the session file (the scratch lives under `.claude/session/`).
+Only after explicit confirmation (it covers the closure steps below, never the step-10 promotion):
+0. **Flush the backlog scratch** (per `.claude/rules/backlog-protocol.md`): if `.claude/session/refactoring-findings.md` exists, consolidate its entries into `docs/refactoring-backlog.md` in a **single** write - dedupe against existing entries, assign contiguous IDs per prefix. This is the block's one consolidated backlog write; the Phase 5d audits appended here instead of writing mid-block. If the scratch is absent or empty, skip. Do NOT delete the scratch here - its removal goes through the step-1 cleanup gate.
 0b. **Collect phase metrics**: consolidate the session file's **Phase log** rows into `docs/metrics/phase-log.md` (create it with the same header if absent) in a single append — one block's rows per closure. Drop or fix any row whose value falls outside its column vocabulary (`model`/`effort` enums; numeric `elapsed`/`findings`) so the persistent log stays aggregable; never invent values for missing cells. Do this before deleting the session file (the Phase log lives in it). Cost is elapsed + model/effort, never tokens; keep this file as raw data — no automatic threshold-fitting. **Unvalidated:** if `docs/metrics/phase-log.md` is still empty after ~2 closed blocks, per-phase logging is not holding — simplify it rather than carry dead ceremony.
-1. **Delete session file**: remove `.claude/session/block-[name].md`.
-   - Proceed only if the user's confirmation unambiguously closes the block.
-   - If the confirmation is ambiguous (partial approval, open questions): ask explicitly before deleting.
-   - Never delete the session file speculatively.
-1b. **Delete first-session guide** (if it exists): remove `.claude/FIRST_SESSION.md`. This file is a one-time onboarding guide - it is no longer needed after the first block completes.
+1. **Cleanup gate** (mandatory - no removal happens outside it; runs after steps 0/0b so consolidation and metrics are already banked):
+
+   ***** STOP — Cleanup confirmation *****
+   - WHY we stopped: files and branches are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.
+   - WHAT to do: review the full candidate list presented via `AskUserQuestion`: `.claude/session/block-[name].md` (session file - consolidated in steps 0/0b), `.claude/session/refactoring-findings.md` (scratch, now flushed), `.claude/FIRST_SESSION.md` (one-time onboarding guide, obsolete after the first block), audit-generated screenshots/artifacts (enumerate from `git status --porcelain` untracked leftovers and known output dirs; an empty scan must be stated, not assumed), and the local `feature/block-name` branch. The spec archive move (step 5) is a move, not a removal - it is not part of this gate.
+   - NEXT after action: only the approved items are deleted, then closure continues with step 2. If the session file is kept: set `block_closed: true` in its front matter so the next session does not resume it as interrupted.
+   *****
 2. Update `docs/implementation-checklist.md`: mark ✅, add Log row.
 3. Update `CLAUDE.md` only if block introduces non-obvious patterns or changes conventions.
 4. Update `docs/requirements.md` if spec changed during implementation.
@@ -296,10 +317,19 @@ Only after explicit confirmation:
    - **Commit 1** (already done in Phase 3): source files only.
    - **Commit 2 - docs**: `docs/` changes + `README.md` if updated.
    - **Commit 3 - context** (only if updated): `CLAUDE.md` and/or `MEMORY.md` - never mixed with code or docs.
+   - Closure commits land on the `feature/` branch (return to it after Phase 5c if needed). Getting them onto `staging` goes through the same Promotion authorization gate as any other push - never push them directly.
 9. **PR review** (recommended): once the PR is open and CI is green, run `/pr-review <PR_NUMBER>` for an autonomous local code review. The review is posted as a PR comment for audit trail and surfaces a merge decision (`integrate` / `fix branch` / `proceed`). Use `--deep` for changes touching auth, money paths, or migrations.
 
-   **Merge barrier (auto-mode-safe):** step 10 runs on `/pr-review`'s *returned* verdict, never on its *launch*. If you gate the merge on the review, promote only after `/pr-review` has returned an explicit `integrate` / `proceed` (or a human decision on `fix branch`). A null / empty / errored / crashed return is **not** a clean verdict — a review that did not complete counts as *not reviewed*: do not promote, re-run or review manually. The launch acknowledgment is not the verdict.
-10. Promote to production: `git checkout main && git merge staging --no-ff && git push origin main`
+   **Merge barrier (auto-mode-safe):** step 10 runs on `/pr-review`'s *returned* verdict, never on its *launch*. If you gate the merge on the review, promote only after `/pr-review` has returned an explicit `integrate` / `proceed` (or a human decision on `fix branch`). A null / empty / errored / crashed return is **not** a clean verdict — a review that did not complete counts as *not reviewed*: do not promote, re-run or review manually. The launch acknowledgment is not the verdict. And a clean verdict satisfies this barrier only - it is machine output, never promotion authorization: the step-10 gate below still requires the developer's own keyword, given after the gate is displayed.
+10. Promote to production - behind its own gate:
+
+    ***** STOP — Promotion authorization (production) *****
+    - WHY we stopped: the next command writes to the protected `main` branch and ships the block to production. No prior approval (Phase 6 sign-off, closure confirmation, or a `/pr-review` verdict) covers this push.
+    - WHAT to do: confirm you want exactly this to run: `git checkout main && git merge staging --no-ff && git push origin main`.
+    - NEXT after action: reply with the bare keyword `Promote` to authorize this ONE push; the merge+push runs, then Phase 8.5 context review closes the session.
+    *****
+
+    `git checkout main && git merge staging --no-ff && git push origin main`
 
 ## Phase 8.5 - Context review + compact
 
@@ -328,9 +358,10 @@ Then the developer may run `/compact` to free the session context — optional, 
 
 ## Cross-cutting rules
 
-- **Never commit to `main` or `staging` directly.**
-- **STOP gates are hard stops** - not suggestions. Never proceed to the next phase without explicit confirmation.
-- **Execution keywords**: `Execute` · `Proceed` · `Confirmed` · `Go ahead` - these are the only phrases that authorize autonomous action after a STOP gate.
+- **Never commit to `main` or `staging` directly.** The only sanctioned writes to these branches are this pipeline's merge-promotions (Phase 5c, Phase 8 step 10), each behind its own Promotion authorization gate.
+- **Promotion is never automatic**: any `git push` to `origin staging` or `origin main`, from any phase and for any reason (first merge, re-merge after a failed smoke test, closure docs, anything else), requires its own Promotion authorization gate answered with the bare keyword `Promote`. No prior approval - plan confirmation, the active-Phase-2 exception, Phase 6 sign-off, block-closure confirmation, or a `/pr-review` verdict - covers a promotion.
+- **STOP gates are hard stops** - not suggestions. Never proceed to the next phase without explicit confirmation. Every STOP states why it stopped, what to do, and the next step after action.
+- **Execution keywords**: `Execute` · `Proceed` · `Confirmed` · `Go ahead` - these are the only phrases that authorize autonomous action after a STOP gate. `Promote` is separate: it authorizes exactly one promotion push and nothing else; conversely no execution keyword authorizes a promotion.
 - **Exception - active Phase 2**: once a plan is confirmed and an execution keyword was given, proceed autonomously through implementation without re-confirming each file edit. The confirmation covers the approved plan, not each step.
 - **Green before commit**: type check + tests must pass before every commit.
 - **Conventional commits**: `feat(scope):`, `fix(scope):`, `docs:`, `chore:` - imperative, under 72 chars.
