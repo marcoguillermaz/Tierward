@@ -303,7 +303,7 @@ Only after explicit confirmation (it covers the closure steps below, never the s
    - WHAT to do: review the full candidate list presented via `AskUserQuestion`: `.claude/session/block-[name].md` (session file - consolidated in steps 0/0b), `.claude/session/refactoring-findings.md` (scratch, now flushed), `.claude/FIRST_SESSION.md` (one-time onboarding guide, obsolete after the first block), audit-generated screenshots/artifacts (enumerate from `git status --porcelain` untracked leftovers and known output dirs; an empty scan must be stated, not assumed), and the local `feature/block-name` branch. The spec archive move (step 5) is a move, not a removal - it is not part of this gate.
    - NEXT after action: only the approved items are deleted, then closure continues with step 2. If the session file is kept: set `block_closed: true` in its front matter so the next session does not resume it as interrupted.
    *****
-2. Update `docs/implementation-checklist.md`: mark ✅, add Log row.
+2. Update `docs/implementation-checklist.md`: mark the block ✅.
 3. Update `CLAUDE.md` only if block introduces non-obvious patterns or changes conventions.
 4. Update `docs/requirements.md` if spec changed during implementation.
 5. If Mode A was used: move `docs/specs/[block-name].md` → `docs/specs/archive/[block-name].md` and mark as `Status: IMPLEMENTED`.

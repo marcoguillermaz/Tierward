@@ -730,8 +730,8 @@ async function scenarioArchAuditTimestamp() {
         );
       }
 
-      // Tier M/L gate the nag on >=1 completed block (a dated implementation-checklist
-      // Log row), so a brand-new project is never nagged. Tier S has no checklist and
+      // Tier M/L gate the nag on >=1 completed block (a ✅ row in the implementation-checklist
+      // Blocks table), so a brand-new project is never nagged. Tier S has no checklist and
       // keeps the unconditional time-based reminder.
       if (tier === 'm' || tier === 'l') {
         if (raw.includes('implementation-checklist.md') && raw.includes('DONE')) {
