@@ -12,6 +12,17 @@
 export const NATIVE_STACKS = ['swift', 'kotlin', 'rust', 'dotnet', 'java'];
 
 /**
+ * Remote-governance profile switch.
+ * When false, the scaffold strips every staging-branch reference from the
+ * payload (pipelines, hooks, rules, skills, config): the project promotes
+ * work branches directly to `main` behind the same Promotion gates.
+ * Derived, not asked in the wizard: native stacks have no staging server.
+ */
+export function remoteGovernanceEnabled(config) {
+  return !NATIVE_STACKS.includes(config.techStack);
+}
+
+/**
  * Web-oriented stacks that typically carry a frontend bundle and a sitemap.
  * Used for placeholder substitution and wizard branching — pair with
  * NATIVE_STACKS for the complete tech-stack vocabulary.

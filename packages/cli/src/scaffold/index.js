@@ -1,6 +1,11 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { NATIVE_STACKS, getSkillsToRemove, getCheatsheetSkillsToRemove } from './skill-registry.js';
+import {
+  NATIVE_STACKS,
+  remoteGovernanceEnabled,
+  getSkillsToRemove,
+  getCheatsheetSkillsToRemove,
+} from './skill-registry.js';
 import { STACK_COMMANDS, TEST_INFRA_MARKERS } from '../utils/stack-commands.js';
 
 /**
@@ -194,8 +199,8 @@ async function pruneCheatsheet(targetDir, config) {
     content = content.replace(new RegExp(`^\\| \`\\/${skill}\` .*\\n`, 'm'), '');
   }
 
-  // Remove staging workflow rows for native stacks (no staging branch/URL)
-  if (NATIVE_STACKS.includes(config.techStack)) {
+  // Remove staging workflow rows when remote governance is off (no staging branch/URL)
+  if (!remoteGovernanceEnabled(config)) {
     content = content.replace(/^\| Merge to staging .*\n/m, '');
     content = content.replace(/^\| Promote to production .*\n/m, '');
   }
@@ -868,9 +873,13 @@ function interpolate(content, config) {
     );
   }
 
-  // ── Post-interpolation: simplify staging workflow for native stacks ───
-  if (NATIVE_STACKS.includes(config.techStack)) {
-    // Phase 5c: replace staging deploy with local build + smoke
+  // ── Post-interpolation: no-remote-governance profile ───
+  // Strips every staging-branch reference from the payload. Applies to ALL
+  // template content (pipelines, hooks, rules, skills, config): replacements
+  // must stay string-exact so they never touch unrelated files. The residual
+  // guard in the integration suite asserts no `staging` survives in output.
+  if (!remoteGovernanceEnabled(config)) {
+    // Tier M/L Phase 5c: replace staging deploy with local build + smoke
     result = result.replace(
       /## Phase 5c - Staging deploy \+ smoke test[\s\S]*?(?=## Phase 5d)/,
       '## Phase 5c - Local build + smoke test\n\n' +
@@ -878,18 +887,177 @@ function interpolate(content, config) {
         '- Verify the main flow in 3-5 steps.\n' +
         '- Output: "smoke test OK" or describe the problem and fix before proceeding.\n\n',
     );
-    // Phase 8 step 9: direct merge to main (no staging intermediate)
+    // Tier S FL-2: replace staging deploy with local smoke
+    result = result.replace(
+      /## FL-2 - Deploy to staging \+ smoke test[\s\S]*?(?=## FL-3)/,
+      '## FL-2 - Local smoke test\n\n' +
+        '- Build (if applicable) and run the fix locally.\n' +
+        '- Verify in 1-3 steps.\n' +
+        '- If broken: fix on the `fix/` branch and re-verify before promoting.\n\n',
+    );
+    // Direct merge to main (no staging intermediate) - branch name per pipeline
+    const workBranch = result.includes('## FL-1') ? 'fix/description' : 'feature/block-name';
     result = result.replace(
       /git checkout main && git merge staging --no-ff && git push origin main/g,
-      'git checkout main && git merge feature/block-name --no-ff && git push origin main',
+      `git checkout main && git merge ${workBranch} --no-ff && git push origin main`,
     );
-    // Cross-cutting: remove staging from branch protection rule
+    // Branch protection rules: remove staging (covers m/l + tier-s + git.md wording)
     result = result.replace(
       /Never commit to `main` or `staging` directly\./g,
       'Never commit to `main` directly.',
     );
-    // Phase 0 branch check: remove staging
-    result = result.replace(/if on `main` or `staging`, stop\./, 'if on `main`, stop.');
+    result = result.replace(
+      /Never commit directly to `main` or `staging`\./g,
+      'Never commit directly to `main`.',
+    );
+    // Phase 0 branch check
+    result = result.replace(/if on `main` or `staging`, stop\./g, 'if on `main`, stop.');
+    // Promote-keyword notes (Phase 1 approval note + cross-cutting rule)
+    result = result.replace(
+      /which the gate consumes on each push to `staging`\/`main`/g,
+      'which the gate consumes on each push to `main`',
+    );
+    result = result.replace(
+      /any `git push` to `origin staging` or `origin main`/g,
+      'any `git push` to `origin main`',
+    );
+    // Phase 8 closure-commits note
+    result = result.replace(
+      /Getting them onto `staging` goes through/g,
+      'Getting them onto `main` goes through',
+    );
+    // Tier L worktree discipline
+    result = result.replace(
+      /git worktree add \.claude\/worktrees\/\[block-name\] -b worktree-\[block-name\] staging/g,
+      'git worktree add .claude/worktrees/[block-name] -b worktree-[block-name] main',
+    );
+    result = result.replace(
+      /Always base the new branch on `staging`, never `main`\./g,
+      'Always base the new branch on `main`.',
+    );
+    result = result.replace(
+      /Never merge two unreviewed worktrees to `staging` simultaneously\. Serial staging only\./g,
+      'Never merge two unreviewed worktrees to `main` simultaneously. Serial promotion only.',
+    );
+    result = result.replace(
+      /Also confirm serial staging is clear/g,
+      'Also confirm serial promotion is clear',
+    );
+    // Tier S wording: FL-1 note, FL-3 STOP, closing recap, gates summary
+    result = result.replace(
+      /there is no further gate until the staging promotion\./,
+      'there is no further gate until the promotion to `main`.',
+    );
+    result = result.replace(
+      /The staging authorization does not cover production - each protected branch gets its own gate\./,
+      'No prior approval covers this push - the protected branch gets its own gate.',
+    );
+    result = result.replace(
+      /type check ✅ · tests N\/N ✅ · staging ✅ · production ✅/,
+      'type check ✅ · tests N/N ✅ · production ✅',
+    );
+    result = result.replace(
+      /Fast Lane has four gates: scope confirmation \(FL-1\), promotion authorization to staging \(FL-2\) and to production \(FL-3\), and cleanup confirmation \(FL-4\)\./,
+      'Fast Lane has three gates: scope confirmation (FL-1), promotion authorization to production (FL-3), and cleanup confirmation (FL-4).',
+    );
+    result = result.replace(/merge-promotions \(FL-2, FL-3\)/, 'merge-promotions (FL-3)');
+    // Hooks: governance gate + capture approval
+    result = result.replace('(staging|main)', '(main)');
+    result = result.replace(/protected branch \(staging\/main\)/g, 'protected branch (main)');
+    result = result.replace(
+      /\(`staging` or `main`\) as a standalone token/,
+      '(`main`) as a standalone token',
+    );
+    result = result.replace(
+      /compound \(`git checkout staging && git merge … && git push origin staging`\)/,
+      'compound (`git checkout main && git merge … && git push origin main`)',
+    );
+    result = result.replace(
+      /on the next `git push` to staging\/main\./,
+      'on the next `git push` to main.',
+    );
+    // git.md force-push rule
+    result = result.replace(
+      /shared branches \(`main`, `staging`, `develop`\)/,
+      'shared branches (`main`, `develop`)',
+    );
+    // pipeline-standards.md
+    result = result.replace(
+      /- Web services: merge to staging server, smoke-test, then promote to production/,
+      '- Web services: build and smoke-test locally, then promote to production',
+    );
+    result = result.replace(
+      /\(`main`, `staging`, or project-equivalent\)/,
+      '(`main` or project-equivalent)',
+    );
+    // pre-commit no-commit-to-branch args
+    result = result.replace(
+      "args: ['--branch', 'main', '--branch', 'staging', '--branch', 'master']",
+      "args: ['--branch', 'main', '--branch', 'master']",
+    );
+    // PR template
+    result = result.replace(/- \[ \] Smoke tested on staging/, '- [ ] Smoke tested locally');
+    // FIRST_SESSION phase table
+    result = result.replace(
+      /\| 5c - Staging deploy \| Merge to staging \+ smoke test/g,
+      '| 5c - Local build | Local build + smoke test',
+    );
+    // Tier L settings.json push permission
+    result = result.replace(/^\s*"Bash\(git push origin staging\*\)",\n/m, '');
+    // Tier L CLAUDE.md worktree example comment
+    result = result.replace(
+      /prefix `worktree-`, base `staging`\./,
+      'prefix `worktree-`, base `main`.',
+    );
+    // Skills: pr-review, security-audit, arch-audit, skill-db, migration-audit, cheatsheet
+    result = result.replace(
+      /`\/pr-review --local --base staging`/,
+      '`/pr-review --local --base main`',
+    );
+    result = result.replace(
+      /\*\*Live check\*\* \(staging\): curl the staging URL/,
+      '**Live check** (local): curl the running app URL',
+    );
+    result = result.replace(
+      /- Headers: server config \+ live curl on staging/,
+      '- Headers: server config + live curl on the running app',
+    );
+    result = result.replace(
+      /prohibiting staging merges before Phase 8/,
+      'prohibiting unreviewed protected-branch merges before Phase 8',
+    );
+    result = result.replace(
+      /\*\*PE6 - Staging-before-production \(S4\)\*\*\nCheck: does pipeline\.md prohibit direct production deploy without staging first\?\nExpected: ≥1 match enforcing the staging prerequisite\. Missing = WARN\./,
+      '**PE6 - Pre-production gate (S4)**\nNot applicable: this project profile has no remote pre-production environment. Record N/A.',
+    );
+    result = result.replace(
+      /- PE6 Staging before production: \[PASS\/WARN\]/g,
+      '- PE6 Pre-production gate: N/A (no remote pre-production environment)',
+    );
+    result = result.replace(
+      /\(common on staging with low data volume\)/,
+      '(common on non-production databases with low data volume)',
+    );
+    result = result.replace(
+      /record as "not verifiable on staging - \[table\] has insufficient data"/,
+      'record as "not verifiable - [table] has insufficient data"',
+    );
+    result = result.replace(
+      /if Step 4 confirms the file is already applied in staging\/prod\./,
+      'if Step 4 confirms the file is already applied to the production DB.',
+    );
+    result = result.replace(
+      /If the file is already applied to staging\/prod:/,
+      'If the file is already applied to the production DB:',
+    );
+    result = result.replace(
+      /Do NOT connect to production DB\. Staging DB is acceptable for Step 4 with explicit `\[STAGING_DB_URL\]` config\./,
+      'Do NOT connect to the production DB. A non-production copy is acceptable for Step 4 with explicit `[STAGING_DB_URL]` config.',
+    );
+    result = result.replace(
+      /After writing a migration, before applying to staging/,
+      'After writing a migration, before applying to the database',
+    );
   }
 
   // ── Post-interpolation: adjust Phase 5b terminology for backend-only projects ───
