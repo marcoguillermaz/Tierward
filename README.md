@@ -151,7 +151,7 @@ Install individual components without a full scaffold:
 ```bash
 npx tierward add skill security-audit   # install one skill
 npx tierward add rule git                # install one rule
-npx tierward add rule security --stack swift  # stack-specific variant
+npx tierward add rule security           # install the security rule
 ```
 
 Custom skills (`custom-*` prefix) are preserved across upgrades. See [Custom Skills Guide](docs/custom-skills.md).
@@ -189,7 +189,7 @@ The Stop hook in `settings.json` is the enforcement mechanism. It blocks Claude 
 npx tierward init                    # scaffold wizard
 npx tierward init --dry-run          # preview without writing
 npx tierward init --answers file.json  # skip prompts (CI/automation)
-npx tierward doctor                  # validate setup (29 checks)
+npx tierward doctor                  # validate setup (28 checks)
 npx tierward doctor --report         # JSON output for CI
 npx tierward doctor --ci             # silent, exit 1 on failure
 npx tierward upgrade                 # update template files
@@ -220,7 +220,7 @@ Read-only tools exposed:
 
 | Tool                    | Returns                                                                                                                                                               |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tierward_doctor_report`     | `doctor --report` JSON (29 checks)                                                                                                                                    |
+| `tierward_doctor_report`     | `doctor --report` JSON (28 checks)                                                                                                                                    |
 | `tierward_team_settings`     | parsed `.claude/team-settings.json`                                                                                                                                   |
 | `tierward_arch_audit_status` | last `arch-audit` run timestamp + age                                                                                                                                 |
 | `tierward_skill_inventory`   | installed skills + frontmatter snapshot                                                                                                                               |
@@ -262,7 +262,7 @@ node packages/cli/test/integration/run.js    # 1171 integration checks
 node --test 'packages/cli/test/unit/**/*.test.js'   # 596 unit tests
 ```
 
-Covers: file structure per tier, Stop hook presence, pipeline gate counts, placeholder resolution, skill pruning, security variant selection, native stack adaptation, rubric scoring, cross-stack content invariants (10 stacks, the named stacks excluding the `other` fallback), golden-file assertions (Swift, Node-TS, Python), full CLI execution via `--answers` fixtures.
+Covers: file structure per tier, Stop hook presence, pipeline gate counts, placeholder resolution, skill pruning, native stack adaptation, rubric scoring, cross-stack content invariants (10 stacks, the named stacks excluding the `other` fallback), golden-file assertions (Swift, Node-TS, Python), full CLI execution via `--answers` fixtures.
 
 A separate **template-coverage** layer (under `packages/cli/test/template-coverage/`) hard-fails on cross-tier semantic drift, missing gate clauses, and undocumented placeholders in the shipped templates. The three scripts (`cross-tier-lint.mjs`, `gate-enum.mjs`, `placeholder-check.mjs`) run standalone for local work and automatically inside `run.js`. Strategy and concept registry: [docs/architecture/test-coverage-strategy.md](docs/architecture/test-coverage-strategy.md).
 

@@ -123,26 +123,12 @@ describe('add rule', () => {
     assert.ok(fs.existsSync(path.join(TMP, '.claude/rules/output-style.md')));
   });
 
-  it('installs security rule (web default)', () => {
+  it('installs security rule (single neutral rule)', () => {
     const out = run('add rule security');
     assert.ok(out.includes('Installed'));
     const content = fs.readFileSync(path.join(TMP, '.claude/rules/security.md'), 'utf8');
-    // Web default mentions OWASP or XSS (web-specific content)
-    assert.ok(content.includes('OWASP') || content.includes('XSS') || content.includes('SQL'));
-  });
-
-  it('installs security rule with swift variant', () => {
-    const out = run('add rule security --stack swift --force');
-    assert.ok(out.includes('security-native-apple.md'));
-    const content = fs.readFileSync(path.join(TMP, '.claude/rules/security.md'), 'utf8');
-    assert.ok(
-      content.includes('Keychain') || content.includes('Apple') || content.includes('entitlement'),
-    );
-  });
-
-  it('installs security rule with rust variant', () => {
-    const out = run('add rule security --stack rust --force');
-    assert.ok(out.includes('security-systems.md'));
+    // Neutral rule covers universal security principles (input/SQL/secrets)
+    assert.ok(content.includes('SQL') || content.includes('secrets') || content.includes('auth'));
   });
 
   it('warns on conflict without --force', () => {
@@ -156,9 +142,9 @@ describe('add rule', () => {
     assert.ok(text.includes('Unknown rule'));
   });
 
-  it('dry-run shows variant info', async () => {
+  it('dry-run does not write the rule', async () => {
     await fs.remove(path.join(TMP, '.claude/rules/security.md'));
-    const out = run('add rule security --stack kotlin --dry-run');
+    const out = run('add rule security --dry-run');
     assert.ok(out.includes('Dry run'));
     assert.ok(!fs.existsSync(path.join(TMP, '.claude/rules/security.md')));
   });

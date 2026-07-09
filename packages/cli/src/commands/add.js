@@ -13,17 +13,7 @@ const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
 const RULE_MAP = {
   git: 'git.md',
   'output-style': 'output-style.md',
-  security: 'security.md', // base variant; resolved dynamically by --stack
-};
-
-// Security variant lookup by stack
-const SECURITY_VARIANTS = {
-  swift: 'security-native-apple.md',
-  kotlin: 'security-native-android.md',
-  rust: 'security-systems.md',
-  dotnet: 'security-systems.md',
-  java: 'security-systems.md',
-  go: 'security-systems.md',
+  security: 'security.md',
 };
 
 const VALID_SKILL_NAMES = SKILL_REGISTRY.map((s) => s.name);
@@ -132,18 +122,9 @@ export async function addRule(name, options) {
   }
 
   // Resolve source file
-  let sourceFile = RULE_MAP[name];
-
-  if (name === 'security' && options.stack) {
-    const variant = SECURITY_VARIANTS[options.stack];
-    if (variant) {
-      sourceFile = variant;
-    }
-    // If no variant match, use the web default (security.md)
-  }
+  const sourceFile = RULE_MAP[name];
 
   const sourcePath = path.join(TEMPLATES_DIR, 'common', 'rules', sourceFile);
-  // Target always named after the canonical rule (security.md, not security-native-apple.md)
   const targetPath = path.join(cwd, '.claude', 'rules', `${name}.md`);
 
   if (!fs.existsSync(sourcePath)) {
@@ -161,11 +142,6 @@ export async function addRule(name, options) {
   if (options.dryRun) {
     console.log(chalk.yellow('Dry run - no files written.'));
     console.log(`  Would create: .claude/rules/${name}.md`);
-    if (name === 'security') {
-      console.log(
-        `  Variant: ${sourceFile}${options.stack ? ` (--stack ${options.stack})` : ' (web default)'}`,
-      );
-    }
     return;
   }
 

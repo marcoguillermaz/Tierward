@@ -103,24 +103,11 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
     await copyTemplateDir(tierDir, targetDir, config, {}, config, [], ['CLAUDE.md']);
   }
 
-  // Copy rules/ subdirectory from common - select security variant by stack family
+  // Copy rules/ subdirectory from common
   const commonRulesDir = path.join(commonDir, 'rules');
   if (await fs.pathExists(commonRulesDir)) {
-    const securityVariant = securityRuleVariant(config);
     const rules = await fs.readdir(commonRulesDir);
     for (const rule of rules) {
-      // Security variant selection: skip all security-*.md variants and the base security.md.
-      // Only the selected variant is copied, always as security.md in the output.
-      if (rule.startsWith('security')) {
-        if (rule === securityVariant) {
-          const src = path.join(commonRulesDir, rule);
-          const dest = path.join(targetDir, '.claude', 'rules', 'security.md');
-          await fs.ensureDir(path.dirname(dest));
-          const content = await fs.readFile(src, 'utf8');
-          await fs.writeFile(dest, interpolate(content, config));
-        }
-        continue;
-      }
       const src = path.join(commonRulesDir, rule);
       const dest = path.join(targetDir, '.claude', 'rules', rule);
       await fs.ensureDir(path.dirname(dest));
@@ -372,20 +359,8 @@ export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
 
   const commonRulesDir = path.join(commonDir, 'rules');
   if (await fs.pathExists(commonRulesDir)) {
-    const securityVariant = securityRuleVariant(config);
     const rules = await fs.readdir(commonRulesDir);
     for (const rule of rules) {
-      if (rule.startsWith('security')) {
-        if (rule === securityVariant) {
-          const dest = path.join(targetDir, '.claude', 'rules', 'security.md');
-          if (await fs.pathExists(dest)) continue;
-          const src = path.join(commonRulesDir, rule);
-          await fs.ensureDir(path.dirname(dest));
-          const content = await fs.readFile(src, 'utf8');
-          await fs.writeFile(dest, interpolate(content, config));
-        }
-        continue;
-      }
       const src = path.join(commonRulesDir, rule);
       const dest = path.join(targetDir, '.claude', 'rules', rule);
       if (await fs.pathExists(dest)) continue;
@@ -468,22 +443,6 @@ async function copyTemplateDirSafe(
 /**
  * Replace template placeholders with actual values from config.
  */
-/**
- * Select the security.md variant based on stack family.
- * Returns the filename of the variant to use (e.g. 'security-native-apple.md').
- * The base 'security.md' is the web default and is used when no variant matches.
- */
-function securityRuleVariant(config) {
-  if (config.techStack === 'swift') return 'security-native-apple.md';
-  if (config.techStack === 'kotlin') return 'security-native-android.md';
-  const systemsStacks = ['rust', 'dotnet', 'java', 'go'];
-  if (systemsStacks.includes(config.techStack) && config.hasApi === false) {
-    return 'security-systems.md';
-  }
-  // Web default: node-ts, node-js, python, ruby, go (with API), dotnet (with API), java (with API), other
-  return 'security.md';
-}
-
 function frameworkValue(config) {
   if (config.framework) return config.framework;
   if (NATIVE_STACKS.includes(config.techStack)) return 'N/A - native app';
@@ -983,7 +942,6 @@ export { interpolate };
 
 // Exported for unit testing only - not part of the public API
 export const _testHelpers = {
-  securityRuleVariant,
   interpolate,
   pruneSkills,
   patchSettingsPermissions,

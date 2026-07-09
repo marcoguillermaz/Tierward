@@ -451,19 +451,9 @@ Options:
 npx tierward add rule git
 npx tierward add rule output-style
 npx tierward add rule security
-npx tierward add rule security --stack swift
 ```
 
-Available rules: `git`, `output-style`, `security`.
-
-The security rule supports stack-specific variants via `--stack`:
-
-| Stack flag                     | Security variant installed |
-| ------------------------------ | -------------------------- |
-| _(none)_                       | Web (default)              |
-| `swift`                        | Native Apple               |
-| `kotlin`                       | Native Android             |
-| `rust`, `go`, `dotnet`, `java` | Systems                    |
+Available rules: `git`, `output-style`, `security`. The `security` rule is a single, stack-neutral file — one set of universal principles that apply to any stack.
 
 Options: `--force`, `--dry-run` (same as `add skill`).
 
@@ -660,18 +650,7 @@ You can add project-specific overrides at the bottom of this file:
 
 ### .claude/rules/security.md
 
-Stack-aware security rules. The scaffold selects the appropriate variant based on your tech stack:
-
-| Variant            | Stacks                                       | Focus areas                                                                                           |
-| ------------------ | -------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Web** (default)  | Node.js, Python, Ruby, Go/Java/.NET with API | Auth checks, input validation, SQL injection, RLS/ACL, API response security, HTTP headers            |
-| **Native Apple**   | Swift                                        | App Sandbox entitlements, Keychain access, TCC permissions, Data Protection, code signing             |
-| **Native Android** | Kotlin                                       | Manifest permissions, Android Keystore, EncryptedSharedPreferences, network security config, ProGuard |
-| **Systems**        | Rust, Go, .NET, Java (without API)           | Memory safety, process execution, file permissions, input validation at system boundaries             |
-
-Selection logic: Swift always gets native-apple, Kotlin always gets native-android. Rust/Go/.NET/Java get the systems variant when `hasApi=false`, otherwise the web variant. All other stacks get the web variant. The output file is always named `security.md` regardless of variant.
-
-You can also install a specific variant via `npx tierward add rule security --stack swift`.
+A single, stack-neutral security rule. It states universal principles — verify caller identity before any operation, validate all inputs at system boundaries, parameterize queries, enforce row-level access control, never expose secrets — framed so they apply to any stack, with concrete mechanisms given as examples rather than assumed. The same file ships for every stack.
 
 ---
 
@@ -1234,7 +1213,7 @@ npx tierward doctor --report  # JSON compliance output for CI pipelines
 npx tierward doctor --ci      # silent mode: exit 1 if any check fails
 ```
 
-Runs 29 checks:
+Runs 28 checks:
 
 1. Claude Code CLI is installed and reachable
 2. `CLAUDE.md` is present
@@ -1258,15 +1237,14 @@ Runs 29 checks:
 20. CLAUDE.md Key Commands include the Stop hook test command (warn on drift)
 21. CLAUDE.md `## Active Skills` matches `.claude/skills/` directories (warn on mismatch)
 22. `pipeline.md` H1 matches its phase structure — Tier S/M/L self-consistency (warn)
-23. `security.md` variant matches the detected stack (warn on drift)
-24. `.claude/rules/context-review.md` includes C12 (warn if not present - upgrade needed)
-25. Stop hook has `timeout` configured and ≤ 600s (warn if missing - prevents hanging test commands)
-26. Anthropic-influenced files match the installed Tierward template — `arch-audit/advanced-checks.md` in v1.15.0 (warn on drift, suggest `upgrade --anthropic`)
-27. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
-28. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
-29. No duplicate entries in `permissions.deny` list (warn if duplicates found)
+23. `.claude/rules/context-review.md` includes C12 (warn if not present - upgrade needed)
+24. Stop hook has `timeout` configured and ≤ 600s (warn if missing - prevents hanging test commands)
+25. Anthropic-influenced files match the installed Tierward template — `arch-audit/advanced-checks.md` in v1.15.0 (warn on drift, suggest `upgrade --anthropic`)
+26. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
+27. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
+28. No duplicate entries in `permissions.deny` list (warn if duplicates found)
 
-Checks 13-29 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier.
+Checks 13-28 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier.
 
 **`--report` output**: machine-readable JSON with timestamp, cwd, summary (passed/warned/failed/skipped), and per-check details. Consumed by CI systems or external audit tools.
 

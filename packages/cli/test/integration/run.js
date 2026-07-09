@@ -1197,54 +1197,28 @@ async function scenarioWizardCoverage() {
 }
 
 async function scenarioSecurityVariants() {
-  section('Security rule variants - stack-aware security.md selection');
+  section('Security rule - single neutral security.md for every stack');
 
-  const variants = [
-    {
-      stack: 'swift',
-      hasApi: true,
-      expected: 'Native Apple',
-      label: 'swift → native-apple',
-      denyIncludes: 'xcodebuild archive',
-    },
-    {
-      stack: 'kotlin',
-      hasApi: true,
-      expected: 'Native Android',
-      label: 'kotlin → native-android',
-      denyIncludes: 'gradlew publish',
-    },
-    {
-      stack: 'rust',
-      hasApi: false,
-      expected: 'Systems & Backend',
-      label: 'rust (no API) → systems',
-      denyIncludes: 'cargo publish',
-    },
-    {
-      stack: 'go',
-      hasApi: false,
-      expected: 'Systems & Backend',
-      label: 'go (no API) → systems',
-      denyIncludes: null,
-    },
-    {
-      stack: 'rust',
-      hasApi: true,
-      expected: 'Security Rules\n',
-      label: 'rust (with API) → web',
-      denyIncludes: 'cargo publish',
-    },
-    {
-      stack: 'node-ts',
-      hasApi: true,
-      expected: 'Security Rules\n',
-      label: 'node-ts → web',
-      denyIncludes: null,
-    },
+  // Stack-specific security variant selection was removed: every stack now
+  // receives the same neutral security.md. Per-stack settings.json deny entries
+  // (a separate mechanism) are unchanged and still verified here.
+  const VARIANT_MARKERS = [
+    'Native Apple',
+    'Native Android',
+    'Systems & Backend',
+    'Keychain',
+    'Android Keystore',
   ];
 
-  for (const { stack, hasApi, expected, label, denyIncludes } of variants) {
+  const cases = [
+    { stack: 'swift', hasApi: true, denyIncludes: 'xcodebuild archive' },
+    { stack: 'kotlin', hasApi: true, denyIncludes: 'gradlew publish' },
+    { stack: 'rust', hasApi: false, denyIncludes: 'cargo publish' },
+    { stack: 'go', hasApi: false, denyIncludes: null },
+    { stack: 'node-ts', hasApi: true, denyIncludes: null },
+  ];
+
+  for (const { stack, hasApi, denyIncludes } of cases) {
     const config = {
       ...BASE,
       tier: 'm',
@@ -1252,48 +1226,48 @@ async function scenarioSecurityVariants() {
       hasApi,
       isDiscovery: false,
     };
-    const dir = await scaffold(
-      `security-variant-${stack}-${hasApi ? 'api' : 'noapi'}`,
-      'm',
-      config,
-    );
+    const dir = await scaffold(`security-rule-${stack}-${hasApi ? 'api' : 'noapi'}`, 'm', config);
     const securityPath = path.join(dir, '.claude', 'rules', 'security.md');
 
     if (!fs.existsSync(securityPath)) {
-      fail(`security-variant[${label}]: security.md missing`);
+      fail(`security-rule[${stack}]: security.md missing`);
       continue;
     }
 
     const content = fs.readFileSync(securityPath, 'utf8');
-    if (content.includes(expected)) {
-      pass(`security-variant[${label}]: correct variant`);
+    const leakedMarker = VARIANT_MARKERS.find((m) => content.includes(m));
+    if (content.startsWith('# Security Rules') && !leakedMarker) {
+      pass(`security-rule[${stack}]: neutral security.md, no variant markers`);
     } else {
-      fail(`security-variant[${label}]: expected "${expected}" in security.md`);
+      fail(
+        `security-rule[${stack}]: expected neutral security.md` +
+          (leakedMarker ? `, found variant marker "${leakedMarker}"` : ''),
+      );
     }
 
-    // Verify no other security variant files leaked into output
+    // Verify no security variant files leaked into output
     const rulesDir = path.join(dir, '.claude', 'rules');
     const ruleFiles = fs.readdirSync(rulesDir);
     const securityFiles = ruleFiles.filter((f) => f.startsWith('security'));
     if (securityFiles.length === 1 && securityFiles[0] === 'security.md') {
-      pass(`security-variant[${label}]: no variant files leaked`);
+      pass(`security-rule[${stack}]: no variant files leaked`);
     } else {
-      fail(`security-variant[${label}]: unexpected security files: ${securityFiles.join(', ')}`);
+      fail(`security-rule[${stack}]: unexpected security files: ${securityFiles.join(', ')}`);
     }
 
-    // Verify stack-specific deny entries in settings.json
+    // Per-stack deny entries in settings.json (unchanged mechanism)
     if (denyIncludes) {
       const settingsPath = path.join(dir, '.claude', 'settings.json');
       const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
       const denyList = (settings.permissions?.deny || []).join(' ');
       if (denyList.includes(denyIncludes)) {
-        pass(`security-variant[${label}]: deny includes ${denyIncludes}`);
+        pass(`security-rule[${stack}]: deny includes ${denyIncludes}`);
       } else {
-        fail(`security-variant[${label}]: deny missing ${denyIncludes}`);
+        fail(`security-rule[${stack}]: deny missing ${denyIncludes}`);
       }
     }
 
-    // security-audit is always present (stack-agnostic, has native security path)
+    // security-audit is always present (stack-agnostic)
     assertExists(dir, '.claude/skills/security-audit/SKILL.md');
   }
 }
@@ -2555,7 +2529,6 @@ async function scenarioDoctorCrossFileValidation() {
     'claudemd-stop-hook-test-cmd-match',
     'claudemd-skills-directory-parity',
     'pipeline-md-tier-coherence',
-    'security-md-stack-alignment',
   ];
 
   function injectStackMarker(dir, stack) {
@@ -2717,24 +2690,6 @@ async function scenarioDoctorCrossFileValidation() {
       pass(`Tier ${tier} corrupt-tier-h1: pipeline-md-tier-coherence = ${tierStatus}`);
     } else {
       fail(`Tier ${tier} corrupt-tier-h1: expected warn/fail, got ${tierStatus}`);
-    }
-
-    // Corruption: node-ts marker but security.md overwritten with the Apple variant
-    const corruptSecurity = await scaffold(`doctor-xfile-corrupt-sec-tier-${tier}`, tier, config);
-    injectStackMarker(corruptSecurity, 'node-ts');
-    fillStopHookTestCmd(corruptSecurity);
-    fillClaudeMdTestCmd(corruptSecurity);
-    const securityPath = path.join(corruptSecurity, '.claude/rules/security.md');
-    fs.writeFileSync(
-      securityPath,
-      '# Security Rules - Native Apple (macOS / iOS)\n\nStore secrets in Keychain only.\n',
-    );
-    const secReport = runDoctor(corruptSecurity);
-    const secStatus = getCheckStatus(secReport, 'security-md-stack-alignment');
-    if (secStatus === 'warn' || secStatus === 'fail') {
-      pass(`Tier ${tier} corrupt-security: security-md-stack-alignment = ${secStatus}`);
-    } else {
-      fail(`Tier ${tier} corrupt-security: expected warn/fail, got ${secStatus}`);
     }
   }
 
