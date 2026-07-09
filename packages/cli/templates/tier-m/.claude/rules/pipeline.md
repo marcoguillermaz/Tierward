@@ -307,8 +307,7 @@ Only after explicit confirmation (it covers the closure steps below, never the s
 3. Update `CLAUDE.md` only if block introduces non-obvious patterns or changes conventions.
 4. Update `docs/requirements.md` if spec changed during implementation.
 5. If Mode A was used: move `docs/specs/[block-name].md` → `docs/specs/archive/[block-name].md` and mark as `Status: IMPLEMENTED`.
-6. **Lessons capture**: review corrections received during this block. Add any non-obvious pattern rule to `tasks/lessons.md` (rule + why it exists). Do not wait for the next block.
-7. Update `MEMORY.md` (project root) only if new lessons emerged not already documented.
+6. **Lessons capture**: review corrections received during this block. Add any non-obvious pattern rule to the "Lessons / Patterns" section of `MEMORY.md` (rule + why it exists) if not already documented. Do not wait for the next block.
 7. **Canonical doc updates** (conditional - only update docs that exist in the project):
    - If `docs/sitemap.md` exists and the block added/removed routes: update it now.
    - If `docs/db-map.md` exists and the block changed the schema: update it now.
