@@ -43,6 +43,14 @@ const SESSION_DIR = path.join(PROJECT_DIR, '.claude', 'session');
 // (and pipeline.md) in a later increment.
 const APPROVAL_RE = /^(execute|proceed|confirmed|go ahead)\s*[.!]*\s*$/i;
 
+// Promotion keyword — a SEPARATE signal from the execution keywords above. A bare
+// `Promote` arms `promotion_approved: true`, which the governance gate consumes
+// (one-shot) on the next `git push` to staging/main. Deliberately disjoint:
+// a Phase 1 "Proceed" must never authorize a promotion, and a `/pr-review`
+// verdict that happens to read "proceed" can never be mistaken for one either.
+// `Promote` conversely never arms `requirements_approved`.
+const PROMOTE_RE = /^promote\s*[.!]*\s*$/i;
+
 function readStdin() {
   return new Promise((resolve) => {
     let data = '';
@@ -53,11 +61,12 @@ function readStdin() {
   });
 }
 
-// Find the active block session file (block-*.md). Returns the path or null.
+// Find the active session file: block-*.md (tier M/L) or fix-*.md (tier S Fast
+// Lane). Returns the path or null.
 function activeSessionFile() {
   if (!existsSync(SESSION_DIR)) return null;
   const blocks = readdirSync(SESSION_DIR).filter(
-    (f) => f.startsWith('block-') && f.endsWith('.md'),
+    (f) => (f.startsWith('block-') || f.startsWith('fix-')) && f.endsWith('.md'),
   );
   if (blocks.length === 0) return null;
   // Most-recently-modified wins if several exist (resumed/interrupted sessions).
@@ -96,6 +105,26 @@ function recordApproval(file) {
   return false;
 }
 
+// Set `promotion_approved: true` in the YAML front matter (same mechanics as
+// recordApproval, different key). The governance gate consumes this flag on the
+// next promotion push, so each push needs a fresh bare `Promote`.
+function recordPromotionApproval(file) {
+  const content = readFileSync(file, 'utf8');
+  const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (fmMatch) {
+    const body = content.slice(fmMatch[0].length);
+    let fm = fmMatch[1];
+    if (/^promotion_approved:/m.test(fm)) {
+      fm = fm.replace(/^promotion_approved:.*$/m, 'promotion_approved: true');
+    } else {
+      fm += '\npromotion_approved: true';
+    }
+    writeFileSync(file, `---\n${fm}\n---\n${body}`);
+  } else {
+    writeFileSync(file, `---\npromotion_approved: true\n---\n${content}`);
+  }
+}
+
 // Emit a one-time star CTA on the first Phase 1 STOP gate approval.
 // Output goes to stdout (additionalContext for the model) — Claude will surface it
 // naturally in the Phase 2 kick-off message.
@@ -119,6 +148,11 @@ async function main() {
     const raw = await readStdin();
     if (!raw.trim()) process.exit(0);
     const prompt = (JSON.parse(raw).prompt || '').trim();
+    if (PROMOTE_RE.test(prompt)) {
+      const file = activeSessionFile();
+      if (file) recordPromotionApproval(file);
+      process.exit(0);
+    }
     if (!APPROVAL_RE.test(prompt)) process.exit(0);
     const file = activeSessionFile();
     if (file) {

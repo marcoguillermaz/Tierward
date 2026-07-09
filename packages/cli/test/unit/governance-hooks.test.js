@@ -27,13 +27,13 @@ const GATE = path.join(HOOKS, 'tierward-governance-gate.mjs');
 // Run a hook with the given stdin JSON in an isolated project dir. Returns
 // { stdout, sessionContent } — sessionContent is the session file after the run
 // (or null if no session file was seeded).
-function runHook(hookPath, stdinObj, { sessionFrontMatter } = {}) {
+function runHook(hookPath, stdinObj, { sessionFrontMatter, sessionFileName } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-gov-'));
   const sessionDir = path.join(dir, '.claude', 'session');
   let sessionFile = null;
   if (sessionFrontMatter !== undefined) {
     fs.mkdirSync(sessionDir, { recursive: true });
-    sessionFile = path.join(sessionDir, 'block-test.md');
+    sessionFile = path.join(sessionDir, sessionFileName || 'block-test.md');
     fs.writeFileSync(sessionFile, `---\n${sessionFrontMatter}\n---\n# Block: test\n`);
   }
   try {
@@ -139,6 +139,63 @@ describe('capture-approval hook (UserPromptSubmit)', () => {
   });
 });
 
+describe('capture-approval hook — promotion keyword (bare Promote)', () => {
+  it('arms promotion_approved on a bare `Promote` (+ optional punctuation)', () => {
+    for (const kw of ['Promote', 'promote', 'Promote.', 'Promote!']) {
+      const { sessionContent } = runHook(
+        CAPTURE,
+        { prompt: kw },
+        { sessionFrontMatter: 'block: test\nrequirements_approved: false' },
+      );
+      assert.match(sessionContent, /promotion_approved:\s*true/, `bare "${kw}" must arm promotion`);
+    }
+  });
+
+  it('does NOT arm requirements_approved on `Promote` (disjoint signals)', () => {
+    const { sessionContent } = runHook(
+      CAPTURE,
+      { prompt: 'Promote' },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: false' },
+    );
+    assert.match(sessionContent, /requirements_approved:\s*false/);
+  });
+
+  it('does NOT arm promotion on `Promote` followed by other words', () => {
+    for (const prompt of ['Promote to staging', 'Promote the fix', 'please promote']) {
+      const { sessionContent } = runHook(
+        CAPTURE,
+        { prompt },
+        { sessionFrontMatter: 'block: test' },
+      );
+      assert.ok(
+        !/promotion_approved:\s*true/.test(sessionContent),
+        `"${prompt}" must NOT arm promotion`,
+      );
+    }
+  });
+
+  it('does NOT arm promotion on execution keywords (Proceed never promotes)', () => {
+    const { sessionContent } = runHook(
+      CAPTURE,
+      { prompt: 'Proceed' },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: false' },
+    );
+    assert.ok(!/promotion_approved:\s*true/.test(sessionContent));
+  });
+
+  it('works on a Fast Lane fix-*.md session file (tier S)', () => {
+    const { sessionContent } = runHook(
+      CAPTURE,
+      { prompt: 'Promote' },
+      {
+        sessionFrontMatter: 'fix: test\nrequirements_approved: false',
+        sessionFileName: 'fix-test.md',
+      },
+    );
+    assert.match(sessionContent, /promotion_approved:\s*true/);
+  });
+});
+
 describe('governance-gate hook (PreToolUse Bash)', () => {
   const blocked = (out) => out.includes('"permissionDecision":"deny"');
 
@@ -195,5 +252,107 @@ describe('governance-gate hook (PreToolUse Bash)', () => {
       tool_input: { command: 'git commit -m "x"' },
     });
     assert.equal(stdout.trim(), '', 'no session file → governance gate inactive');
+  });
+});
+
+describe('governance-gate hook — promotion push gate', () => {
+  const blocked = (out) => out.includes('"permissionDecision":"deny"');
+  const PROMO_CMD =
+    'git checkout staging && git merge feature/x --no-ff && git push origin staging';
+
+  it('blocks a promotion push to staging without promotion_approved', () => {
+    const { stdout } = runHook(
+      GATE,
+      { tool_name: 'Bash', tool_input: { command: PROMO_CMD } },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: true\npromotion_approved: false' },
+    );
+    assert.ok(blocked(stdout), 'unauthorized promotion must be denied');
+    assert.ok(stdout.includes('Promote'), 'deny reason must name the Promote keyword');
+  });
+
+  it('blocks a promotion push to main without promotion_approved', () => {
+    const { stdout } = runHook(
+      GATE,
+      {
+        tool_name: 'Bash',
+        tool_input: {
+          command: 'git checkout main && git merge staging --no-ff && git push origin main',
+        },
+      },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: true' },
+    );
+    assert.ok(blocked(stdout), 'absent flag counts as not approved');
+  });
+
+  it('a prior requirements approval does NOT cover promotion (leak guard)', () => {
+    const { stdout } = runHook(
+      GATE,
+      { tool_name: 'Bash', tool_input: { command: 'git push origin staging' } },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: true' },
+    );
+    assert.ok(blocked(stdout));
+  });
+
+  it('allows the push when promotion_approved and consumes the flag (one-shot)', () => {
+    const { stdout, sessionContent } = runHook(
+      GATE,
+      { tool_name: 'Bash', tool_input: { command: PROMO_CMD } },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: true\npromotion_approved: true' },
+    );
+    assert.equal(stdout.trim(), '', 'authorized promotion must pass');
+    assert.match(
+      sessionContent,
+      /promotion_approved:\s*false/,
+      'flag must be consumed after allow',
+    );
+  });
+
+  it('allows pushes to non-protected branches regardless of the flag', () => {
+    for (const cmd of ['git push origin feature/x', 'git push -u origin fix/bug-123']) {
+      const { stdout } = runHook(
+        GATE,
+        { tool_name: 'Bash', tool_input: { command: cmd } },
+        { sessionFrontMatter: 'block: test\npromotion_approved: false' },
+      );
+      assert.equal(stdout.trim(), '', `"${cmd}" must not be gated as a promotion`);
+    }
+  });
+
+  it('does not false-positive on branch names containing main/staging as a segment', () => {
+    const { stdout } = runHook(
+      GATE,
+      { tool_name: 'Bash', tool_input: { command: 'git push origin feature/main-nav' } },
+      { sessionFrontMatter: 'block: test\npromotion_approved: false' },
+    );
+    assert.equal(stdout.trim(), '');
+  });
+
+  it('catches HEAD:main refspec pushes', () => {
+    const { stdout } = runHook(
+      GATE,
+      { tool_name: 'Bash', tool_input: { command: 'git push origin HEAD:main' } },
+      { sessionFrontMatter: 'block: test\npromotion_approved: false' },
+    );
+    assert.ok(blocked(stdout), 'refspec promotion must be gated');
+  });
+
+  it('gates the Fast Lane fix-*.md session file too (tier S)', () => {
+    const { stdout } = runHook(
+      GATE,
+      { tool_name: 'Bash', tool_input: { command: 'git push origin staging' } },
+      {
+        sessionFrontMatter: 'fix: test\nrequirements_approved: true',
+        sessionFileName: 'fix-test.md',
+      },
+    );
+    assert.ok(blocked(stdout));
+  });
+
+  it('promotion gate inactive without a session file (fail-open, like the commit gate)', () => {
+    const { stdout } = runHook(GATE, {
+      tool_name: 'Bash',
+      tool_input: { command: 'git push origin staging' },
+    });
+    assert.equal(stdout.trim(), '');
   });
 });

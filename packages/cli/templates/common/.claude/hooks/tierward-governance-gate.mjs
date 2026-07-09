@@ -3,6 +3,9 @@
 // Wired as a `PreToolUse` hook on the `Bash` matcher. Blocks `git commit` when the
 // active block's requirements have not been approved by the human (see
 // tierward-capture-approval.mjs, which records approval from the human's prompt).
+// Also blocks `git push` toward a protected branch (staging/main) unless the human
+// authorized the promotion with a bare `Promote` — a one-shot flag consumed per push,
+// so no promotion is ever automatic and no prior execution keyword covers it.
 //
 // WHY PreToolUse, not Stop: approval requires Claude to YIELD THE TURN so the human
 // can type "Proceed". The Stop hook blocks the turn-yield — gating approval there is
@@ -25,7 +28,7 @@
 // Fail-open: any error → allow. A misconfigured project never has commits blocked
 // spuriously; worst case is the pre-v1.34 status quo (no governance gate).
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const PROJECT_DIR = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -37,6 +40,16 @@ const SESSION_DIR = path.join(PROJECT_DIR, '.claude', 'session');
 // `git commit-tree`/`commit-graph` (commit followed by `-`) and `git log
 // --grep=commit` (commit not space-preceded as a subcommand).
 const GIT_COMMIT_RE = /\bgit\s+([^\n]*\s)?commit(\s|$)/;
+
+// Promotion detection: a `git push` in a command that names a protected branch
+// (`staging` or `main`) as a standalone token (space- or colon-preceded, so
+// `feature/main-nav` never matches). The pipeline's promotion commands are
+// compound (`git checkout staging && git merge … && git push origin staging`),
+// so testing the whole command string is deliberate. Known limitation: a bare
+// `git push` while checked out on a protected branch is not detected — the
+// pipeline's prose gate ("promotion is never automatic") still covers it.
+const GIT_PUSH_RE = /\bgit\s+([^\n]*\s)?push(\s|$)/;
+const PROTECTED_REF_RE = /(^|[\s:'"])(staging|main)(?=$|[\s:'".])/;
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -51,7 +64,7 @@ function readStdin() {
 function activeSessionFile() {
   if (!existsSync(SESSION_DIR)) return null;
   const blocks = readdirSync(SESSION_DIR).filter(
-    (f) => f.startsWith('block-') && f.endsWith('.md'),
+    (f) => (f.startsWith('block-') || f.startsWith('fix-')) && f.endsWith('.md'),
   );
   if (blocks.length === 0) return null;
   return blocks
@@ -76,6 +89,25 @@ function requirementsApproved(file) {
   return !!m && m[1].trim() === 'true';
 }
 
+// Read `promotion_approved` from the session file's front matter.
+function promotionApproved(file) {
+  const fm = readFileSync(file, 'utf8').match(/^---\n([\s\S]*?)\n---/);
+  if (!fm) return false;
+  const m = fm[1].match(/^promotion_approved:\s*(.+)$/m);
+  return !!m && m[1].trim() === 'true';
+}
+
+// Consume the promotion flag (one-shot): each push to a protected branch needs
+// a fresh bare `Promote` from the human. Consumed BEFORE allowing, so a failed
+// push errs on the safe side (re-authorize to retry).
+function consumePromotionApproval(file) {
+  const content = readFileSync(file, 'utf8');
+  writeFileSync(
+    file,
+    content.replace(/^promotion_approved:\s*true\s*$/m, 'promotion_approved: false'),
+  );
+}
+
 function deny(reason) {
   process.stdout.write(
     JSON.stringify({
@@ -91,6 +123,20 @@ async function main() {
     if (!raw.trim()) process.exit(0);
     const payload = JSON.parse(raw);
     const command = payload?.tool_input?.command || '';
+
+    // Promotion gate first (stricter): a push naming a protected branch.
+    if (GIT_PUSH_RE.test(command) && PROTECTED_REF_RE.test(command)) {
+      const file = activeSessionFile();
+      if (!file) process.exit(0); // no active block → gate inactive, allow
+      if (!promotionApproved(file)) {
+        deny(
+          'Promotion to a protected branch (staging/main) requires its own authorization. Present the Promotion authorization gate (why / what runs / next step) and ask the developer to reply with the bare keyword `Promote`. No prior approval or execution keyword covers a promotion push.',
+        );
+      }
+      consumePromotionApproval(file); // one-shot: next push needs a fresh `Promote`
+      process.exit(0);
+    }
+
     if (!GIT_COMMIT_RE.test(command)) process.exit(0); // not a commit → allow
 
     const file = activeSessionFile();
