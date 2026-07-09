@@ -4,7 +4,7 @@ description: Scan changed files for complexity patterns: deep nesting, local dup
 user-invocable: true
 model: haiku
 context: fork
-allowed-tools: Read Glob Grep Bash Edit
+allowed-tools: Read Glob Grep Bash(git:*) Edit
 ---
 
 ## Applicability
