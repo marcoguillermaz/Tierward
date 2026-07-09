@@ -39,7 +39,7 @@ node packages/cli/src/index.js --help
 node packages/cli/src/index.js init
 node packages/cli/src/index.js doctor
 node packages/cli/src/index.js add skill arch-audit
-node packages/cli/src/index.js add rule security --stack swift
+node packages/cli/src/index.js add rule security
 node packages/cli/src/index.js new skill
 ```
 

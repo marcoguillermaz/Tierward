@@ -5,50 +5,12 @@ import path from 'path';
 import os from 'os';
 import { _testHelpers } from '../../src/scaffold/index.js';
 
-const { securityRuleVariant, interpolate, pruneSkills, patchSettingsPermissions } = _testHelpers;
+const { interpolate, pruneSkills, patchSettingsPermissions } = _testHelpers;
 
 // Helper: run interpolate on a single placeholder with given config
 function interp(placeholder, config) {
   return interpolate(`${placeholder}`, config);
 }
-
-describe('securityRuleVariant', () => {
-  it('returns native-apple for swift', () => {
-    assert.equal(securityRuleVariant({ techStack: 'swift' }), 'security-native-apple.md');
-  });
-
-  it('returns native-android for kotlin', () => {
-    assert.equal(securityRuleVariant({ techStack: 'kotlin' }), 'security-native-android.md');
-  });
-
-  it('returns systems variant for rust without API', () => {
-    assert.equal(securityRuleVariant({ techStack: 'rust', hasApi: false }), 'security-systems.md');
-  });
-
-  it('returns web default for rust WITH API', () => {
-    assert.equal(securityRuleVariant({ techStack: 'rust', hasApi: true }), 'security.md');
-  });
-
-  it('returns systems variant for go without API', () => {
-    assert.equal(securityRuleVariant({ techStack: 'go', hasApi: false }), 'security-systems.md');
-  });
-
-  it('returns web default for go with API', () => {
-    assert.equal(securityRuleVariant({ techStack: 'go', hasApi: true }), 'security.md');
-  });
-
-  it('returns web default for node-ts', () => {
-    assert.equal(securityRuleVariant({ techStack: 'node-ts' }), 'security.md');
-  });
-
-  it('returns web default for python', () => {
-    assert.equal(securityRuleVariant({ techStack: 'python' }), 'security.md');
-  });
-
-  it('returns web default for unknown stack', () => {
-    assert.equal(securityRuleVariant({ techStack: 'other' }), 'security.md');
-  });
-});
 
 // ---------------------------------------------------------------------------
 // interpolate()

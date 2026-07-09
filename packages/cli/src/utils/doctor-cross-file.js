@@ -1,6 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-
 const PLACEHOLDER_TOKEN_RE = /\[[A-Z][A-Z0-9_]+\]/;
 
 export function parseActiveSkills(claudeMd) {
@@ -62,53 +59,4 @@ export function detectPhaseCountTier(pipelineMd) {
   if (/^##\s+Phase\s+1\.6/m.test(pipelineMd)) return 'l';
   if (/^##\s+Phase\s+\d+/m.test(pipelineMd)) return 'm';
   return 'unknown';
-}
-
-export function detectSecurityVariant(securityMd) {
-  const h1 = (securityMd.split('\n')[0] || '').trim();
-  if (/^#\s+Security Rules - Native Apple\b/.test(h1)) return 'native-apple';
-  if (/^#\s+Security Rules - Native Android\b/.test(h1)) return 'native-android';
-  if (/^#\s+Security Rules - Systems & Backend\b/.test(h1)) return 'systems';
-  if (/^#\s+Security Rules\s*$/.test(h1)) return 'web';
-  const variantMarkers = [
-    { re: /\bKeychain\b/, variant: 'native-apple' },
-    { re: /\bAndroid Keystore\b|\bAndroidManifest\.xml\b/, variant: 'native-android' },
-    { re: /\bMemory & Resource Safety\b/, variant: 'systems' },
-    { re: /\brow-level access control\b|\bRLS\b/i, variant: 'web' },
-  ];
-  for (const { re, variant } of variantMarkers) {
-    if (re.test(securityMd)) return variant;
-  }
-  return 'unknown';
-}
-
-export function expectedSecurityVariant(techStack, hasApi) {
-  if (techStack === 'swift') return 'native-apple';
-  if (techStack === 'kotlin') return 'native-android';
-  const systems = ['rust', 'dotnet', 'java', 'go'];
-  if (systems.includes(techStack) && hasApi === false) return 'systems';
-  return 'web';
-}
-
-export function detectStackSync(cwd) {
-  const exists = (f) => fs.existsSync(path.join(cwd, f));
-  if (exists('Package.swift')) return 'swift';
-  if (exists('build.gradle.kts') || exists('build.gradle')) return 'kotlin';
-  if (exists('Cargo.toml')) return 'rust';
-  if (exists('go.mod')) return 'go';
-  if (exists('Gemfile')) return 'ruby';
-  if (exists('pom.xml')) return 'java';
-  if (exists('pyproject.toml') || exists('requirements.txt')) return 'python';
-  if (fs.existsSync(cwd)) {
-    try {
-      const entries = fs.readdirSync(cwd);
-      if (entries.some((n) => n.endsWith('.csproj'))) return 'dotnet';
-    } catch {
-      // ignore
-    }
-  }
-  if (exists('tsconfig.json') || exists('package.json')) {
-    return exists('tsconfig.json') ? 'node-ts' : 'node-js';
-  }
-  return null;
 }

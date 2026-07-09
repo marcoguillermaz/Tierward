@@ -84,10 +84,6 @@ add
 add
   .command('rule <name>')
   .description('Install a rule (e.g. git, output-style, security)')
-  .option(
-    '--stack <stack>',
-    'Tech stack for security variant (swift, kotlin, rust, dotnet, java, go)',
-  )
   .option('--force', 'Overwrite if the rule already exists')
   .option('--dry-run', 'Show what would be created without writing files')
   .action(addRule);
