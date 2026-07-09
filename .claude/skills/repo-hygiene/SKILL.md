@@ -1,6 +1,6 @@
 ---
 name: repo-hygiene
-description: Periodic repository cleanup sweep - finds orphaned/merged git branches, orphaned worktrees, stale `.claude/session/*.md` files, and (target:full only) orphaned documentation. Reports every finding with evidence, then executes only the branches/worktrees/session-files the user explicitly confirms via a single AskUserQuestion batch. Never deletes docs/*.md itself - those are always report-only, evidence-based, human-decided. Distinct from the Phase 8 cleanup gate (which tears down one specific block at closure) - this is the periodic sweep that catches what block-by-block cleanup misses.
+description: Periodic repository cleanup sweep (Tierward repo variant) - finds orphaned/merged git branches, orphaned worktrees and unregistered worktree directories, stale `.claude/session/*.md` files, stale `.claude/initiatives/*.md` files, and (target:full only) orphaned documentation and stale `docs/reviews/` snapshots. Reports every finding with evidence, then executes only the branches/worktrees/session-files the user explicitly confirms via a single AskUserQuestion batch. Never deletes docs/*.md itself - those are always report-only, evidence-based, human-decided. Distinct from the Phase 8 cleanup gate (which tears down one specific block at closure) - this is the periodic sweep that catches what block-by-block cleanup misses.
 user-invocable: true
 model: sonnet
 argument-hint: "[target:full]"
@@ -8,9 +8,13 @@ allowed-tools: >
   Bash(bash .claude/skills/repo-hygiene/references/scan-branches-worktrees.sh), Bash(git branch:*),
   Bash(git worktree:*), Bash(git status:*), Bash(git log:*), Bash(git fetch:*),
   Bash(git rev-parse:*), Bash(git show:*), Bash(gh pr list:*), Bash(gh pr view:*),
-  Bash(ls:*), Bash(wc:*), Bash(date:*), Bash(stat:*), Bash(rm .claude/session/*.md),
+  Bash(ls:*), Bash(wc:*), Bash(date:*), Bash(stat:*), Bash(find:*), Bash(rm .claude/session/*.md),
+  Bash(rm .claude/initiatives/*.md), Bash(mkdir -p docs/reviews/archive), Bash(mv .claude/initiatives/*),
+  Bash(rm -rf .claude/worktrees/*),
   Read, Grep, Glob
 ---
+
+**Tierward repo variant** - diverges deliberately from the scaffolded payload copy (`packages/cli/templates/tier-{m,l}/...`): adds the unregistered-worktree-dir scan, Step 2b (initiatives staleness), and the `docs/reviews/` staleness pass. Do not sync this file back over the payload copies.
 
 Runs in the **main conversation, deliberately without `context: fork`**. `AskUserQuestion` is unavailable to subagents/forked skill contexts, and this skill's confirm-then-execute design requires it mid-run. Do not add `context: fork` to this file.
 
@@ -33,6 +37,7 @@ It is read-only and prints three sections:
 - `SAFE_BRANCH_DELETE` - bare branch names with no attached worktree, merged into every protected branch that exists on origin (see `PROTECTED_BRANCHES` at the top of the script), no open PR.
 - `SAFE_WORKTREE_REMOVE` - `<branch>|<path>` pairs, merged into all protected branches, clean working tree, no open PR. Lines prefixed `KEEP|` are explicitly excluded with a reason (uncommitted changes / not yet merged / open PR / gh check failed) - do not re-litigate these, the script already checked.
 - `PRUNABLE_WORKTREE` - paths registered in `git worktree list` whose actual directory no longer exists.
+- `ORPHAN_WORKTREE_DIR` - directories on disk under `.claude/worktrees/` that are NOT registered in `git worktree list` (leftovers of a failed/manual removal + prune), with a content summary (`files:N|newest:date`). Git cannot report dirtiness for an unregistered dir, so these NEVER join the low-risk batch: each one gets its own separate confirmation in Step 5, after the content summary is shown, and is removed with `rm -rf` only on that explicit per-item confirm.
 
 The classification is deliberately conservative (merged into ALL protected branches + clean + no open PR; a failed `gh` check reads as unknown, never as "no PR"). Trust it - do not loosen or tighten the criteria ad hoc.
 
@@ -51,9 +56,20 @@ For every `.claude/session/*.md` (block-*.md and fix-*.md):
    - **WEAK CANDIDATE**: closed-and-kept front matter (point 2), OR no merged PR references it AND the file's own status reads as finished/abandoned AND it is several days old. Report with lower confidence, explicit evidence.
    - **KEEP**: recent activity, an in-progress/blocked-pending-external-action status, or a still-existing matching branch/worktree. When in doubt, KEEP.
 
+## Step 2b - Initiatives staleness check (Tierward repo only, judgment, always runs)
+
+For every `.claude/initiatives/*.md` (gitignored, local - deletable like session files, with one hard exception):
+
+- **`roadmap-status.md` is KEEP, always, non-negotiable.** It is the single source of truth for roadmap state. Never list it as a candidate, regardless of any evidence.
+- For each other file: read the header/status, note mtime and size, then cross-check closure evidence - does `roadmap-status.md` mark the corresponding item(s) Done/Closed/Deferred-with-criteria? Do merged PRs confirm the plan was executed? Does a superseding doc exist?
+- Classify STRONG / WEAK / KEEP with the same evidence discipline as Step 2 (never mtime alone; deferred-with-criteria plans are KEEP - they are the criteria's home).
+- For large closed memos (>50KB), offer **archive** (`mkdir -p docs/reviews/archive && mv` the file there) as the default proposal instead of deletion - they carry decision history worth keeping out of the working set but not destroying.
+
 ## Step 3 - Documentation orphan sweep (`target:full` only, judgment, evidence-only, NEVER executable)
 
 Scan `docs/**/*.md`, excluding the pipeline-fed canonical set (`requirements.md`, `implementation-checklist.md`, `refactoring-backlog.md`, `sitemap.md`, `db-map.md`, `pipeline-standards.md`, `claudemd-standards.md`, `model-effort-policy.md`, `adr/`, `specs/`, `metrics/`). For each remaining file, check inbound references - Grep across every other tracked doc, every `SKILL.md`, `CLAUDE.md`, and the `.claude/rules/*.md` files. A file with zero inbound references AND content suggesting a closed/superseded snapshot is reported as **evidence-only**.
+
+Additionally (Tierward repo): scan `docs/reviews/` (gitignored, local audit history). For each dated snapshot dir/file, report staleness evidence - findings absorbed into `docs/refactoring-backlog.md` or roadmap, superseding reviews, age. **Evidence-only, never executable**, same hard rule as tracked docs but for a different reason: this history exists nowhere else - deletion is irreversible loss with no git recovery.
 
 **Hard rule**: documentation is git-tracked content - a wrong call here is real, hard-to-reverse loss, a different risk class than a git branch or a local session file. Never include a doc-orphan finding in the Step 5 confirmation batch, never suggest a deletion command for it, regardless of how confident the evidence looks. State this limitation explicitly in the report so it doesn't read as an oversight.
 
@@ -63,7 +79,7 @@ Present findings grouped by category, each with its evidence. For branches/workt
 
 ## Step 5 - Confirm (AskUserQuestion)
 
-One batched question (or a small set): list the exact items proposed for deletion, grouped, with an option to execute all / execute a subset / cancel. Do not include doc-orphan findings in this gate - they were never candidates for execution.
+One batched question (or a small set): list the exact items proposed for deletion, grouped, with an option to execute all / execute a subset / cancel. Initiatives candidates state their proposed action per item (archive vs delete). `ORPHAN_WORKTREE_DIR` items are NEVER part of the batch: each gets its own dedicated confirmation, with the content summary restated. Do not include doc-orphan or docs/reviews findings in this gate - they were never candidates for execution.
 
 ## Step 6 - Execute confirmed items only
 
@@ -71,6 +87,8 @@ One batched question (or a small set): list the exact items proposed for deletio
 - Worktrees: `git worktree remove <path>`
 - Prunable worktree registrations: `git worktree prune`
 - Session files: `rm .claude/session/<file>.md` - only for items the user explicitly confirmed, one at a time, never a bulk `rm .claude/session/*.md`.
+- Initiatives: `rm .claude/initiatives/<file>.md` (delete) or `mkdir -p docs/reviews/archive && mv .claude/initiatives/<file>.md docs/reviews/archive/` (archive) - one at a time, per the action confirmed for that item. Never touch `roadmap-status.md`.
+- Orphan worktree dirs: `rm -rf .claude/worktrees/<dir>` - only after that item's own dedicated confirmation.
 
 If any command refuses (unmerged branch, dirty worktree), stop and report - do not force.
 

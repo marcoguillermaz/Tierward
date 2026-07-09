@@ -119,3 +119,24 @@ git worktree list --porcelain | awk '/^worktree /{wt=$2} /^prunable/{print wt}'
 
 echo
 echo "=== DONE ==="
+
+echo
+echo "=== ORPHAN_WORKTREE_DIR (on disk under .claude/worktrees/ but NOT registered) ==="
+# A dir left behind after a failed/manual removal + prune. Git cannot report
+# dirtiness for an unregistered dir - the caller must show a content summary
+# and gate any rm -rf behind its own, separate confirmation.
+if [ -d ".claude/worktrees" ]; then
+  REGISTERED=$(git worktree list --porcelain | awk '/^worktree /{print $2}')
+  for d in .claude/worktrees/*/; do
+    [ -d "$d" ] || continue
+    abs=$(cd "$d" && pwd)
+    if ! echo "$REGISTERED" | grep -qxF "$abs"; then
+      files=$(find "$d" -type f 2>/dev/null | wc -l | tr -d ' ')
+      newest=$(find "$d" -type f -exec stat -f '%Sm' -t '%Y-%m-%d' {} + 2>/dev/null | sort -r | head -1)
+      echo "$d|files:$files|newest:${newest:-n/a}"
+    fi
+  done
+fi
+
+echo
+echo "=== SCAN_COMPLETE ==="
