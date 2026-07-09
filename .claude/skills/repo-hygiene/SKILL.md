@@ -1,6 +1,6 @@
 ---
 name: repo-hygiene
-description: Periodic repository cleanup sweep (Tierward repo variant) - finds orphaned/merged git branches, orphaned worktrees and unregistered worktree directories, stale `.claude/session/*.md` files, stale `.claude/initiatives/*.md` files, and (target:full only) orphaned documentation and stale `docs/reviews/` snapshots. Reports every finding with evidence, then executes only the branches/worktrees/session-files the user explicitly confirms via a single AskUserQuestion batch. Never deletes docs/*.md itself - those are always report-only, evidence-based, human-decided. Distinct from the Phase 8 cleanup gate (which tears down one specific block at closure) - this is the periodic sweep that catches what block-by-block cleanup misses.
+description: Periodic repository cleanup sweep (Tierward repo variant) - finds orphaned/merged git branches, orphaned worktrees and unregistered worktree directories, stale `.claude/session/*.md` files, stale `.claude/initiatives/*.md` files, and (target:full / target:reviews) orphaned documentation and stale `docs/reviews/` snapshots (archive-only moves, never deletion). Reports every finding with evidence, then executes only the branches/worktrees/session-files the user explicitly confirms via a single AskUserQuestion batch. Never deletes docs/*.md itself - those are always report-only, evidence-based, human-decided. Distinct from the Phase 8 cleanup gate (which tears down one specific block at closure) - this is the periodic sweep that catches what block-by-block cleanup misses.
 user-invocable: true
 model: sonnet
 argument-hint: "[target:full]"
@@ -10,6 +10,7 @@ allowed-tools: >
   Bash(git rev-parse:*), Bash(git show:*), Bash(gh pr list:*), Bash(gh pr view:*),
   Bash(ls:*), Bash(wc:*), Bash(date:*), Bash(stat:*), Bash(find:*), Bash(rm .claude/session/*.md),
   Bash(rm .claude/initiatives/*.md), Bash(mkdir -p docs/reviews/archive), Bash(mv .claude/initiatives/*),
+  Bash(mv docs/reviews/*),
   Bash(rm -rf .claude/worktrees/*),
   Read, Grep, Glob
 ---
@@ -22,7 +23,7 @@ Goal: search thoroughly, report every candidate with concrete evidence, execute 
 
 ## Step 0 - Parse scope
 
-`$ARGUMENTS`: default = quick scan (Steps 1-2). `target:full` adds Step 3 (doc orphans) - the slow, judgment-heavy, evidence-only pass. State which mode is active before starting.
+`$ARGUMENTS`: default = quick scan (Steps 1, 2, 2b). `target:full` adds Step 3 (doc orphans + reviews staleness) - the slow, judgment-heavy pass. `target:reviews` runs ONLY the Step 3 reviews-staleness pass (skips the tracked-doc orphan sweep). State which mode is active before starting.
 
 **Always exclude `.claude/worktrees/**` from every Grep/Glob in Steps 2 and 3.** Worktrees are full repo checkouts - without this exclusion every file inside every active worktree gets reported as a duplicate "root-level" finding.
 
@@ -65,11 +66,17 @@ For every `.claude/initiatives/*.md` (gitignored, local - deletable like session
 - Classify STRONG / WEAK / KEEP with the same evidence discipline as Step 2 (never mtime alone; deferred-with-criteria plans are KEEP - they are the criteria's home).
 - For large closed memos (>50KB), offer **archive** (`mkdir -p docs/reviews/archive && mv` the file there) as the default proposal instead of deletion - they carry decision history worth keeping out of the working set but not destroying.
 
-## Step 3 - Documentation orphan sweep (`target:full` only, judgment, evidence-only, NEVER executable)
+## Step 3 - Documentation orphan sweep + reviews staleness (`target:full`; reviews pass alone via `target:reviews`)
+
+Tracked-doc orphan findings are judgment-based, **evidence-only, NEVER executable**. The `docs/reviews/` staleness pass below is the one exception with an action - and that action is archive-only, never deletion.
 
 Scan `docs/**/*.md`, excluding the pipeline-fed canonical set (`requirements.md`, `implementation-checklist.md`, `refactoring-backlog.md`, `sitemap.md`, `db-map.md`, `pipeline-standards.md`, `claudemd-standards.md`, `model-effort-policy.md`, `adr/`, `specs/`, `metrics/`). For each remaining file, check inbound references - Grep across every other tracked doc, every `SKILL.md`, `CLAUDE.md`, and the `.claude/rules/*.md` files. A file with zero inbound references AND content suggesting a closed/superseded snapshot is reported as **evidence-only**.
 
-Additionally (Tierward repo): scan `docs/reviews/` (gitignored, local audit history). For each dated snapshot dir/file, report staleness evidence - findings absorbed into `docs/refactoring-backlog.md` or roadmap, superseding reviews, age. **Evidence-only, never executable**, same hard rule as tracked docs but for a different reason: this history exists nowhere else - deletion is irreversible loss with no git recovery.
+Additionally (Tierward repo, also runs under `target:reviews`): scan `docs/reviews/` (gitignored, local audit history), excluding `docs/reviews/archive/` (the destination). For each dated snapshot dir/file:
+
+1. **Mechanical KEEP first (non-negotiable)**: Grep for inbound references across `roadmap-status.md`, every tracked doc, every `SKILL.md`, `CLAUDE.md`, and `.claude/rules/*.md`. Any hit → KEEP, regardless of age or absorption evidence (e.g. the roadmap "Source files for open items" table cites review synthesis files - those must stay where the pointer says).
+2. For the rest, classify by staleness - ALL THREE required, never one alone: (a) findings absorbed into `docs/refactoring-backlog.md` or roadmap-status, (b) superseded by a more recent review of the same surface, (c) older than 30 days.
+3. **Action semantics - archive-only**: candidates are proposed as `mv docs/reviews/<item> docs/reviews/archive/` in the Step 5 batch. **Deletion of anything under `docs/reviews/` stays forbidden** - this history exists nowhere else (gitignored, no git recovery); a move within the same tree is reversible by hand, a delete is not.
 
 **Hard rule**: documentation is git-tracked content - a wrong call here is real, hard-to-reverse loss, a different risk class than a git branch or a local session file. Never include a doc-orphan finding in the Step 5 confirmation batch, never suggest a deletion command for it, regardless of how confident the evidence looks. State this limitation explicitly in the report so it doesn't read as an oversight.
 
@@ -79,7 +86,7 @@ Present findings grouped by category, each with its evidence. For branches/workt
 
 ## Step 5 - Confirm (AskUserQuestion)
 
-One batched question (or a small set): list the exact items proposed for deletion, grouped, with an option to execute all / execute a subset / cancel. Initiatives candidates state their proposed action per item (archive vs delete). `ORPHAN_WORKTREE_DIR` items are NEVER part of the batch: each gets its own dedicated confirmation, with the content summary restated. Do not include doc-orphan or docs/reviews findings in this gate - they were never candidates for execution.
+One batched question (or a small set): list the exact items proposed for deletion, grouped, with an option to execute all / execute a subset / cancel. Initiatives candidates state their proposed action per item (archive vs delete). `ORPHAN_WORKTREE_DIR` items are NEVER part of the batch: each gets its own dedicated confirmation, with the content summary restated. Reviews-staleness candidates enter the batch as MOVES only (`mv` into `docs/reviews/archive/`), clearly labeled as such. Do not include tracked-doc orphan findings in this gate - they were never candidates for execution.
 
 ## Step 6 - Execute confirmed items only
 
@@ -89,6 +96,7 @@ One batched question (or a small set): list the exact items proposed for deletio
 - Session files: `rm .claude/session/<file>.md` - only for items the user explicitly confirmed, one at a time, never a bulk `rm .claude/session/*.md`.
 - Initiatives: `rm .claude/initiatives/<file>.md` (delete) or `mkdir -p docs/reviews/archive && mv .claude/initiatives/<file>.md docs/reviews/archive/` (archive) - one at a time, per the action confirmed for that item. Never touch `roadmap-status.md`.
 - Orphan worktree dirs: `rm -rf .claude/worktrees/<dir>` - only after that item's own dedicated confirmation.
+- Reviews snapshots: `mv docs/reviews/<item> docs/reviews/archive/` - one at a time, archive-only; never `rm` anything under `docs/reviews/`.
 
 If any command refuses (unmerged branch, dirty worktree), stop and report - do not force.
 
