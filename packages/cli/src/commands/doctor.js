@@ -19,9 +19,6 @@ import {
   hasPlaceholder,
   detectPipelineTier,
   detectPhaseCountTier,
-  detectSecurityVariant,
-  expectedSecurityVariant,
-  detectStackSync,
 } from '../utils/doctor-cross-file.js';
 import { fileURLToPath } from 'url';
 import { ANTHROPIC_FILES, detectScaffoldedTier } from './upgrade.js';
@@ -459,39 +456,6 @@ const checks = [
           ? undefined
           : `H1 declares Tier ${declaredTier.toUpperCase()} but phase markers look like Tier ${bodyTier.toUpperCase()}`,
         fix: 'Reconcile pipeline.md: H1 and phase sections must agree on tier. Reinstall via `tierward init --tier=<tier>` (choose "Existing project") if in doubt.',
-      };
-    },
-  },
-  {
-    id: 'security-md-stack-alignment',
-    label: 'security.md variant matches the detected stack',
-    check: (cwd) => {
-      const securityPath = path.join(cwd, '.claude', 'rules', 'security.md');
-      if (!fs.existsSync(securityPath)) return { pass: true, skip: true };
-      const stack = detectStackSync(cwd);
-      if (!stack) return { pass: true, skip: true, info: 'stack not detectable in this directory' };
-      const securityMd = fs.readFileSync(securityPath, 'utf8');
-      const actual = detectSecurityVariant(securityMd);
-      if (actual === 'unknown') {
-        return {
-          pass: false,
-          warn: true,
-          info: 'security.md variant could not be identified (H1 and content markers absent)',
-          fix: 'Reinstall security.md via `tierward upgrade` so the correct variant is written.',
-        };
-      }
-      const hasApi = fs.existsSync(path.join(cwd, 'CLAUDE.md'))
-        ? /^##\s*API/im.test(fs.readFileSync(path.join(cwd, 'CLAUDE.md'), 'utf8'))
-        : true;
-      const expected = expectedSecurityVariant(stack, hasApi);
-      const pass = actual === expected;
-      return {
-        pass,
-        warn: true,
-        info: pass
-          ? undefined
-          : `stack "${stack}" expects "${expected}" variant, found "${actual}"`,
-        fix: `Reinstall security.md for stack "${stack}" via \`tierward upgrade\` — expected variant "${expected}".`,
       };
     },
   },

@@ -1,19 +1,19 @@
 # Security Rules
 
-These rules apply when working on API routes, auth, and database code.
+These rules apply to any code handling untrusted input, authentication, or data access.
 
 ## Authentication
 
 - Verify caller identity before any operation. Never trust client-supplied user IDs.
-- Auth check must be the **first** operation in every route handler - before DB access, before validation.
-- Return 401 for missing/invalid session. Return 403 for insufficient permissions. Never return 404 to hide existence.
+- The auth check must be the **first** operation at every entry point that performs a privileged action - before data access, before validation.
+- Distinguish "not authenticated" from "not authorized" (e.g. in HTTP, 401 vs 403). Never signal that a resource does not exist to hide an authorization failure (e.g. never return 404 in place of 403).
 
 ## Input Validation
 
-- Validate all inputs at system boundaries (API routes, webhooks, form submissions).
+- Validate all inputs at system boundaries (API routes, webhooks, form submissions, IPC, CLI arguments).
 - Use a schema validation library [VALIDATION_LIBRARIES] - never manual `if` chains.
 - Reject requests with unexpected fields (strict parsing, not passthrough).
-- Numeric IDs from URL params must be validated as integers before use in queries.
+- IDs and typed values from external input must be validated against their expected type before use in queries.
 
 ## Database
 
@@ -22,11 +22,11 @@ These rules apply when working on API routes, auth, and database code.
 - Never expose raw DB errors to clients - log internally, return generic message.
 - Before using a column name from user input in a query, validate it against an allowlist.
 
-## API Responses
+## Responses / Output
 
 - Never return password hashes, tokens, internal IDs (unless required), or PII beyond what the requester is authorized to see.
 - Error messages must not reveal system internals (stack traces, query structure, file paths).
-- Sensitive operations (delete, state change, privilege escalation) must require explicit confirmation in request body - never from a GET request.
+- Sensitive operations (delete, state change, privilege escalation) must require explicit confirmation in the request payload - never from a read-only request.
 
 ## Secrets and Credentials
 
@@ -34,9 +34,9 @@ These rules apply when working on API routes, auth, and database code.
 - Never log secrets, even at debug level.
 - `.env*` files must be in `.gitignore`. Verify before committing.
 
-## Security Checklist (before every commit touching API/auth code)
+## Security Checklist (before every commit touching auth, data access, or external input)
 
-- [ ] Auth check before any DB operation
+- [ ] Auth check before any data operation
 - [ ] All inputs validated with schema library
 - [ ] No sensitive data in responses
 - [ ] No raw DB errors exposed to client

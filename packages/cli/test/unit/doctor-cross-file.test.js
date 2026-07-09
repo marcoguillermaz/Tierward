@@ -7,8 +7,6 @@ import {
   hasPlaceholder,
   detectPipelineTier,
   detectPhaseCountTier,
-  detectSecurityVariant,
-  expectedSecurityVariant,
 } from '../../src/utils/doctor-cross-file.js';
 
 describe('parseActiveSkills', () => {
@@ -174,61 +172,5 @@ describe('detectPhaseCountTier', () => {
 
   it('tier M detected via plain Phase N', () => {
     assert.equal(detectPhaseCountTier('## Phase 0\n## Phase 1\n## Phase 2'), 'm');
-  });
-});
-
-describe('detectSecurityVariant', () => {
-  it('H1 apple signature', () => {
-    assert.equal(
-      detectSecurityVariant('# Security Rules - Native Apple (macOS / iOS)\n'),
-      'native-apple',
-    );
-  });
-
-  it('H1 android signature', () => {
-    assert.equal(
-      detectSecurityVariant('# Security Rules - Native Android (Kotlin / Java)\n'),
-      'native-android',
-    );
-  });
-
-  it('H1 systems signature', () => {
-    assert.equal(
-      detectSecurityVariant(
-        '# Security Rules - Systems & Backend (Rust / Go / .NET / Java / C++)\n',
-      ),
-      'systems',
-    );
-  });
-
-  it('H1 web signature (exact, no suffix)', () => {
-    assert.equal(detectSecurityVariant('# Security Rules\n\nmore'), 'web');
-  });
-
-  it('falls back to content markers when H1 modified', () => {
-    const md = '# Custom Rules\n\nStore secrets in Android Keystore only.';
-    assert.equal(detectSecurityVariant(md), 'native-android');
-  });
-});
-
-describe('expectedSecurityVariant', () => {
-  it('swift → native-apple', () => {
-    assert.equal(expectedSecurityVariant('swift', false), 'native-apple');
-  });
-
-  it('kotlin → native-android', () => {
-    assert.equal(expectedSecurityVariant('kotlin', false), 'native-android');
-  });
-
-  it('rust without API → systems', () => {
-    assert.equal(expectedSecurityVariant('rust', false), 'systems');
-  });
-
-  it('rust with API → web', () => {
-    assert.equal(expectedSecurityVariant('rust', true), 'web');
-  });
-
-  it('node-ts → web', () => {
-    assert.equal(expectedSecurityVariant('node-ts', true), 'web');
   });
 });

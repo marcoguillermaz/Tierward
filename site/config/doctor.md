@@ -1,6 +1,6 @@
 # doctor
 
-`npx tierward doctor` validates your scaffold and reports on 29 checks across four categories: scaffold presence, Stop hook configuration, pipeline structure, and CODEOWNERS coverage.
+`npx tierward doctor` validates your scaffold and reports on 28 checks across four categories: scaffold presence, Stop hook configuration, pipeline structure, and CODEOWNERS coverage.
 
 ## Usage
 

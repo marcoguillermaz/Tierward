@@ -56,7 +56,7 @@ The exact files depend on your tier and project flags. Run `npx tierward doctor`
 npx tierward doctor
 ```
 
-Doctor runs 29 checks across your scaffold: Stop hook presence, pipeline structure, CODEOWNERS coverage, placeholder residuals, and more. It exits 0 when everything is clean.
+Doctor runs 28 checks across your scaffold: Stop hook presence, pipeline structure, CODEOWNERS coverage, placeholder residuals, and more. It exits 0 when everything is clean.
 
 ```bash
 npx tierward doctor --report   # JSON output (for CI)
