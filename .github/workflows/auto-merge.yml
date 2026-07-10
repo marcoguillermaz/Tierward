@@ -24,7 +24,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.event.pull_request.base.ref != 'main'
     steps:
       - name: Enable auto-merge
-        run: gh pr merge "$PR_NUMBER" --auto --squash
+        run: gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
