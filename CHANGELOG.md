@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Local dev-server discipline in the smoke-test phase** (Tier M/L templates). Phase 5c now requires the agent to start the dev server itself, from the exact working tree under verification (worktree-aware), probe for a free port, declare the endpoint before the first smoke step, and stop the server when verification ends — with the Phase 8 cleanup gate as backstop. Closes the wrong-target smoke risk: testing against an already-running server that serves another checkout's code.
+
 ---
 
 ## [2.0.0] — 2026-07-10
