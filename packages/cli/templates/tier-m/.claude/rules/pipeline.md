@@ -213,6 +213,11 @@ If either condition is false: **skip this phase and state so explicitly** - do n
 ## Phase 5c - Staging deploy + smoke test
 
 - Bring up the staging context appropriate for the project — web: dev server `[DEV_COMMAND]` and declare the endpoint; native: build and run on simulator/emulator; CLI: install the binary in a test sandbox; library: prepare a consumer test harness. Skip explicitly with a one-line statement if not applicable.
+- **Local dev-server discipline** *(applies whenever the smoke context is a locally started dev server)*:
+  - Start the server yourself with `[DEV_COMMAND]`, from the exact working tree under verification (the worktree, if this block runs in one). Never smoke-test against a server you did not start in this phase: an already-running server may be serving another checkout's code, and every smoke result against it is void. In a worktree, never delegate the start to the user.
+  - If the default port is taken, probe upward to the first free port and start there. Run in background with output redirected to a log file, poll until the server responds, and read the log to diagnose if it never comes up.
+  - Declare the endpoint before the first smoke step — "Smoke test endpoint: `http://localhost:NNNN`" — and record the port and PID.
+  - Stop the server you started when verification ends: after Phase 5d Track A if it runs (it reuses the same server), otherwise at the end of Phase 5c. Kill by the recorded PID/port. If it is still alive at closure, list it at the Phase 8 cleanup gate — a running dev server is a block artifact like any other.
 
 ***** STOP — Promotion authorization (staging) *****
 - WHY we stopped: the next command writes to the protected `staging` branch and deploys the block to the staging environment. No prior approval (Phase 1 keyword, design confirmation, active-Phase-2 exception) covers a promotion push.
