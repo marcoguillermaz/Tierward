@@ -76,6 +76,7 @@ scripts/*
 !scripts/external-review-bundle.mjs
 !scripts/cross-llm-rubric.mjs
 !scripts/sync-plugin-version.mjs
+!scripts/release-sha-followup.sh
 !scripts/worktree-setup.sh
 !scripts/gen-skill-registry.mjs
 !scripts/fill-skill-content.mjs
