@@ -99,7 +99,7 @@ One contract across four tiers. Solo bugfix or fully governed team pipeline, the
 
 Start at Tier 0. Move up when you need more structure: `npx tierward upgrade --tier=m`
 
-### 26 audit skills
+### 27 audit skills
 
 Executable multi-step programs that run inside Claude Code, not prompt instructions. Structured audit workflows with model routing (haiku for mechanical checks, sonnet for analysis).
 
@@ -131,6 +131,7 @@ Executable multi-step programs that run inside Claude Code, not prompt instructi
 | `/skill-review`         | M L   | Quality review pipeline for skill portfolios. Spec compliance, cross-tier coherence, behavioral fixtures.                                                                                                                                                                                                                                                                                                                                       |
 | `/dependency-scan`      | M L   | Pipeline-integrated (Phase 1): forked-context scan that returns the full file list (routes, components, shared types, DB tables) fed into the Phase 1 STOP gate. Six structurally independent checks (C1–C6) with a "Mandatory additions" section.                                                                                                                                                                                            |
 | `/context-review`       | L     | Pipeline-integrated (Phase 8.5): forked-context review that runs after block closure to recompact `CLAUDE.md` and detect context drift before the next block opens. Tier L only.                                                                                                                                                                                                                                                                |
+| `/repo-hygiene`         | M L   | Periodic cleanup sweep: orphaned/merged branches, stray worktrees, stale `.claude/session/*.md` files, and (`target:full`) orphaned docs. Reports every finding with evidence, executes only what you confirm. Never deletes `docs/*.md` — those stay report-only. Distinct from the Phase 8 closure cleanup gate.                                                                                                                                |
 
 Skills are conditionally installed based on your project: `hasApi`, `hasDatabase`, `hasFrontend`, `hasDesignSystem`.
 
@@ -229,7 +230,7 @@ Read-only tools exposed:
 
 *Note: The legacy `cdk_*` tool names remain available as deprecated aliases for backwards compatibility.*
 
-The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v1.34.1.
+The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from `process.cwd()`. v1.17.0 launched read-only by design; that posture is unchanged through v2.0.0.
 
 ---
 
@@ -292,7 +293,7 @@ A separate **template-coverage** layer (under `packages/cli/test/template-covera
 
 See [GitHub Milestones](https://github.com/marcoguillermaz/Tierward/milestones) for the 12-month plan.
 
-**Current**: v1.34.1 adds a stale-block reminder for Tier M/L (idle blocks nudge you to close or split after 5+ days) and fixes the post-scaffold "Try it now" step and docs links in all four init flows. v1.34.0 ships branded wizard onboarding, a human-approval commit gate for Tier M/L, Go support across the audit skill portfolio, and a greenfield 0-to-1 activation fix. v1.33.4 fixed `npx tierward init` being completely broken on all interactive installs due to an inquirer v14 prompt-type rename. v1.33.2 added `mcpName` and auto-publish to the MCP registry via OIDC. v1.33.1 introduces an output-style language rule and extends `doctor` validation to tier 0. v1.33.0 brings `/systematic-debugging` (tier S+): root-cause enforcement with a STOP gate between hypothesis and fix.
+**Current**: v2.0.0 consolidates the platform-specific security context files into a single neutral `security.md` (the breaking change behind the major bump), adds the `/repo-hygiene` cleanup sweep, and tightens governance with a scope-enforcement hook, a Tier L closure-completeness gate, and human authorization gates on promotions, cleanup, and security-relevant audits. It also ships `/pr-review --local`, a `no-remote-governance` profile, and stack-agnostic audit skills with the model baseline aligned to Sonnet 5 / Opus 4.8. v1.34.x added the stale-block reminder for Tier M/L, branded wizard onboarding, a human-approval commit gate, and Go support across the audit skill portfolio. v1.33.0 brought `/systematic-debugging` (tier S+): root-cause enforcement with a STOP gate between hypothesis and fix.
 
 **Next**: `/arch-audit` MCP-aware once the upstream Anthropic spec MCP server lands. `/privacy-audit` re-eval (Issue #97 sub-track 3) when AST tracing matures or a demand signal materializes.
 

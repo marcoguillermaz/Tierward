@@ -11,6 +11,37 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.0.0] — 2026-07-10
+
+### BREAKING
+
+- **One neutral `security.md`, no more platform-specific security variants.** The scaffold used to ship different security context files per platform; it now ships a single stack-agnostic `security.md`. Projects that relied on a platform-specific variant will get the neutral file on their next `init` and should re-check any local overrides. This is the change that moves the major version.
+
+### Added
+
+- **`/repo-hygiene` skill.** A periodic cleanup sweep that finds orphaned or merged branches, stray worktrees and unregistered worktree directories, and stale session files. The Tierward repo variant also covers initiatives, `docs/reviews/` snapshots, and orphan directories, with archive-only semantics — it never deletes docs, it reports evidence and lets you decide.
+- **Scope-enforcement hook** (`file-list-guard`, PreToolUse): blocks edits to files outside the block's declared scope, so a block can't silently sprawl.
+- **Closure-completeness Stop hook** (Tier L) and an **auto-mode-safe merge barrier** in Phase 8: closure can't be declared, and the branch can't merge, until the block's exit conditions are actually met.
+- **Per-phase metrics instrumentation** and an on-demand `arch-audit`, so audits run when you ask rather than on every phase.
+- **Human ask-gates on sensitive steps.** A block can't skip a security-relevant audit, and promotions and cleanup now sit behind explicit user authorization instead of running unattended.
+- **Backlog write-once protocol** and a **`no-remote-governance` profile** that strips staging/remote references end-to-end for projects that don't use a remote governance flow.
+- **`/pr-review --local`** for reviewing a diff without a GitHub round-trip.
+
+### Changed
+
+- **Common docs consolidated across template tiers** and the implementation-checklist slimmed to the Blocks table only — less duplicated context shipped into every project.
+- **Model and effort policy applied across the audit skills.** Bare `Bash` permissions scoped down in `allowed-tools`, T7 target-narrowing annotations added, and the model baseline aligned to Sonnet 5 / Opus 4.8 with a live-page guardrail.
+- **`skill-db` and `security-audit` made stack-agnostic**, and `arch-audit` pointed at `docs/claudemd-standards.md` with its hook-event list synced to current Claude Code events.
+
+### Fixed
+
+- **`/commit` now runs on invocation** instead of greeting.
+- **`/pr-review` same-commit reuse gate hardened** (counts-only, anchored read) so a stale review isn't silently reused.
+- **`allowed-tools` completed** on the audit skills that were missing or under-declaring it.
+- **MCP read-only posture stamp** brought back in line with the shipped version.
+
+---
+
 ## [1.34.1] — 2026-06-29
 
 ### Added
