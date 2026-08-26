@@ -67,31 +67,39 @@ Report: structural improvements for scannability → RECOMMEND.
 
 These checks audit the project's own efficiency at model selection and subagent delegation. Regressions here increase cost and latency without improving output quality. Judgment-based where noted; mechanical checks reuse the grep-tier haiku batch from Step 3b.
 
-**T1 - Research agent model in arch-audit Step 1**
-Check: does the Step 1 instruction in this SKILL.md specify `model: haiku` for the research agent?
-Batch command: `grep -n "model.*haiku\|haiku.*model" .claude/skills/arch-audit/SKILL.md`
-Expected: at least 1 match in the Step 1 section. Missing = FAIL.
-AUTO-FIX: add `(model: haiku)` to the research agent invocation in Step 1.
+**T1 - No delegation inside arch-audit**
+Check: this skill declares `context: fork`. A child agent spawned from a forked context never delivers its result back, so any delegation here stalls the audit until it gives up and redoes the work inline. Step 1 (documentation fetch) and Step 3b (grep-tier batch) must therefore run in this context.
+Batch command: `grep -nE "Launch [^.]*(sub)?agent|invoke one Agent|run_in_background" .claude/skills/arch-audit/SKILL.md`
+Expected: 0 matches. Any match = FAIL.
+AUTO-FIX: rewrite the instruction to run inline, and state the reason next to it so the delegation is not reintroduced later.
 
-**T2 - Haiku model on all Explore subagents across skills**
-Check: every "Launch ... Explore subagent" instruction in all SKILL.md files must explicitly name `model: haiku`. The model directive may appear on the anchor line OR in the next few lines of the same invocation block (a step header names the subagent, the model directive follows in the instruction body). A same-line-only grep misses that layout and produces false negatives.
-Batch command (windowed lookahead - buffers each file, then for each anchor checks the anchor line plus the next 5 lines for `haiku`, case-insensitive):
+**T2 - Delegation discipline across skills**
+Check: two rules, applied per file.
+1. A SKILL.md that declares `context: fork` must not delegate at all - same reason as T1.
+2. Any other SKILL.md may delegate, but every launch must explicitly name `model: haiku`. The model directive may appear on the anchor line OR in the next few lines of the same invocation block (a step header names the subagent, the model directive follows in the instruction body). A same-line-only grep misses that layout and produces false negatives.
+
+Batch command (per file: branch on `context: fork`, then windowed lookahead over the next 5 lines for the non-fork case):
 ```bash
 for f in .claude/skills/*/SKILL.md; do
-  awk 'BEGIN{IGNORECASE=1} {L[NR]=$0} END{
-    for(i=1;i<=NR;i++){
-      if(L[i] ~ /Explore (sub)?agent/){
-        hay=0
-        for(j=i;j<=i+5 && j<=NR;j++){ if(L[j] ~ /haiku/) hay=1 }
-        if(!hay) print FILENAME":"i": "L[i]
+  if grep -q "^context: fork" "$f"; then
+    grep -nE "Launch [^.]*(sub)?agent|Explore (sub)?agent|run_in_background" "$f" \
+      | sed "s|^|FORK-DELEGATION $f:|"
+  else
+    awk 'BEGIN{IGNORECASE=1} {L[NR]=$0} END{
+      for(i=1;i<=NR;i++){
+        if(L[i] ~ /Explore (sub)?agent/){
+          hay=0
+          for(j=i;j<=i+5 && j<=NR;j++){ if(L[j] ~ /haiku/) hay=1 }
+          if(!hay) print "NO-HAIKU "FILENAME":"i": "L[i]
+        }
       }
-    }
-  }' "$f"
+    }' "$f"
+  fi
 done
 ```
-Expected: 0 matches (every launch names haiku on or near its anchor line). Any match = FAIL.
-Known-benign: a line that clearly back-references an already-launched agent (e.g. "the Explore subagent from Step 1") rather than a fresh launch - treat as benign, not a FAIL.
-AUTO-FIX: append `(model: haiku)` to the invocation description in each genuinely failing launch.
+Expected: 0 lines. Any `FORK-DELEGATION` line = FAIL (rule 1). Any `NO-HAIKU` line = FAIL (rule 2).
+Known-benign: a line that back-references an already-launched agent (e.g. "the Explore subagent from Step 1"), or prose documenting the no-delegation rule itself, rather than a fresh launch - treat as benign, not a FAIL.
+AUTO-FIX: for rule 1, rewrite the step to run inline. For rule 2, append `(model: haiku)` to the invocation description.
 
 **T3 - Phase 5d Playwright concurrency note**
 Check: does pipeline.md Phase 5d document that `/ui-audit` (static, no Playwright by default) can run concurrently with Playwright-based skills, and that `/visual-audit`, `/ux-audit`, `/responsive-audit` must run sequentially (shared MCP Playwright session)?

@@ -53,8 +53,8 @@ For each item in Recommendations above, output one decision card in this format:
 - P5 Long context structure: [PASS/WARN - list any scannability or positioning issues]
 
 ### Token & subagent optimization (T1-T5)
-- T1 Research agent model: [PASS/FAIL - haiku specified in Step 1]
-- T2 Explore subagent model: [PASS/FAIL - all haiku, list any missing]
+- T1 No delegation inside arch-audit: [PASS/FAIL - list any delegation found in Step 1 or Step 3b]
+- T2 Delegation discipline across skills: [PASS/FAIL - list any fork skill that delegates, and any non-fork launch missing haiku]
 - T3 Phase 5d Playwright concurrency: [PASS/WARN]
 - T5 Skill model fitness: [PASS/FAIL/WARN - list any mismatches]
 

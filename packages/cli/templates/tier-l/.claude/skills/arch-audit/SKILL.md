@@ -4,14 +4,14 @@ description: Audit Claude Code architecture files against Anthropic docs and rel
 user-invocable: true
 model: sonnet
 context: fork
-allowed-tools: Read Glob Grep Bash(grep:*) Bash(date:*) Agent Edit
+allowed-tools: Read Glob Grep WebFetch Bash(grep:*) Bash(date:*) Edit
 ---
 
 ## Step 1 - Fetch latest Anthropic documentation
 
-> **Parallelism**: Steps 1 and 2 have no data dependency. Launch the Step 1 research agent first (async), then begin Step 2 file reads in the main context immediately - do not wait for the agent to complete before reading local files.
+> **Run everything in this context - do not delegate.** This skill declares `context: fork`. An agent spawned from a forked context does not deliver its result back, so the audit stalls waiting for output that never arrives, then has to redo the work itself. Fetch the URLs below with WebFetch here, in this context.
 
-Launch a single research agent **(model: haiku)** to fetch ALL of the following URLs and extract key changes:
+Fetch ALL of the following URLs and extract key changes:
 
 - https://code.claude.com/docs/en/memory
 - https://code.claude.com/docs/en/settings
@@ -19,7 +19,7 @@ Launch a single research agent **(model: haiku)** to fetch ALL of the following 
 - https://code.claude.com/docs/en/mcp
 - https://code.claude.com/docs/en/sub-agents
 - https://code.claude.com/docs/en/slash-commands
-- https://code.claude.com/docs/en/release-notes/overview
+- https://code.claude.com/docs/en/changelog
 - https://github.com/anthropics/claude-code/releases (latest 5 releases)
 - https://docs.anthropic.com/en/docs/about-claude/models (latest model IDs and deprecation notices)
 - https://code.claude.com/docs/en/best-practices
@@ -43,9 +43,9 @@ From the prompting guide sources extract: principles for system prompt design, i
 
 Flag any changes to this list in the report.
 
-## Step 2 - Read current architecture files (run in parallel with Step 1)
+## Step 2 - Read current architecture files
 
-Read these files in parallel while the Step 1 agent runs:
+Read these files in parallel:
 
 - `CLAUDE.md`
 - `.claude/rules/pipeline.md`
@@ -100,12 +100,12 @@ Every RECOMMEND must include: (1) specific file path(s) to modify, (2) section o
 
 **Execution strategy - two tiers**:
 
-- **Grep-tier** (pure pattern matching, no judgment): C2, C4, C6, C9, C10, C11, C12, C13, C14, C15, C16, C17 - batch into a **single haiku subagent** that runs all commands and returns structured pass/fail results.
-- **Judgment-tier** (require file reading + interpretation): C1, C3, C5, C7, C8 - run in main context using files already read in Step 2.
+- **Grep-tier** (pure pattern matching, no judgment): C2, C4, C6, C9, C10, C11, C12, C13, C14, C15, C16, C17 - run every command yourself and record structured pass/fail results.
+- **Judgment-tier** (require file reading + interpretation): C1, C3, C5, C7, C8 - interpret the files already read in Step 2.
 
-**Grep-tier batch** - invoke one Agent with `model: "haiku"`, pass the table from [`BATCH_COMMANDS.md § Grep-tier batch`](BATCH_COMMANDS.md), and receive one structured result.
+**Grep-tier batch** - run each command in the table from [`BATCH_COMMANDS.md § Grep-tier batch`](BATCH_COMMANDS.md) here, in this context. Do NOT delegate the batch to a subagent: see the execution note in Step 1.
 
-Collect batch results, then run judgment-tier checks below. For each FAIL: classify as AUTO-FIX or RECOMMEND using the same criteria as Step 3.
+Collect the results, then run judgment-tier checks below. For each FAIL: classify as AUTO-FIX or RECOMMEND using the same criteria as Step 3.
 
 **C1 - Deploy information currency (CLAUDE.md)**
 Check: does the `## Tech Stack → Deploy` entry describe the actual deploy platform?
@@ -228,7 +228,7 @@ AUTO-FIX: for each failing skill, read the `mcp__*` tool names from its body and
 See [advanced-checks.md](advanced-checks.md) for the full content of these steps. Execute them before Step 3e.
 
 - **Step 3c** - Anthropic Prompting Guide compliance against `CLAUDE.md`, `pipeline.md`, `context-review.md` + normative baseline `docs/claudemd-standards.md`. Covers P1 (content type inclusion test), P2 (instruction clarity), P3 (redundancy across instruction files), P4 (pipeline complexity proportionality), P5 (long context scannability). All judgment-based, PASS/WARN only, RECOMMEND never AUTO-FIX.
-- **Step 3d** - Token & subagent optimization. Covers T1 (research agent haiku in Step 1), T2 (Explore subagent haiku across skills), T3 (Playwright concurrency note in Phase 5d), T5 (skill model fitness table). Mix of mechanical grep and judgment.
+- **Step 3d** - Token & subagent optimization. Covers T1 (no delegation inside this skill), T2 (delegation discipline across skills: none in `context: fork` skills, haiku everywhere else), T3 (Playwright concurrency note in Phase 5d), T5 (skill model fitness table). Mix of mechanical grep and judgment.
 
 ## Step 3e - Pipeline.md compliance check
 
@@ -347,7 +347,7 @@ The most common ways discipline is silently abandoned here:
 
 | Temptation | Why it fails |
 |---|---|
-| Relying on remembered doc content instead of fetching in Step 1 | Anthropic's docs change between audits; the research agent exists to surface those deltas |
+| Relying on remembered doc content instead of fetching in Step 1 | Anthropic's docs change between audits; Step 1 exists to surface those deltas |
 | Classifying a RECOMMEND as AUTO-FIX to reduce the findings count | AUTO-FIX requires certainty of safety; any doubt must yield RECOMMEND |
 | Skipping a C-check because "the project hasn't changed" | The project's change history has no bearing on whether the reference docs changed |
 | Omitting the file path from a RECOMMEND entry | Every RECOMMEND must include a file path — this is a hard rule, not a style suggestion |
