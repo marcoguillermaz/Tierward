@@ -54,7 +54,7 @@ For each item in Recommendations above, output one decision card in this format:
 
 ### Token & subagent optimization (T1-T5)
 - T1 No delegation inside arch-audit: [PASS/FAIL - list any delegation found in Step 1 or Step 3b]
-- T2 Delegation discipline across skills: [PASS/FAIL - list any fork skill that delegates, and any non-fork launch missing haiku]
+- T2 Delegation discipline across skills: [PASS/FAIL on rule 2 - list any non-fork launch missing haiku; rule 1 fork-skill delegations are RECOMMEND only, excluding the documented known exceptions]
 - T3 Phase 5d Playwright concurrency: [PASS/WARN]
 - T5 Skill model fitness: [PASS/FAIL/WARN - list any mismatches]
 

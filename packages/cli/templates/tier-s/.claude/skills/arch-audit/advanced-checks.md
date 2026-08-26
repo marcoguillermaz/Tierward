@@ -97,9 +97,13 @@ for f in .claude/skills/*/SKILL.md; do
   fi
 done
 ```
-Expected: 0 lines. Any `FORK-DELEGATION` line = FAIL (rule 1). Any `NO-HAIKU` line = FAIL (rule 2).
-Known-benign: a line that back-references an already-launched agent (e.g. "the Explore subagent from Step 1"), or prose documenting the no-delegation rule itself, rather than a fresh launch - treat as benign, not a FAIL.
-AUTO-FIX: for rule 1, rewrite the step to run inline. For rule 2, append `(model: haiku)` to the invocation description.
+Expected: 0 lines in a clean project. Any `NO-HAIKU` line = FAIL (rule 2). Any `FORK-DELEGATION` line = **RECOMMEND, never AUTO-FIX** (rule 1): converting a delegating skill to inline execution restructures its steps and its result-collection logic, which is a maintainer's judgment call, not a mechanical rewrite.
+
+Known-benign: a line that back-references an already-launched agent (e.g. "the Explore subagent from Step 1"), or prose documenting the no-delegation rule itself, rather than a fresh launch - treat as benign, not a finding.
+
+**Known exceptions to rule 1**: the scaffolded audit skills `accessibility-audit`, `api-design`, `perf-audit`, `security-audit`, `skill-db` and `ui-audit` still delegate to Explore subagents from a `context: fork` body. This is tracked upstream in Tierward, not a defect introduced by your project. Report them once as a single consolidated RECOMMEND line, never one finding per skill per run, and never rewrite them here. The exemption lifts when they ship converted.
+
+AUTO-FIX: rule 2 only - append `(model: haiku)` to the invocation description. Rule 1 findings stay RECOMMEND: name the file and the step, and leave the rewrite to the maintainer.
 
 **T3 - Phase 5d Playwright concurrency note**
 Check: does pipeline.md Phase 5d document that `/ui-audit` (static, no Playwright by default) can run concurrently with Playwright-based skills, and that `/visual-audit`, `/ux-audit`, `/responsive-audit` must run sequentially (shared MCP Playwright session)?
