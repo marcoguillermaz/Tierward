@@ -47,18 +47,18 @@ Three hard constraints the skill enforces on the subagent:
 - The subagent must not post the comment, edit files, or run any mutation command — read-only only
 - Merge is always a human decision
 
-### Live example: /skill-dev (background Explore agent)
+### The `context: fork` constraint — when you cannot delegate at all
 
-`/skill-dev` shows a different Agent pattern — a background agent launched immediately so the main skill's sequential judgment checks run in parallel:
+Before reaching for the Agent tool inside a skill, check the skill's own frontmatter. A skill that declares `context: fork` runs in a forked context, and an agent spawned from there does not deliver its result back to the skill that spawned it. The skill waits for output that never arrives, then either stalls or silently redoes the work itself.
 
-```
-## Step 2 - Launch Explore agent in background
-Launch immediately with `run_in_background: true`, then proceed to Step 3 without waiting.
-```
+`/skill-dev` is the worked example. It declares `context: fork`, and its Step 2 pattern checks (D1–D10) used to run as a background Explore agent while Step 3's judgment checks proceeded in parallel — on paper, roughly half the wall-clock time. In practice the Step 4 join never received anything. Step 2 now runs inline, in the skill's own context, and the steps are sequential.
 
-The orchestrator starts a Haiku Explore agent in the background, then proceeds with its own structural checks (J1–J5). In Step 4 it waits for the background agent before producing the combined report.
+The rule that follows:
 
-Running the agents in parallel cuts wall-clock time roughly in half compared to sequential execution. The cost is low because the background pass uses Haiku.
+- **`context: fork` skill** → run every check inline. No Agent calls, no `run_in_background`.
+- **Non-fork skill** → delegation works; name `model: haiku` at the invocation to keep the cost down.
+
+The parallelism is not lost, only moved. A skill that genuinely needs concurrent agents belongs in a Workflow script (below), which the harness runs from a context where fan-out and result collection both work.
 
 ---
 
