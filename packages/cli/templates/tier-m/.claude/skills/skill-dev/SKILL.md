@@ -4,7 +4,7 @@ description: Code quality audit: detect cross-module coupling, N+1 queries, dead
 user-invocable: true
 model: sonnet
 context: fork
-allowed-tools: Read Glob Grep Bash Agent Edit Write
+allowed-tools: Read Glob Grep Bash Edit Write
 ---
 
 ## Configuration (adapt before first run)
@@ -114,13 +114,13 @@ Output: (a) structured file list, (b) high-debt zone map (module → open entry 
 
 ---
 
-## Step 2 - Launch Explore agent in background
+## Step 2 - Pattern checks
 
-**Launch immediately with `run_in_background: true`, then proceed to Step 3 without waiting.**
+**Run these checks yourself, here, in this context - do not delegate.** This skill declares `context: fork`. An agent spawned from a forked context does not deliver its result back, so Step 4 would wait for output that never arrives.
 
-Pass the full file list from Step 1 to a Haiku Explore agent. **Before copying the prompt below**: remove any checks marked "Skip entirely" in the Applicability section for the detected stack category. Only include checks that are "Run as-is" or "Run with adaptation" for this project. Do not send skipped checks to the subagent.
+Run the checks below against the file list from Step 1. **Before starting**: skip any check marked "Skip entirely" in the Applicability section for the detected stack category. Only run checks that are "Run as-is" or "Run with adaptation" for this project.
 
-"Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` for stack-specific grep patterns. Run the checks below on ONLY the files provided. For each check: state total match count, list every match as `file:line - excerpt`, and state PASS or FAIL.
+Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` for stack-specific grep patterns. Run the checks below on ONLY the files provided. For each check: state total match count, list every match as `file:line - excerpt`, and state PASS or FAIL.
 
 **CHECK D1 - Cross-module direct imports (coupling)**
 Pattern: modules importing directly from other feature modules instead of going through a shared layer (e.g. `features/admin/` importing from `features/billing/`).
@@ -181,13 +181,13 @@ Grep for catch blocks that swallow errors silently or log them without recovery 
 Flag: catch blocks with empty bodies, comment-only bodies, or log-only bodies without error recovery.
 Pattern B - Debug output in production:
 Grep for debug/logging statements in source directories (excluding test files). See PATTERNS.md → D10 for per-language debug output patterns.
-Debug-level logging in catch blocks is acceptable only if also returning an error response."
+Debug-level logging in catch blocks is acceptable only if also returning an error response.
 
 ---
 
-## Step 3 - Structural judgment checks (runs in parallel with Step 2)
+## Step 3 - Structural judgment checks
 
-**Begin immediately after launching the Step 2 agent - do not wait for it.**
+**Run after the Step 2 pattern checks are complete.**
 
 **J1 - Over-large components**
 Flag components that are:
@@ -261,9 +261,7 @@ The point is to **rank backlog work by leverage**, not to add findings. Files in
 
 The hotspot table goes in the report between "Findings requiring action" and "Backlog decision gate". It does not gate the backlog: every finding above Low severity still goes through Step 4 unchanged.
 
-## Step 4 - Wait for Step 2 agent, then produce combined report
-
-**Wait for the Step 2 Explore agent to complete before proceeding.**
+## Step 4 - Produce combined report
 
 Cross-check all findings from Step 2 (D1–D10) and Step 3 (J1–J5) against `docs/refactoring-backlog.md`. Exclude any finding already documented.
 
@@ -279,7 +277,7 @@ For remaining findings, apply severity modifiers in this exact order:
 ### Scope: [N] files from sitemap.md
 ### Sources: Refactoring.Guru smells taxonomy, language-specific lint rules, framework composition patterns
 
-### Pattern Checks (Explore agent)
+### Pattern Checks (Step 2)
 | # | Check | Matches | Severity | Verdict |
 |---|---|---|---|---|
 | D1 | Cross-module coupling | N | Medium | ✅/⚠️ |
@@ -372,4 +370,4 @@ Each entry **must** include a `Regression risk` field:
 
 - Do NOT make any code changes.
 - After producing the report, ask: "Should I implement the High/Critical priority fixes identified?"
-- To run audit checks in parallel or chain this skill into a multi-phase Workflow pipeline, see `AGENT_PATTERN.md` in this directory.
+- To chain this skill into a multi-phase Workflow pipeline, see `AGENT_PATTERN.md` in this directory.
