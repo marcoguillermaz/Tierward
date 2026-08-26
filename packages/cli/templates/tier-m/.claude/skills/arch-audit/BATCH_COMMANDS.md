@@ -2,9 +2,9 @@
 
 Exact commands for Step 3b consistency checks. Stored here to keep the SKILL.md body free of implementation patterns (body purity rule).
 
-## Grep-tier batch (haiku subagent)
+## Grep-tier batch (run inline)
 
-Pass this entire table to the haiku subagent in Step 3b. Receive one structured pass/fail result per row.
+Run every command in this table yourself during Step 3b and record one pass/fail result per row. Do not hand the table to a subagent: arch-audit runs as `context: fork`, where child-agent results never come back.
 
 | Check | Command | Pass condition |
 | ----- | ------- | -------------- |
