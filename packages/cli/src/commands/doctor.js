@@ -236,7 +236,7 @@ const checks = [
       return {
         pass: exists,
         warn: true,
-        fix: 'Run `tierward upgrade` to add docs/claudemd-standards.md, or copy from the template.',
+        fix: 'Copy templates/common/claudemd-standards.md from the tierward package to docs/claudemd-standards.md (`tierward upgrade` does not add it).',
       };
     },
   },
@@ -250,7 +250,7 @@ const checks = [
       return {
         pass: exists,
         warn: true,
-        fix: 'Run `tierward upgrade` to add docs/pipeline-standards.md, or copy from the template.',
+        fix: 'Copy templates/common/pipeline-standards.md from the tierward package to docs/pipeline-standards.md (`tierward upgrade` does not add it).',
       };
     },
   },
@@ -264,7 +264,7 @@ const checks = [
       return {
         pass: exists,
         warn: true,
-        fix: 'Run `tierward upgrade` to add the commit skill, or copy from the template.',
+        fix: 'Run `tierward add skill commit` to add the commit skill.',
       };
     },
   },
@@ -469,7 +469,7 @@ const checks = [
       return {
         pass: content.includes('C12'),
         warn: true,
-        fix: 'Run `tierward upgrade` to update context-review.md to include C12 (canonical docs currency check).',
+        fix: 'Run `tierward upgrade --dry-run` to see the context-review.md template diff, then add C12 (canonical docs currency check) by hand.',
       };
     },
   },
@@ -601,7 +601,7 @@ const checks = [
           pass: false,
           warn: true,
           info: 'team-settings.json present but `.claude/hooks/team-settings-enforcement.mjs` missing — runtime enforcement disabled (CLI-side enforcement only).',
-          fix: 'Run `tierward upgrade` to refresh the hook script, or copy it manually from the Tierward template.',
+          fix: 'Copy templates/common/.claude/hooks/team-settings-enforcement.mjs from the tierward package to .claude/hooks/ (`tierward upgrade` does not add hook scripts).',
         };
       }
 

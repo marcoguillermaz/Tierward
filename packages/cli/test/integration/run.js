@@ -3722,6 +3722,220 @@ async function scenarioUpgradeAnthropic() {
   }
 }
 
+async function scenarioUpgradeSafety() {
+  section('upgrade - fresh scaffolds stay intact, customizations survive');
+
+  const CLI = path.resolve(__dirname, '../../src/index.js');
+
+  function runCli(args, cwd) {
+    try {
+      return {
+        stdout: execFileSync('node', [CLI, ...args], { cwd, encoding: 'utf8' }),
+        code: 0,
+      };
+    } catch (e) {
+      return {
+        stdout: (e.stdout || '').toString() + (e.stderr || '').toString(),
+        code: e.status || 1,
+      };
+    }
+  }
+
+  function snapshot(dir) {
+    const files = new Map();
+    for (const f of walkFiles(dir)) files.set(path.relative(dir, f), fs.readFileSync(f, 'utf8'));
+    return files;
+  }
+
+  function snapshotChanges(before, after) {
+    const changes = [];
+    for (const [rel, content] of after) {
+      if (!before.has(rel)) changes.push(`added ${rel}`);
+      else if (before.get(rel) !== content) changes.push(`changed ${rel}`);
+    }
+    for (const rel of before.keys()) {
+      if (!after.has(rel)) changes.push(`removed ${rel}`);
+    }
+    return changes;
+  }
+
+  const SWIFT = {
+    techStack: 'swift',
+    testCommand: 'swift test',
+    devCommand: 'swift run',
+    buildCommand: 'swift build',
+    installCommand: 'swift package resolve',
+    typeCheckCommand: '',
+  };
+
+  // A fresh scaffold is the template output for its own config, so upgrade
+  // must find nothing to do: no rewritten, added or removed file, no backup.
+  const cases = [
+    {
+      name: 'upgrade-safe-tier-0',
+      tier: '0',
+      config: {
+        ...BASE,
+        tier: '0',
+        isDiscovery: true,
+        includePreCommit: false,
+        includeGithub: false,
+      },
+    },
+  ];
+  for (const tier of ['s', 'm', 'l']) {
+    cases.push({
+      name: `upgrade-safe-node-${tier}`,
+      tier,
+      config: { ...BASE, tier, isDiscovery: false },
+    });
+    cases.push({
+      name: `upgrade-safe-swift-${tier}`,
+      tier,
+      config: { ...BASE, ...SWIFT, tier, isDiscovery: false },
+    });
+  }
+  cases.push({
+    name: 'upgrade-safe-no-github-m',
+    tier: 'm',
+    config: { ...BASE, tier: 'm', isDiscovery: false, includeGithub: false },
+  });
+
+  for (const { name, tier, config } of cases) {
+    const dir = await scaffold(name, tier, config);
+
+    const dry = runCli(['upgrade', '--dry-run'], dir);
+    if (dry.code === 0 && /All upgradeable files are up to date/.test(dry.stdout)) {
+      pass(`${name}: upgrade --dry-run finds nothing to upgrade`);
+    } else {
+      const listed = dry.stdout
+        .split('\n')
+        .filter((l) => l.includes('→'))
+        .map((l) => l.trim());
+      fail(`${name}: upgrade --dry-run lists files on a fresh scaffold`, listed.join('; '));
+    }
+
+    const before = snapshot(dir);
+    const out = runCli(['upgrade'], dir);
+    const changes = snapshotChanges(before, snapshot(dir));
+    if (out.code === 0 && changes.length === 0) {
+      pass(`${name}: upgrade leaves a fresh scaffold byte-identical`);
+    } else {
+      fail(`${name}: upgrade changed a fresh scaffold`, `code=${out.code}; ${changes.join('; ')}`);
+    }
+  }
+
+  // Team edits: rule files the scaffold fills in are never overwritten (their
+  // diff is shown instead); an edited auto-upgraded file keeps a backup.
+  {
+    const dir = await scaffold('upgrade-safe-custom-m', 'm', {
+      ...BASE,
+      tier: 'm',
+      isDiscovery: false,
+    });
+    const marker = '- Team rule: never log personal tax codes.';
+    const reviewFiles = [
+      '.claude/rules/security.md',
+      '.claude/rules/git.md',
+      '.claude/rules/context-review.md',
+    ];
+    for (const rel of [...reviewFiles, '.claude/rules/output-style.md']) {
+      fs.appendFileSync(path.join(dir, rel), `\n${marker}\n`);
+    }
+
+    const out = runCli(['upgrade'], dir);
+
+    for (const rel of reviewFiles) {
+      if (fs.readFileSync(path.join(dir, rel), 'utf8').includes(marker)) {
+        pass(`custom: ${rel} keeps the team's line after upgrade`);
+      } else {
+        fail(`custom: ${rel} lost the team's line after upgrade`);
+      }
+    }
+    if (out.stdout.includes(marker)) {
+      pass('custom: upgrade shows the team edit in the review diff');
+    } else {
+      fail('custom: upgrade output shows no diff for the edited rule files');
+    }
+
+    const rulesDir = path.join(dir, '.claude/rules');
+    const styleKept = fs
+      .readFileSync(path.join(rulesDir, 'output-style.md'), 'utf8')
+      .includes(marker);
+    const styleBackedUp = fs
+      .readdirSync(rulesDir)
+      .filter((f) => f.startsWith('output-style.md.bak.'))
+      .some((f) => fs.readFileSync(path.join(rulesDir, f), 'utf8').includes(marker));
+    if (styleKept || styleBackedUp) {
+      pass('custom: output-style.md edit kept or backed up');
+    } else {
+      fail('custom: output-style.md edit lost with no .bak');
+    }
+  }
+
+  // A project's own PR template, in any letter case, is left alone.
+  {
+    const dir = await scaffold('upgrade-safe-own-pr-template', 'm', {
+      ...BASE,
+      tier: 'm',
+      isDiscovery: false,
+      includeGithub: false,
+    });
+    const own = '## What changed\n\nOur own pull request template.\n';
+    await fs.ensureDir(path.join(dir, '.github'));
+    fs.writeFileSync(path.join(dir, '.github/pull_request_template.md'), own);
+
+    runCli(['upgrade'], dir);
+
+    const templates = fs
+      .readdirSync(path.join(dir, '.github'))
+      .filter((f) => f.toLowerCase() === 'pull_request_template.md');
+    const content =
+      templates.length === 1
+        ? fs.readFileSync(path.join(dir, '.github', templates[0]), 'utf8')
+        : null;
+    if (templates.length === 1 && content === own) {
+      pass('own PR template: one file, project content kept');
+    } else {
+      fail(
+        'own PR template: upgrade replaced or duplicated it',
+        `files=${templates.join(',')}; content kept=${content === own}`,
+      );
+    }
+  }
+
+  // Outside a Tierward project, upgrade writes nothing.
+  {
+    const dir = path.join(OUTPUT_DIR, 'upgrade-safe-not-a-project');
+    await fs.ensureDir(dir);
+    fs.writeFileSync(path.join(dir, 'README.md'), '# Not a Tierward project\n');
+    runCli(['upgrade'], dir);
+    const files = walkFiles(dir).map((f) => path.relative(dir, f));
+    if (files.length === 1) {
+      pass('not a project: upgrade writes nothing');
+    } else {
+      fail('not a project: upgrade wrote files', files.filter((f) => f !== 'README.md').join(', '));
+    }
+  }
+
+  // Every template the upgrade lists point at exists.
+  {
+    const upgradeModule = await import('../../src/commands/upgrade.js');
+    const entries = [
+      ...(upgradeModule.UPGRADEABLE_FILES || []),
+      ...(upgradeModule.REVIEW_DIFF_FILES || []),
+    ];
+    const missing = entries
+      .filter((e) => !fs.existsSync(path.join(TEMPLATES_DIR, e.template)))
+      .map((e) => e.template);
+    if (entries.length > 0 && missing.length === 0) {
+      pass(`upgrade lists: all ${entries.length} template paths exist`);
+    } else {
+      fail('upgrade lists: template paths missing', missing.join(', ') || 'lists not exported');
+    }
+  }
+}
+
 async function scenarioTeamSettings() {
   section('team-settings.json governance: init / upgrade / add / doctor (v1.16.0)');
 
@@ -4276,6 +4490,7 @@ async function main() {
   await scenarioRuntimeEnforcementHook();
   await scenarioSkillDevHotspot();
   await scenarioUpgradeAnthropic();
+  await scenarioUpgradeSafety();
   await scenarioTeamSettings();
   await scenarioMCPServer();
   await scenarioScaffoldedYaml();
