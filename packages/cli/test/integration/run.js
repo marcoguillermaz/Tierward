@@ -16,6 +16,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
+import { load as loadYaml } from 'js-yaml';
 import { scaffoldTier, scaffoldTierSafe } from '../../src/scaffold/index.js';
 import { generateClaudeMd } from '../../src/generators/claude-md.js';
 import { generateReadme } from '../../src/generators/readme.js';
@@ -4143,6 +4144,79 @@ async function scenarioMCPServer() {
   }
 }
 
+// ── Scenario: scaffolded YAML parses + AI commit audit hook ──────────────────
+
+// The AI commit audit runs at the commit-msg stage: it must read the message file
+// pre-commit passes to it (`git log -1` is the previous commit), be installed by a
+// plain `pre-commit install`, and print its warning although the hook passes.
+function assertAiCommitHook(dir, label) {
+  let config;
+  try {
+    config = loadYaml(fs.readFileSync(path.join(dir, '.pre-commit-config.yaml'), 'utf8'));
+  } catch (err) {
+    fail(`${label}: .pre-commit-config.yaml parses`, err.reason || err.message);
+    return;
+  }
+  const installTypes = config?.default_install_hook_types || [];
+  if (installTypes.includes('pre-commit') && installTypes.includes('commit-msg')) {
+    pass(`${label}: pre-commit install installs pre-commit + commit-msg hooks`);
+  } else {
+    fail(
+      `${label}: default_install_hook_types must list pre-commit and commit-msg`,
+      JSON.stringify(installTypes),
+    );
+  }
+  const hook = (config?.repos || [])
+    .flatMap((r) => r.hooks || [])
+    .find((h) => h.id === 'ai-commit-review-reminder');
+  if (!hook) {
+    fail(`${label}: ai-commit-review-reminder hook missing`);
+    return;
+  }
+  const problems = [];
+  if (!(hook.stages || []).includes('commit-msg')) problems.push('not on the commit-msg stage');
+  if (hook.pass_filenames === false) problems.push('pass_filenames: false drops the message file');
+  if (/\bgit\s+log\b/.test(hook.entry || '')) problems.push('entry reads git log');
+  if (hook.verbose !== true) problems.push('verbose is not true, the warning is hidden');
+  if (problems.length === 0) {
+    pass(`${label}: ai-commit-review-reminder reads the message being committed`);
+  } else {
+    fail(`${label}: ai-commit-review-reminder`, problems.join('; '));
+  }
+}
+
+// Runs last: walks every scenario's output, so each YAML file a scaffold ships is
+// parsed. An unparseable .pre-commit-config.yaml aborts every `git commit` once
+// `pre-commit install` has run.
+async function scenarioScaffoldedYaml() {
+  section('Scaffolded YAML - every .yaml/.yml output parses');
+  const yamlFiles = walkFiles(OUTPUT_DIR).filter((f) => /\.ya?ml$/.test(f));
+  if (yamlFiles.length === 0) {
+    fail('Scaffolded YAML: no .yaml/.yml file found in any scenario output');
+  } else {
+    const broken = [];
+    for (const f of yamlFiles) {
+      try {
+        loadYaml(fs.readFileSync(f, 'utf8'));
+      } catch (err) {
+        broken.push(`${path.relative(OUTPUT_DIR, f)}: ${err.reason || err.message}`);
+      }
+    }
+    if (broken.length === 0) {
+      pass(`Scaffolded YAML: ${yamlFiles.length} files parse`);
+    } else {
+      fail(
+        `Scaffolded YAML: ${broken.length}/${yamlFiles.length} files fail to parse`,
+        broken.slice(0, 3).join('; '),
+      );
+    }
+  }
+
+  for (const scenarioDir of ['tier-s-full', 'tier-m', 'tier-l']) {
+    assertAiCommitHook(path.join(OUTPUT_DIR, scenarioDir), scenarioDir);
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -4204,6 +4278,7 @@ async function main() {
   await scenarioUpgradeAnthropic();
   await scenarioTeamSettings();
   await scenarioMCPServer();
+  await scenarioScaffoldedYaml();
 
   // ── Summary ────────────────────────────────────────────────────────────────
 

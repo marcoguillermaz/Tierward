@@ -1144,12 +1144,14 @@ Every commit made during a Claude Code session includes `Co-authored-by: Claude 
 
 ### Pre-commit hooks
 
-`.pre-commit-config.yaml` includes **gitleaks** (scans for secrets) and **AI commit audit** (flags Claude co-authored commits for team awareness).
+`.pre-commit-config.yaml` includes **gitleaks** (scans for secrets) and **AI commit audit**. The audit reads the commit message: when it carries a `Co-authored-by: Claude` trailer, the hook prints a reminder that a human should review the changes before merge. It never blocks a commit.
 
 ```bash
 pip install pre-commit
 pre-commit install
 ```
+
+The config sets `default_install_hook_types: [pre-commit, commit-msg]`, so a plain `pre-commit install` sets up both hooks. This needs pre-commit 2.18.0 or later. If you installed the hooks from an older config, run `pre-commit install` again.
 
 If gitleaks finds a secret: the commit is blocked. Fix by removing the secret and adding the file to `.gitignore`.
 

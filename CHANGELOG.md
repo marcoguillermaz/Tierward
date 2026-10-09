@@ -13,6 +13,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **Local dev-server discipline in the smoke-test phase** (Tier M/L templates). Phase 5c now requires the agent to start the dev server itself, from the exact working tree under verification (worktree-aware), probe for a free port, declare the endpoint before the first smoke step, and stop the server when verification ends — with the Phase 8 cleanup gate as backstop. Closes the wrong-target smoke risk: testing against an already-running server that serves another checkout's code.
 
+### Fixed
+
+- **The generated `.pre-commit-config.yaml` was not valid YAML.** The `entry` of the AI commit audit hook was an unquoted scalar containing `: `, so pre-commit rejected the file with "mapping values are not allowed". Once `pre-commit install` had run, every `git commit` in the project failed. The entry is now a folded block scalar, and the integration suite parses every YAML file a scaffold produces.
+- **The AI commit audit now warns about the commit you are making.** Until now it never did, for three reasons. It ran at the `commit-msg` stage but read `git log -1`, which is the previous commit. A plain `pre-commit install` never installed the `commit-msg` hook. And pre-commit hides the output of a hook that passes, which this one always does. The hook now reads the message file pre-commit passes to it, and it matches a `Co-authored-by: Claude` trailer at the start of a line in any letter case, so Claude Code's default `Co-Authored-By:` counts too. It runs with `verbose: true`, and the config sets `default_install_hook_types: [pre-commit, commit-msg]`, which needs pre-commit 2.18.0 or later.
+
+  Projects scaffolded with 2.0.0 or earlier have to apply this by hand, because `tierward upgrade` does not touch `.pre-commit-config.yaml`. Add `default_install_hook_types: [pre-commit, commit-msg]` at the top level, replace the `ai-commit-review-reminder` hook with the block below, then run `pre-commit install` again so the `commit-msg` hook gets installed.
+
+  ```yaml
+  - id: ai-commit-review-reminder
+    name: AI commit — verify human review
+    entry: >-
+      bash -c 'grep -qiE "^Co-authored-by: Claude" "$1" && echo "⚠️  AI-assisted commit detected. Ensure a human has reviewed the changes before merging." || true' --
+    language: system
+    stages: [commit-msg]
+    verbose: true
+  ```
+
 ---
 
 ## [2.0.0] — 2026-07-10
