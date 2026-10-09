@@ -9,6 +9,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`tierward upgrade` no longer damages the project it upgrades.** It compared the raw templates with files the scaffold had already filled in, so on any project, even one created a minute earlier, it rewrote `.claude/rules/git.md` and `security.md` (and `.claude/files-guide.md` on Tier M/L) with unfilled placeholders such as `[COMMIT_EXAMPLES]`, dropped any line your team had added, and kept no backup. It put `staging` back into `git.md` and the PR template on projects without a staging branch, added files your tier or options had left out (the workflow rules on Tier 0, `files-guide.md` on Tier S, a PR template after you opted out of GitHub files), replaced your own `pull_request_template.md` on case-insensitive disks, and wrote template files into directories that were not Tierward projects. It now writes only `.claude/rules/output-style.md`, which you are not expected to edit, and saves a timestamped `.bak` before replacing it. For the files the scaffold fills in, it prints the template diff and leaves the file alone. It adds no missing file except `output-style.md`, and writes nothing where `.claude/settings.json` is absent.
+
+  If you ran `tierward upgrade` before, look for damage: literal `[COMMIT_EXAMPLES]`, `[BUILD_ARTIFACTS]` or `[VALIDATION_LIBRARIES]` in `.claude/rules/`; `staging` back in `git.md` or `.github/PULL_REQUEST_TEMPLATE.md` on a project without a staging branch; on Tier 0, a `git.md`, `security.md`, `context-review.md`, `.claude/files-guide.md` or PR template you never had; on Tier S, a `.claude/files-guide.md`; a PR template after you opted out of GitHub files. To restore a file, find the last commit before the upgrade with `git log -- <file>` and run `git checkout <commit> -- <file>`. Delete the files upgrade added.
+
+- **`doctor` no longer sends you to `upgrade` for files it cannot add.** The hints for `docs/claudemd-standards.md`, `docs/pipeline-standards.md`, the commit skill, the context-review C12 check and the team-settings enforcement hook now name the command to run or the template to copy.
+
+- **The docs no longer show `tierward upgrade --tier`.** The README, the docs site and the operational guide gave it as the way to change tier, but the CLI rejects it with "unknown option". They now describe the path that works today: scaffold again on a branch with `init`, choose "New project" and the new tier, then use `git diff` to bring back your own edits.
+
 ---
 
 ## [2.0.1] — 2026-10-09

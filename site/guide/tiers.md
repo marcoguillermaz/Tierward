@@ -35,7 +35,7 @@ For a single developer moving quickly. Adds four pipeline steps and a scope-conf
 Use Tier S for personal projects, bugfixes, and any work where a lightweight review contract is enough. Most solo projects live here.
 
 ```bash
-npx tierward upgrade --tier=s
+npx tierward init --tier=s
 ```
 
 ## Tier M — Standard
@@ -51,7 +51,7 @@ Also enables the team skills library: `/pr-review`, `/dependency-scan`, `/migrat
 Use Tier M when you're working with at least one other person, shipping features to users, or when the cost of a regression is meaningful.
 
 ```bash
-npx tierward upgrade --tier=m
+npx tierward init --tier=m
 ```
 
 ## Tier L — Full
@@ -61,21 +61,27 @@ The tier for team projects with complex domain changes. Adds a fourth STOP gate 
 Use Tier L for regulated environments, large feature sets, or any project where a mistake in one block can silently break another.
 
 ```bash
-npx tierward upgrade --tier=l
+npx tierward init --tier=l
 ```
 
-## Upgrading
+## Changing tier
 
-You can move up a tier at any time:
+There is no in-place tier switch yet. `upgrade` keeps the tier you have, and running `init` again in "Existing project" mode skips every file that already exists, so the old pipeline stays. To move to another tier, scaffold again on a branch and let git show what changed:
+
+1. Commit your work, then create a branch, for example `git switch -c tierward-tier-m`.
+2. Run `npx tierward init`, choose "New project", and answer the wizard with the new tier. It rewrites the Tierward files (`CLAUDE.md`, `.claude/settings.json`, `.claude/rules/`, the pipeline) with the new tier's versions and adds the files that tier needs.
+3. Run `git diff` and bring back what you had added to those files: project notes in `CLAUDE.md`, your own rules, permission changes. `git checkout -p HEAD -- <file>` restores them hunk by hunk.
+4. Coming from Tier 0, delete `GETTING_STARTED.md` if you no longer need it. Commit, then merge the branch.
+
+## Keeping files current
 
 ```bash
-npx tierward upgrade --tier=m        # promote to Tier M
-npx tierward upgrade                  # upgrade template files at your current tier
-npx tierward upgrade --anthropic      # preview diff for Anthropic-influenced files
+npx tierward upgrade                      # refresh safe files, show diffs for the rest
+npx tierward upgrade --anthropic          # preview diff for Anthropic-influenced files
 npx tierward upgrade --anthropic --apply  # apply with .bak backup
 ```
 
-Upgrades are non-destructive. Custom files (anything prefixed `custom-`) are never overwritten.
+`upgrade` never overwrites a file you are expected to edit. It refreshes `.claude/rules/output-style.md`, keeping a `.bak` of the old copy, prints the template diff for the rules and files the scaffold filled in with your project's values, and lists `CLAUDE.md`, the pipeline, `settings.json` and the skills for manual review. Custom skills (anything prefixed `custom-`) are never touched.
 
 ## Which tier should I use?
 

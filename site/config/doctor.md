@@ -57,4 +57,4 @@ Most `doctor` failures have a direct fix:
 | `[TEST_COMMAND] placeholder found` | Replace `[TEST_COMMAND]` with your actual test command |
 | `timeout not set` | Add `"timeout": 300` to the Stop hook entry |
 | `CODEOWNERS missing` | Create `.github/CODEOWNERS` with a rule for `.claude/` |
-| `pipeline.md not found` | Run `npx tierward upgrade --tier=m` to install the Tier M pipeline |
+| `pipeline.md not found` | Re-run `npx tierward init` with Tier S or above (see [Changing tier](../guide/tiers#changing-tier)) |
