@@ -74,7 +74,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"$CLAUDE_TOOL_INPUT\" | jq -r '.command // \"\"' | grep -qE '(rm -rf /|DROP DATABASE|format C:|del /f /s /q C:)' && echo '{\"decision\": \"block\", \"reason\": \"Potentially destructive command blocked. Confirm manually if intentional.\"}' || true"
+            "command": "jq -r '.tool_input.command // \"\"' 2>/dev/null | grep -qE '(rm -rf /|DROP DATABASE|format C:|del /f /s /q C:)' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"Potentially destructive command. Confirm manually if intentional.\"}}' || true"
           },
           {
             "type": "command",
@@ -121,7 +121,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -nc --arg ts \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" --arg tool \"$CLAUDE_TOOL_NAME\" --arg input \"$CLAUDE_TOOL_INPUT\" --arg session \"$CLAUDE_SESSION_ID\" '{timestamp: $ts, session: $session, tool: $tool, input: ($input | .[:300])}' >> ~/.claude/audit/$(basename $CLAUDE_PROJECT_DIR).jsonl 2>/dev/null || true",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-audit-log.mjs\"",
             "async": true
           }
         ]
@@ -132,7 +132,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "mkdir -p ~/.claude/audit && echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) SESSION_START project=$(basename $CLAUDE_PROJECT_DIR) model=$CLAUDE_MODEL\" >> ~/.claude/audit/sessions.log",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-audit-log.mjs\"",
             "async": true
           },
           {
@@ -153,7 +153,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat >> /tmp/claude-instructions-$(date +%Y%m%d).log 2>/dev/null || true",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-audit-log.mjs\"",
             "async": true
           }
         ]

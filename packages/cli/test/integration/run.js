@@ -5021,6 +5021,146 @@ async function scenarioPrPromotion() {
   }
 }
 
+// ── Scenario: hook logs read stdin and stay out of /tmp ──────────────────────
+// Claude Code passes session and tool data to hooks as JSON on stdin and sets no
+// CLAUDE_TOOL_* / CLAUDE_SESSION_ID / CLAUDE_MODEL variables (hooks reference;
+// confirmed empty by a headless probe), so hooks reading them logged timestamps
+// only and the tier L destructive-command check never fired.
+
+const UNDOCUMENTED_HOOK_VARS =
+  /\bCLAUDE_(TOOL_INPUT_FILE_PATH|TOOL_INPUT|TOOL_NAME|SESSION_ID|MODEL)\b/;
+const AUDIT_HOOK = 'tierward-audit-log.mjs';
+
+function hookEntries(settings, event) {
+  return (settings.hooks?.[event] || []).flatMap((e) =>
+    (e.hooks || []).map((h) => ({ matcher: e.matcher, command: h.command || '' })),
+  );
+}
+
+async function scenarioHookLogs() {
+  section('Hook logs - stdin only, nothing under /tmp');
+
+  for (const tier of ['s', 'm', 'l']) {
+    const dir = await scaffold(`hook-logs-${tier}`, tier, { ...BASE, tier, isDiscovery: false });
+    const settings = JSON.parse(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'));
+    const all = Object.keys(settings.hooks || {}).flatMap((ev) => hookEntries(settings, ev));
+
+    const tmpHits = all.filter((h) => h.command.includes('/tmp/'));
+    if (tmpHits.length === 0) pass(`hook-logs[${tier}]: no hook command writes under /tmp`);
+    else fail(`hook-logs[${tier}]: hook command uses /tmp`, tmpHits[0].command.slice(0, 120));
+
+    const varHits = all.filter((h) => UNDOCUMENTED_HOOK_VARS.test(h.command));
+    if (varHits.length === 0) pass(`hook-logs[${tier}]: no hook reads undocumented variables`);
+    else
+      fail(
+        `hook-logs[${tier}]: hook reads an undocumented variable`,
+        varHits[0].command.slice(0, 120),
+      );
+
+    assertExists(dir, `.claude/hooks/${AUDIT_HOOK}`);
+
+    const audit = hookEntries(settings, 'PostToolUse').filter((h) =>
+      h.command.includes(AUDIT_HOOK),
+    );
+    const expectedMatcher = tier === 's' ? 'Write|Edit' : 'Write|Edit|Bash';
+    if (audit.length === 1 && audit[0].matcher === expectedMatcher) {
+      pass(`hook-logs[${tier}]: audit hook on PostToolUse ${expectedMatcher}`);
+    } else {
+      fail(`hook-logs[${tier}]: audit hook not wired on PostToolUse ${expectedMatcher}`);
+    }
+
+    if (hookEntries(settings, 'InstructionsLoaded').some((h) => h.command.includes(AUDIT_HOOK))) {
+      pass(`hook-logs[${tier}]: InstructionsLoaded goes through the audit hook`);
+    } else {
+      fail(`hook-logs[${tier}]: InstructionsLoaded not wired to the audit hook`);
+    }
+
+    if (tier === 'l') {
+      if (hookEntries(settings, 'SessionStart').some((h) => h.command.includes(AUDIT_HOOK))) {
+        pass('hook-logs[l]: SessionStart log goes through the audit hook');
+      } else {
+        fail('hook-logs[l]: SessionStart log not wired to the audit hook');
+      }
+    }
+
+    const gitignore = fs.readFileSync(path.join(dir, '.gitignore'), 'utf8');
+    if (/^\.claude\/logs\/$/m.test(gitignore)) pass(`hook-logs[${tier}]: .claude/logs/ gitignored`);
+    else fail(`hook-logs[${tier}]: .claude/logs/ missing from .gitignore`);
+
+    // Run the scaffolded hook on an Edit, the payload shape Claude Code sends.
+    const root = path.join(OUTPUT_DIR, `hook-logs-run-${tier}`);
+    const home = path.join(root, 'home');
+    const project = path.join(root, 'probe-app');
+    fs.removeSync(root);
+    fs.ensureDirSync(home);
+    fs.ensureDirSync(project);
+    let entry = {};
+    try {
+      execFileSync('node', [path.join(dir, '.claude', 'hooks', AUDIT_HOOK)], {
+        input: JSON.stringify({
+          session_id: 'probe-session',
+          hook_event_name: 'PostToolUse',
+          tool_name: 'Edit',
+          tool_input: { file_path: '/repo/src/app.ts', old_string: 'a', new_string: 'b' },
+        }),
+        env: { ...process.env, HOME: home, CLAUDE_PROJECT_DIR: project },
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'ignore'],
+      });
+      const jsonl = path.join(home, '.claude', 'audit', 'probe-app.jsonl');
+      if (fs.existsSync(jsonl)) entry = JSON.parse(fs.readFileSync(jsonl, 'utf8').trim());
+    } catch {
+      // A missing or crashing hook is reported by the assertion below.
+    }
+    if (
+      entry.tool === 'Edit' &&
+      entry.input === '/repo/src/app.ts' &&
+      entry.session === 'probe-session'
+    ) {
+      pass(`hook-logs[${tier}]: scaffolded audit hook logs tool, path and session`);
+    } else {
+      fail(`hook-logs[${tier}]: scaffolded audit hook did not log the Edit`);
+    }
+    fs.removeSync(root);
+  }
+
+  // Tier L destructive-command check (DEC-40): stdin, permission prompt, no block.
+  const dirL = path.join(OUTPUT_DIR, 'hook-logs-l');
+  const settingsL = JSON.parse(fs.readFileSync(path.join(dirL, '.claude/settings.json'), 'utf8'));
+  const destructive = hookEntries(settingsL, 'PreToolUse').find(
+    (h) => h.matcher === 'Bash' && h.command.includes('DROP DATABASE'),
+  );
+  const runCheck = (command) =>
+    execFileSync('bash', ['-c', destructive.command], {
+      input: JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'Bash',
+        tool_input: { command },
+      }),
+      encoding: 'utf8',
+    });
+  if (!destructive) {
+    fail('hook-logs[l]: destructive-command check missing from PreToolUse Bash');
+  } else {
+    const hit = runCheck('psql -c "DROP DATABASE prod"');
+    const miss = runCheck('ls -la');
+    let decision = null;
+    try {
+      const out = JSON.parse(hit);
+      decision = out.decision === undefined ? out.hookSpecificOutput?.permissionDecision : null;
+    } catch {
+      // No or malformed output is reported below.
+    }
+    if (decision === 'ask' && miss.trim() === '') {
+      pass(
+        'hook-logs[l]: destructive-command check asks on psql -c "DROP DATABASE", silent otherwise',
+      );
+    } else {
+      fail('hook-logs[l]: destructive-command check does not ask', hit.trim() || '(no output)');
+    }
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -5088,6 +5228,7 @@ async function main() {
   await scenarioMergeGate();
   await scenarioPrPromotion();
   await scenarioPromotionCommands();
+  await scenarioHookLogs();
 
   // ── Summary ────────────────────────────────────────────────────────────────
 

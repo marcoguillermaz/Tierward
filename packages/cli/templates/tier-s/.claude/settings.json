@@ -70,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) WRITE $CLAUDE_TOOL_INPUT_FILE_PATH\" >> /tmp/claude-audit.log",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-audit-log.mjs\"",
             "async": true
           }
         ]
@@ -103,7 +103,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat >> /tmp/claude-instructions-$(date +%Y%m%d).log 2>/dev/null || true",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-audit-log.mjs\"",
             "async": true
           }
         ]
