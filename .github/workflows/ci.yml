@@ -57,7 +57,23 @@ jobs:
       - name: Prettier
         run: npx --prefix packages/cli prettier --check packages/cli/src/ packages/cli/test/
 
-      - name: Dependency audit
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    # Own job, not a step of "Lint & format": that job is a required check,
+    # so an advisory published against an existing dependency would fail
+    # every PR. This job is not required. Dependency review
+    # (dependency-review.yml) covers the PR-level case: it flags only the
+    # dependencies the PR itself adds or changes.
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # npm audit reads the lockfile; no install needed.
+      - name: npm audit
         run: npm audit --audit-level=moderate --prefix packages/cli
 
   unit-tests:
