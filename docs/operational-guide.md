@@ -410,11 +410,11 @@ You can start at Tier 0 or S and escalate. Claude notifies you when scope expand
 
 ### Changing tier
 
-There is no in-place tier switch yet. `upgrade` keeps the tier you have, and running `init` again in "Existing project" mode skips every file that already exists, so the old pipeline stays. To move to another tier, scaffold again on a branch and let git show what changed:
+There is no in-place tier switch yet. `upgrade` keeps the tier you have, and running `init` again in "Existing project" mode skips the Tierward files that already exist, so the old pipeline and settings stay. To move to another tier, scaffold again on a branch and let git show what changed:
 
-1. Commit your work, then create a branch, for example `git switch -c tierward-tier-m`.
-2. Run `npx tierward init`, choose "New project", and answer the wizard with the new tier. It rewrites the Tierward files (`CLAUDE.md`, `.claude/settings.json`, `.claude/rules/`, the pipeline) with the new tier's versions and adds the files that tier needs.
-3. Run `git diff` and bring back what you had added to those files: project notes in `CLAUDE.md`, your own rules, permission changes. `git checkout -p HEAD -- <file>` restores them hunk by hunk.
+1. Commit everything, then create a branch, for example `git switch -c tierward-tier-m`. Git is your only backup for the next step.
+2. Run `npx tierward init`, choose "New project", and answer the wizard with the new tier. It overwrites every file it generates, not only the Tierward ones: `CLAUDE.md`, `README.md`, `.gitignore`, `.pre-commit-config.yaml`, `.claude/settings.json`, `.claude/rules/`, the pipeline, the skills and the files under `docs/`. Then it adds what the new tier needs.
+3. Review the whole `git diff` and bring back everything of yours: the project README, ignore entries, extra pre-commit hooks, filled-in docs, notes in `CLAUDE.md`, permission changes. `git checkout HEAD -- <file>` restores a whole file, `git checkout -p HEAD -- <file>` one hunk at a time.
 4. Coming from Tier 0, delete `GETTING_STARTED.md` if you no longer need it. Commit, then merge the branch.
 
 ---
