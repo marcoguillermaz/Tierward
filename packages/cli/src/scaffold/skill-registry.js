@@ -12,14 +12,47 @@
 export const NATIVE_STACKS = ['swift', 'kotlin', 'rust', 'dotnet', 'java'];
 
 /**
+ * How work reaches `main`:
+ *   staging - merge into `staging`, smoke-test there, then merge `staging` into `main`
+ *   direct  - merge the work branch into `main` locally, no staging
+ *   pr      - push the work branch and merge a pull request into `main`, no staging
+ */
+export const PROMOTION_MODES = ['staging', 'direct', 'pr'];
+
+/**
+ * The project's promotion mode. Chosen in the wizard or in CONTEXT.md
+ * (`scaffold_options.promotion`); when absent, derived from the stack:
+ * native stacks have no staging server, so they default to `direct`.
+ */
+export function promotionMode(config) {
+  if (config.promotion !== undefined) return config.promotion;
+  return NATIVE_STACKS.includes(config.techStack) ? 'direct' : 'staging';
+}
+
+/**
+ * Why `config.promotion` cannot be scaffolded, or null when it can.
+ * `staging` assumes a staging server, which native stacks do not have.
+ */
+export function promotionError(config) {
+  if (config.promotion === undefined) return null;
+  if (!PROMOTION_MODES.includes(config.promotion)) {
+    return `Unknown promotion mode "${config.promotion}" (expected one of: ${PROMOTION_MODES.join(', ')})`;
+  }
+  if (config.promotion === 'staging' && NATIVE_STACKS.includes(config.techStack)) {
+    return `Promotion mode "staging" is not available for the ${config.techStack} stack (no staging server); use "direct" or "pr"`;
+  }
+  return null;
+}
+
+/**
  * Remote-governance profile switch.
  * When false, the scaffold strips every staging-branch reference from the
  * payload (pipelines, hooks, rules, skills, config): the project promotes
- * work branches directly to `main` behind the same Promotion gates.
- * Derived, not asked in the wizard: native stacks have no staging server.
+ * work branches to `main` behind the same Promotion gates, either by a local
+ * merge (`direct`) or by a pull request (`pr`).
  */
 export function remoteGovernanceEnabled(config) {
-  return !NATIVE_STACKS.includes(config.techStack);
+  return promotionMode(config) === 'staging';
 }
 
 /**

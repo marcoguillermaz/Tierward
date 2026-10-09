@@ -4493,6 +4493,139 @@ async function scenarioScaffoldedYaml() {
   }
 }
 
+// The promotion setting reaches the scaffold from `--answers` and from
+// CONTEXT.md, and an invalid value stops `init` before any file is written.
+async function scenarioPromotionSetting() {
+  section('Promotion setting - reaches the scaffold, invalid values refused');
+
+  const CLI = path.resolve(__dirname, '../../src/index.js');
+  const webAnswers = {
+    mode: 'greenfield',
+    tier: 'm',
+    projectName: 'Promotion Project',
+    description: 'Promotion setting passthrough',
+    techStack: 'node-ts',
+    testCommand: 'npx vitest run',
+    devCommand: 'npm run dev',
+    hasApi: true,
+    hasDatabase: true,
+    hasFrontend: false,
+    hasPrd: false,
+    includePreCommit: true,
+    includeGithub: true,
+  };
+  const directMerge = 'git merge feature/block-name --no-ff && git push origin main';
+
+  // --answers: `direct` on a web stack drops the staging steps
+  const answersDir = path.join(OUTPUT_DIR, 'promotion-answers-direct');
+  fs.removeSync(answersDir);
+  fs.ensureDirSync(answersDir);
+  try {
+    execFileSync(
+      'node',
+      [CLI, 'init', '--answers', JSON.stringify({ ...webAnswers, promotion: 'direct' })],
+      {
+        cwd: answersDir,
+        stdio: 'pipe',
+      },
+    );
+    const pipeline = fs.readFileSync(path.join(answersDir, '.claude/rules/pipeline.md'), 'utf8');
+    if (!/staging/i.test(pipeline) && pipeline.includes(directMerge)) {
+      pass('promotion[--answers direct/web/m]: pipeline promotes straight to main, no staging');
+    } else {
+      fail('promotion[--answers direct/web/m]: setting did not reach the scaffold');
+    }
+  } catch (err) {
+    fail(
+      'promotion[--answers direct/web/m]: init failed',
+      err.stderr?.toString().trim().split('\n')[0],
+    );
+  }
+
+  // CONTEXT.md: scaffold_options.promotion is mapped into the init flow
+  const contextDir = path.join(OUTPUT_DIR, 'promotion-context-direct');
+  fs.removeSync(contextDir);
+  fs.ensureDirSync(contextDir);
+  fs.writeFileSync(
+    path.join(contextDir, 'CONTEXT.md'),
+    [
+      '---',
+      'schema_version: 1',
+      "generated_at: '2026-10-09T10:00:00Z'",
+      'generated_by: context-builder',
+      'generated_by_version: 2.1.0',
+      'project:',
+      '  name: promotion-context',
+      '  description: Promotion setting from CONTEXT.md',
+      '  mode: greenfield',
+      'stack:',
+      '  primary: node-ts',
+      'commands:',
+      '  install: npm install',
+      '  test: npx vitest run',
+      'tier:',
+      '  selected: m',
+      '  rationale: Feature blocks',
+      'scaffold_options:',
+      '  include_pre_commit: true',
+      '  include_github: true',
+      '  promotion: direct',
+      '---',
+      '',
+      'body',
+      '',
+    ].join('\n'),
+  );
+  try {
+    execFileSync('node', [CLI, 'init'], { cwd: contextDir, stdio: 'pipe' });
+    const pipeline = fs.readFileSync(path.join(contextDir, '.claude/rules/pipeline.md'), 'utf8');
+    if (!/staging/i.test(pipeline) && pipeline.includes(directMerge)) {
+      pass('promotion[CONTEXT.md direct/web/m]: setting reaches the scaffold');
+    } else {
+      fail('promotion[CONTEXT.md direct/web/m]: setting did not reach the scaffold');
+    }
+  } catch (err) {
+    fail(
+      'promotion[CONTEXT.md direct/web/m]: init failed',
+      err.stderr?.toString().trim().split('\n')[0],
+    );
+  }
+
+  // `staging` on a native stack, or an unknown value: refused, nothing written
+  for (const [label, override] of [
+    ['staging/swift', { techStack: 'swift', testCommand: 'swift test', promotion: 'staging' }],
+    ['unknown/web', { promotion: 'merge' }],
+  ]) {
+    const dir = path.join(OUTPUT_DIR, `promotion-invalid-${label.replace('/', '-')}`);
+    fs.removeSync(dir);
+    fs.ensureDirSync(dir);
+    let refused = false;
+    let message = '';
+    try {
+      execFileSync(
+        'node',
+        [CLI, 'init', '--answers', JSON.stringify({ ...webAnswers, ...override })],
+        {
+          cwd: dir,
+          stdio: 'pipe',
+        },
+      );
+    } catch (err) {
+      refused = true;
+      message = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+    }
+    const written = fs.existsSync(path.join(dir, '.claude'));
+    if (refused && /promotion mode/i.test(message) && !written) {
+      pass(`promotion[invalid ${label}]: init refused before writing any file`);
+    } else {
+      fail(
+        `promotion[invalid ${label}]: expected a refusal with no files written`,
+        `refused=${refused} written=${written}`,
+      );
+    }
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -4556,6 +4689,7 @@ async function main() {
   await scenarioTeamSettings();
   await scenarioMCPServer();
   await scenarioScaffoldedYaml();
+  await scenarioPromotionSetting();
 
   // ── Summary ────────────────────────────────────────────────────────────────
 

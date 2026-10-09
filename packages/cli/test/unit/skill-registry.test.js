@@ -3,9 +3,13 @@ import assert from 'node:assert/strict';
 import {
   NATIVE_STACKS,
   SKILL_REGISTRY,
+  PROMOTION_MODES,
   getSkillsToRemove,
   getActiveSkills,
   getCheatsheetSkillsToRemove,
+  promotionMode,
+  promotionError,
+  remoteGovernanceEnabled,
 } from '../../src/scaffold/skill-registry.js';
 
 // ---------------------------------------------------------------------------
@@ -15,6 +19,64 @@ import {
 describe('NATIVE_STACKS', () => {
   it('contains the 5 expected native stacks', () => {
     assert.deepEqual(NATIVE_STACKS, ['swift', 'kotlin', 'rust', 'dotnet', 'java']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Promotion mode
+// ---------------------------------------------------------------------------
+
+describe('promotionMode', () => {
+  it('lists the three modes', () => {
+    assert.deepEqual(PROMOTION_MODES, ['staging', 'direct', 'pr']);
+  });
+
+  it('defaults to staging on web stacks and direct on native stacks', () => {
+    for (const techStack of ['node-ts', 'node-js', 'python', 'ruby', 'go', 'other']) {
+      assert.equal(promotionMode({ techStack }), 'staging', techStack);
+      assert.equal(remoteGovernanceEnabled({ techStack }), true, techStack);
+    }
+    for (const techStack of NATIVE_STACKS) {
+      assert.equal(promotionMode({ techStack }), 'direct', techStack);
+      assert.equal(remoteGovernanceEnabled({ techStack }), false, techStack);
+    }
+  });
+
+  it('defaults to staging when the stack is unknown (from-context flow)', () => {
+    assert.equal(promotionMode({}), 'staging');
+  });
+
+  it('an explicit setting overrides the stack default', () => {
+    assert.equal(promotionMode({ techStack: 'node-ts', promotion: 'pr' }), 'pr');
+    assert.equal(promotionMode({ techStack: 'node-ts', promotion: 'direct' }), 'direct');
+    assert.equal(promotionMode({ techStack: 'swift', promotion: 'pr' }), 'pr');
+  });
+
+  it('remote governance (staging steps) is on only in staging mode', () => {
+    assert.equal(remoteGovernanceEnabled({ techStack: 'node-ts', promotion: 'staging' }), true);
+    assert.equal(remoteGovernanceEnabled({ techStack: 'node-ts', promotion: 'direct' }), false);
+    assert.equal(remoteGovernanceEnabled({ techStack: 'node-ts', promotion: 'pr' }), false);
+  });
+});
+
+describe('promotionError', () => {
+  it('accepts an absent setting and every mode on a web stack', () => {
+    assert.equal(promotionError({ techStack: 'node-ts' }), null);
+    for (const promotion of PROMOTION_MODES) {
+      assert.equal(promotionError({ techStack: 'node-ts', promotion }), null, promotion);
+    }
+  });
+
+  it('rejects an unknown mode', () => {
+    assert.match(promotionError({ techStack: 'node-ts', promotion: 'merge' }), /Unknown/);
+  });
+
+  it('rejects staging on a native stack, accepts direct and pr', () => {
+    for (const techStack of NATIVE_STACKS) {
+      assert.match(promotionError({ techStack, promotion: 'staging' }), /not available/);
+      assert.equal(promotionError({ techStack, promotion: 'direct' }), null);
+      assert.equal(promotionError({ techStack, promotion: 'pr' }), null);
+    }
   });
 });
 

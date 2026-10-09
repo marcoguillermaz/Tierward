@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import {
   NATIVE_STACKS,
+  promotionError,
   remoteGovernanceEnabled,
   getSkillsToRemove,
   getCheatsheetSkillsToRemove,
@@ -55,6 +56,7 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
   if (tier === '0') {
     return scaffoldTier0(targetDir, config, templatesDir);
   }
+  assertPromotion(config);
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
 
@@ -156,6 +158,12 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
 
   // Post-process settings.json: replace default permissions.allow with stack-aware permissions
   await patchSettingsPermissions(targetDir, config);
+}
+
+// Refuse an invalid promotion mode before any file is written.
+function assertPromotion(config) {
+  const error = promotionError(config);
+  if (error) throw new Error(error);
 }
 
 /**
@@ -343,6 +351,7 @@ async function copyTemplateDir(
  * Used for in-place and from-context init modes to avoid overwriting the user's existing files.
  */
 export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
+  assertPromotion(config);
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
 
