@@ -59,7 +59,7 @@ and should be reviewed by a human before merging to shared branches.
 | Test gate | Claude cannot complete a task until \`${config.testCommand || 'npm test'}\` passes (Stop hook) |
 | Audit log | Every tool use is logged to \`~/.claude/audit/\` |
 | Secret scanning | Pre-commit hook blocks accidental credential commits |
-| CODEOWNERS | PRs that change \`.claude/\` request tech lead review; mandatory only with branch protection requiring code owner review |
+| CODEOWNERS | PRs that change \`.claude/\` request tech lead review (public repos, or private repos on paid GitHub plans); mandatory only with branch protection requiring code owner review |
 
 ---
 
