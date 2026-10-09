@@ -4,6 +4,10 @@
 # Run manually: pre-commit run --all-files
 # Update hooks: pre-commit autoupdate
 
+# A plain `pre-commit install` installs both hook types (needs pre-commit 2.18.0+).
+# The AI commit audit below runs at the commit-msg stage.
+default_install_hook_types: [pre-commit, commit-msg]
+
 repos:
   # ─── General file hygiene ───────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -33,10 +37,14 @@ repos:
     hooks:
       - id: ai-commit-review-reminder
         name: AI commit — verify human review
-        entry: bash -c 'git log -1 --format="%B" | grep -q "Co-authored-by: Claude" && echo "⚠️  AI-assisted commit detected. Ensure a human has reviewed the changes before merging." || true'
+        # commit-msg hooks receive the message file as $1 (`--` fills $0);
+        # `git log -1` would read the previous commit.
+        entry: >-
+          bash -c 'grep -qiE "^Co-authored-by: Claude" "$1" && echo "⚠️  AI-assisted commit detected. Ensure a human has reviewed the changes before merging." || true' --
         language: system
-        pass_filenames: false
         stages: [commit-msg]
+        # pre-commit hides the output of a passing hook unless verbose is set.
+        verbose: true
 
   # ─── Add your language-specific hooks below ─────────────────────────
   # JavaScript / TypeScript example:
