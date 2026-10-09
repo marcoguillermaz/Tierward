@@ -1,0 +1,33 @@
+name: Scheduled dependency audit
+
+# Weekly audit of every lockfile in the repo, so advisories published
+# against existing dependencies surface without failing PRs (the per-PR
+# audit in ci.yml is not a required check). Scheduled and manual runs
+# start only from the workflow file on the default branch.
+
+on:
+  schedule:
+    - cron: "0 5 * * 1" # Monday 05:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [packages/cli, packages/vscode-extension, site]
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # npm audit reads the lockfile; no install needed.
+      - name: npm audit
+        run: npm audit --audit-level=moderate --prefix ${{ matrix.package }}
