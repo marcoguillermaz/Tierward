@@ -150,7 +150,7 @@ npx tierward validate-context              # CI gate: exits 0 on pass, 1 on fail
 
 When `CONTEXT.md` is present in the cwd, `init` reads it and scaffolds without asking anything else. Pass `--ignore-context` to fall back to the prompt-based flow.
 
-`CONTEXT.md` is a schema-validated project context file: Zod schema, 16 MUST PASS structural checks, plus eight inter-field constraints (tier-0 forces scaffold options off, mode invariants, dotted-path keys, `design_system_name` required when `has_design_system=true`, features block forbidden on tier 0/S, and so on).
+`CONTEXT.md` is a schema-validated project context file: Zod schema, 16 MUST PASS structural checks, plus 9 inter-field constraints (tier-0 forces scaffold options off, mode invariants, dotted-path keys, `design_system_name` required when `has_design_system=true`, features block forbidden on tier 0/S, `scaffold_options.promotion` forbidden on tier 0 and `staging` refused on native stacks, and so on).
 
 Greenfield gets a PM-friendly interview. Existing repos go through three-phase inference: algorithmic detection wrapping `detect-stack`, optional LLM extraction, hybrid PM review. The first question routes you to a PM or developer flow. As of v1.24.0, the developer flow reuses the legacy `init` wizard's technical questions and auto-derives `tier.rationale` from `teamSize` + `workScope`, so devs skip the prose prompts.
 
@@ -186,6 +186,7 @@ For experienced users, the wizard asks:
   - "Track a PRD per feature block?" -> determines if `docs/prd/prd.md` is referenced in context review
   - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-sonnet-4-6` (override with any current model id)
 - Whether to include pre-commit config and `.github/` files
+- How changes reach `main`: through a staging branch, by a direct merge, or by a pull request (see [4d](#4d-how-changes-reach-main-promotion-modes)). Native stacks get the last two only.
 
 Output: a fully scaffolded project directory with `CLAUDE.md`, pipeline rules, settings, and docs - ready to open in Claude Code.
 
@@ -237,6 +238,27 @@ The CLI:
 8. Optionally installs pre-commit hooks inline.
 
 **After running:** open Claude Code with `claude`. Claude detects `CONTEXT_IMPORT.md` and runs the Discovery pass automatically - reads your codebase, generates `CLAUDE.md` content, and asks about anything it could not infer from the code. See section 5.
+
+---
+
+### 4d. How changes reach `main`: promotion modes
+
+The greenfield and in-place wizards ask **"How do changes reach `main`?"** The answer decides how the pipeline promotes a finished block or fix. In `CONTEXT.md` the same setting is `scaffold_options.promotion`; when it is absent, the stack default applies.
+
+| Mode | What the pipeline does | Default for |
+| --- | --- | --- |
+| `staging` | Merges the work branch into `staging`, smoke-tests there, then merges `staging` into `main`. | Web stacks (Node.js, Python, Go, Ruby, other) |
+| `direct` | Merges the work branch into `main` locally and pushes it. No staging branch. | Native stacks (Swift, Kotlin, Rust, .NET, Java) |
+| `pr` | Pushes the work branch, opens a pull request to `main` and merges it. No staging branch and no push to `main`. | - |
+
+Native stacks have no staging server, so the wizard offers them `direct` and `pr` only, and the `CONTEXT.md` schema refuses `staging` for them.
+
+Whatever the mode, while a block or fix session is open a promotion waits for your bare `Promote`, one promotion per keyword. The governance gate counts a push to a protected branch and a pull request merge (`gh pr merge`, or a GitHub MCP `merge_pull_request` tool) as promotions. It does not see a merge made through the REST API (`gh api .../pulls/<n>/merge`).
+
+- **`staging` and `direct`**: the push to `main` (on Tier L, also the push to `staging`) is an `ask` rule in `.claude/settings.json`. After your `Promote`, Claude Code still asks for permission before the push runs, in every permission mode.
+- **`pr`**: the agent pushes the work branch and opens the pull request with `gh pr create` (or you open it in the GitHub web UI); neither is a promotion. The merge, `gh pr merge --merge`, needs your `Promote` and then the permission prompt, since `gh pr merge` is an `ask` rule. Opening, reading and checking pull requests runs without a prompt. Every push to `main` is denied, refspec forms such as `HEAD:main` included. The work branch stays out of the step-1 cleanup gate, because the pull request needs it, and is removed at a short cleanup confirmation after the merge.
+
+Pick `pr` when changes should reach `main` only through a pull request and nothing else stops a push: for example, a private repository on a personal GitHub Free account, where branch protection is not available. The GitHub CLI (`gh`) is optional; without it, open and merge the pull request in the GitHub web UI.
 
 ---
 
@@ -624,7 +646,7 @@ Permissions and hooks. Five hooks are pre-configured in Tier M/L (three in Tier 
 | Python            | git, python, pip, uv, curl          | twine upload                                  |
 | Go                | git, go, curl                       | -                                             |
 
-> **Git-deploy hosts (Cloudflare Pages, Vercel, Netlify, Render):** these platforms deploy by watching pushes to `main`. The default deny `Bash(git push origin main*)` is intentional — it prevents accidental direct pushes. The correct flow is `feature/*` → PR → merge to `main`; the host picks up the merge commit automatically. Do **not** relax the deny to work around it.
+> **Git-deploy hosts (Cloudflare Pages, Vercel, Netlify, Render):** these platforms deploy by watching pushes to `main`. In `staging` and `direct` mode a push to `main` waits for your `Promote` and then a permission prompt (`Bash(git push origin main*)` is an `ask` rule), so it never happens by accident. If the host should only ever deploy reviewed code, use the `pr` promotion mode ([4d](#4d-how-changes-reach-main-promotion-modes)): `feature/*` → PR → merge to `main`, the host picks up the merge commit, and every push to `main` is denied. Do **not** move the push to `main` into `permissions.allow`.
 
 ---
 
@@ -1475,7 +1497,7 @@ Yes. All init commands accept `--answers <path>` that bypasses every wizard prom
 npx tierward init --answers ./answers.json
 ```
 
-Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy one as a starting point.
+There are 10 example fixtures in `packages/cli/test/fixtures/wizard-answers/`. Copy one as a starting point.
 
 ---
 

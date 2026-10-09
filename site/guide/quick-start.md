@@ -17,7 +17,7 @@ Tierward's enforcement layer — Stop hook, STOP gates, audit skills — is buil
 npx tierward init
 ```
 
-The wizard detects your project state and asks a few questions: team size, tech stack, which features you have (API, database, frontend, design system). It then scaffolds the right pipeline, rules, and audit skills for your setup.
+The wizard detects your project state and asks a few questions: team size, tech stack, which features you have (API, database, frontend, design system), and how changes reach `main` (a staging branch, a direct merge, or a pull request). It then scaffolds the right pipeline, rules, and audit skills for your setup.
 
 Three paths are available:
 
