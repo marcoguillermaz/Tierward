@@ -17,7 +17,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import { load as loadYaml } from 'js-yaml';
-import { scaffoldTier, scaffoldTierSafe } from '../../src/scaffold/index.js';
+import { scaffoldTier, scaffoldTierSafe, PR_MODE_PUSH_DENY } from '../../src/scaffold/index.js';
 import { generateClaudeMd } from '../../src/generators/claude-md.js';
 import { generateReadme } from '../../src/generators/readme.js';
 import {
@@ -2002,10 +2002,12 @@ async function scenarioRubricScore() {
         rubricFail('D7', `[${name}] deny missing force-push block`);
       }
 
-      if (Array.isArray(deny) && deny.some((d) => d.includes('push origin main'))) {
-        rubricPass('D7', `[${name}] deny blocks push to main`);
+      // A push to main is denied (`pr` mode) or asks for permission (DEC-7)
+      const guarded = [...(deny || []), ...(settings.permissions?.ask || [])];
+      if (guarded.some((d) => d.includes('push origin main'))) {
+        rubricPass('D7', `[${name}] deny or ask guards push to main`);
       } else {
-        rubricFail('D7', `[${name}] deny missing push-to-main block`);
+        rubricFail('D7', `[${name}] no deny or ask rule guards push to main`);
       }
     } else {
       rubricFail('D7', `[${name}] settings.json missing`);
@@ -4667,6 +4669,143 @@ async function scenarioMergeGate() {
   }
 }
 
+// Approximates how Claude Code matches a Bash permission rule
+// (code.claude.com/docs/en/permissions, "Wildcard patterns" and "Compound
+// commands"): `*` matches any text, a trailing ` *` or `:*` that is the only
+// wildcard also matches the bare command, and a rule applies to each part of a
+// compound command. A test oracle, not Claude Code's own engine.
+function bashRuleMatches(rule, command) {
+  const m = /^Bash\((.*)\)$/.exec(rule);
+  if (!m) return false;
+  let pattern = m[1];
+  let bareToo = false;
+  if (pattern.endsWith(':*')) {
+    pattern = pattern.slice(0, -2);
+    bareToo = true;
+  } else if (pattern.endsWith(' *') && pattern.indexOf('*') === pattern.length - 1) {
+    pattern = pattern.slice(0, -2);
+    bareToo = true;
+  }
+  const body = pattern
+    .split('*')
+    .map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+    .join('.*');
+  const re = new RegExp(`^${body}${bareToo ? '( .*)?' : ''}$`);
+  return command.split(/\s*(?:&&|\|\||;|\|)\s*/).some((part) => re.test(part.trim()));
+}
+
+// Every git/gh command the pipeline and the cheatsheet show for pushing,
+// merging, pulling or opening a PR.
+function promotionStepCommands(dir) {
+  const commands = new Set();
+  for (const rel of ['.claude/rules/pipeline.md', '.claude/cheatsheet.md']) {
+    const file = path.join(dir, rel);
+    if (!fs.existsSync(file)) continue;
+    for (const [, code] of fs.readFileSync(file, 'utf8').matchAll(/`([^`\n]+)`/g)) {
+      if (/^(git|gh) /.test(code) && /\b(push|merge|pull|pr create)\b/.test(code)) {
+        commands.add(code);
+      }
+    }
+  }
+  return [...commands];
+}
+
+// Pushes that land on `main` without a pull request; `pr` mode denies each one.
+const PR_MODE_MAIN_PUSHES = [
+  'git push origin main',
+  'git push -u origin main',
+  'git push origin HEAD:main',
+  'git push origin feature/x:main',
+  'git push origin +main',
+  'git push origin HEAD:refs/heads/main',
+  'git push --force-with-lease origin main',
+  'git push origin HEAD:main --force',
+  'git status && git push origin HEAD:main',
+];
+
+// P4f: no command a promotion step tells the agent to run is refused by a deny
+// rule of the same tier and mode, and the gate refuses exactly the promotions
+// (a push naming a protected branch, a PR merge). A checkout of a protected
+// branch followed by a push that names no branch would slip past both.
+async function scenarioPromotionCommands() {
+  section('Promotion commands - not denied by the tier settings, gated only when promoting');
+
+  const isPromotion = (cmd) =>
+    (/\bgh pr merge\b/.test(cmd) && !cmd.includes('--disable-auto')) ||
+    /\bgit push( -\S+)* origin (main|staging)(\s|$)/.test(cmd);
+  const bareProtectedPush = /git checkout (main|staging)\b.*&& git push\s*$/;
+  const profiles = [
+    ['web-staging', {}],
+    ['web-direct', { promotion: 'direct' }],
+    ['web-pr', { promotion: 'pr' }],
+    ['swift-direct', { techStack: 'swift', testCommand: 'swift test', typeCheckCommand: '' }],
+    [
+      'swift-pr',
+      { techStack: 'swift', testCommand: 'swift test', typeCheckCommand: '', promotion: 'pr' },
+    ],
+  ];
+
+  for (const tier of ['s', 'm', 'l']) {
+    for (const [profile, overrides] of profiles) {
+      const label = `promotion-commands[${profile}/${tier}]`;
+      const dir = await scaffold(`promotion-commands-${profile}-${tier}`, tier, {
+        ...BASE,
+        ...overrides,
+        tier,
+        isDiscovery: false,
+      });
+      const settingsText = fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8');
+      const { deny, ask = [] } = JSON.parse(settingsText).permissions;
+      const mode = overrides.promotion || (profile.startsWith('swift') ? 'direct' : 'staging');
+      const pushAsk = ['Bash(git push origin main*)'];
+      if (mode === 'staging' && tier === 'l') pushAsk.push('Bash(git push origin staging*)');
+      const permissionProblems =
+        mode === 'pr'
+          ? [
+              ...PR_MODE_PUSH_DENY.filter((rule) => !deny.includes(rule)),
+              ...ask.filter((rule) => rule.startsWith('Bash(git push')),
+              ...PR_MODE_MAIN_PUSHES.filter((cmd) => !deny.some((r) => bashRuleMatches(r, cmd))),
+            ]
+          : [
+              ...pushAsk.filter((rule) => !ask.includes(rule)),
+              ...pushAsk.filter((rule) => deny.includes(rule)),
+              ...(mode === 'direct' && /staging/i.test(settingsText) ? ['staging rule left'] : []),
+            ];
+      if (permissionProblems.length === 0) {
+        pass(`${label}: settings.json push rules fit the ${mode} mode`);
+      } else {
+        fail(`${label}: settings.json push rules`, permissionProblems.join(' | '));
+      }
+      const commands = promotionStepCommands(dir);
+      if (commands.length === 0) {
+        fail(`${label}: no promotion command found in the pipeline`);
+        continue;
+      }
+      const denied = commands.filter((cmd) => deny.some((rule) => bashRuleMatches(rule, cmd)));
+      if (denied.length === 0) {
+        pass(`${label}: no promotion step command matches a deny rule (${commands.length})`);
+      } else {
+        fail(`${label}: promotion step refused by a deny rule`, denied.join(' | '));
+      }
+      const bare = commands.filter((cmd) => bareProtectedPush.test(cmd));
+      if (bare.length === 0) {
+        pass(`${label}: every push after a protected checkout names its branch`);
+      } else {
+        fail(`${label}: push without a branch after a protected checkout`, bare.join(' | '));
+      }
+      const wrong = commands.filter(
+        (cmd, i) =>
+          scaffoldedGateDenies(dir, `cmd-${profile}-${tier}-${i}`, cmd) !== isPromotion(cmd),
+      );
+      if (wrong.length === 0) {
+        pass(`${label}: gate refuses exactly the promotions without Promote`);
+      } else {
+        fail(`${label}: gate decision differs from the promotion oracle`, wrong.join(' | '));
+      }
+    }
+  }
+}
+
 // `pr` promotion mode: no staging, the promotion is a pull request merged
 // behind the gate, and every string-exact rewrite of the transform fired.
 async function scenarioPrPromotion() {
@@ -4877,6 +5016,7 @@ async function main() {
   await scenarioPromotionSetting();
   await scenarioMergeGate();
   await scenarioPrPromotion();
+  await scenarioPromotionCommands();
 
   // ── Summary ────────────────────────────────────────────────────────────────
 

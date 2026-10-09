@@ -1018,8 +1018,8 @@ function interpolate(content, config) {
       /\| 5c - Staging deploy \| Merge to staging \+ smoke test/g,
       '| 5c - Local build | Local build + smoke test',
     );
-    // Tier L settings.json push permission
-    result = result.replace(/^\s*"Bash\(git push origin staging\*\)",\n/m, '');
+    // Tier L settings.json push permission (ask list)
+    result = result.replace(', "Bash(git push origin staging*)"', '');
     // repo-hygiene scan script: protected-branch list
     result = result.replace('PROTECTED_BRANCHES="main staging"', 'PROTECTED_BRANCHES="main"');
     // Tier L CLAUDE.md worktree example comment
@@ -1310,8 +1310,29 @@ function toPullRequestPromotion(content) {
     'which the gate consumes on each push to `main`',
     'which the gate consumes on each pull request merge into `main` (and on any push to `main`)',
   );
+
+  // settings.json: no push reaches `main`, so the push asks become denies,
+  // refspec forms included (`HEAD:main`, `+main`, `refs/heads/main`)
+  result = result.replace(
+    /^ {4}"ask": \["Bash\(git push origin main\*\)"\],\n {4}"deny": \[\n/m,
+    `    "deny": [\n${PR_MODE_PUSH_DENY.map((rule) => `      "${rule}",\n`).join('')}`,
+  );
   return result;
 }
+
+// Deny rules for `pr` mode. Claude Code matches each subcommand of a compound
+// command, and `*` matches any text (code.claude.com/docs/en/permissions).
+export const PR_MODE_PUSH_DENY = [
+  'Bash(git push origin main*)',
+  'Bash(git push * main)',
+  'Bash(git push * main *)',
+  'Bash(git push *:main)',
+  'Bash(git push *:main *)',
+  'Bash(git push * +main)',
+  'Bash(git push * +main *)',
+  'Bash(git push *refs/heads/main)',
+  'Bash(git push *refs/heads/main *)',
+];
 
 // Named export - used by generators/claude-md.js to resolve all template placeholders
 export { interpolate };

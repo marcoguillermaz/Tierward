@@ -12,9 +12,9 @@
       "Bash(npm:*)",
       "Bash(npx:*)"
     ],
+    "ask": ["Bash(git push origin main*)"],
     "deny": [
       "Bash(git push --force*)",
-      "Bash(git push origin main*)",
       "Bash(rm -rf /*)",
       "Bash(npm publish*)",
       "Bash(DROP DATABASE*)"

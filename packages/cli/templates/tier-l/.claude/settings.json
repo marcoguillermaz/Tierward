@@ -17,10 +17,9 @@
       "Bash(curl:*)",
       "Bash(docker:*)"
     ],
+    "ask": ["Bash(git push origin main*)", "Bash(git push origin staging*)"],
     "deny": [
       "Bash(git push --force*)",
-      "Bash(git push origin main*)",
-      "Bash(git push origin staging*)",
       "Bash(rm -rf /*)",
       "Bash(chmod 777*)",
       "Bash(npm publish*)",
