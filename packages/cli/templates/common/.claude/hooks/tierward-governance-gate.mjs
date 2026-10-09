@@ -75,7 +75,9 @@ const FALLBACK_COMMIT_RE = /\bgit\s+([^\n]*\s)?commit(\s|$)/;
 // starting at `start` and stopping after `closer` (`)` or a backtick) when
 // given. Commands inside `$(...)` and backticks are returned alongside the
 // outer ones; the substitution itself becomes an opaque word fragment.
-// Heredoc bodies are skipped. Throws past MAX_DEPTH nested substitutions.
+// Heredoc bodies are skipped. Throws past MAX_DEPTH nested substitutions and
+// on input bash would not run as written (an unterminated quote, substitution
+// or heredoc), so the caller judges it with the whole-text check.
 function parse(src, start, closer, depth) {
   if (depth > MAX_DEPTH) throw new Error('command nesting too deep');
   const commands = [];
@@ -119,6 +121,7 @@ function parse(src, start, closer, depth) {
         j += 1;
       }
     }
+    if (j >= src.length) throw new Error('unterminated double quote');
     return j + 1;
   };
   // Heredoc delimiter after `<<` or `<<-`: a bare or quoted word.
@@ -143,13 +146,15 @@ function parse(src, start, closer, depth) {
   const skipHeredocs = (from) => {
     let j = from;
     for (const { tag, tabs } of heredocs.splice(0)) {
-      while (j < src.length) {
+      let closed = false;
+      while (j < src.length && !closed) {
         const nl = src.indexOf('\n', j);
         const lineEnd = nl === -1 ? src.length : nl;
         const line = src.slice(j, lineEnd);
         j = lineEnd + 1;
-        if ((tabs ? line.replace(/^\t+/, '') : line) === tag) break;
+        closed = (tabs ? line.replace(/^\t+/, '') : line) === tag;
       }
+      if (!closed) throw new Error('unterminated heredoc');
     }
     return Math.min(j, src.length);
   };
@@ -165,11 +170,13 @@ function parse(src, start, closer, depth) {
       i += 2;
     } else if (c === "'") {
       const end = src.indexOf("'", i + 1);
-      const stop = end === -1 ? src.length : end;
-      add(src.slice(i + 1, stop));
-      i = stop + 1;
+      if (end === -1) throw new Error('unterminated single quote');
+      add(src.slice(i + 1, end));
+      i = end + 1;
     } else if (c === '"') {
       i = doubleQuoted(i + 1);
+    } else if (c === '$' && (src[i + 1] === "'" || src[i + 1] === '"')) {
+      i += 1; // `$'...'` and `$"..."`: the quoted text is the word
     } else if (c === '$' && src[i + 1] === '(') {
       i = substitution(i + 2, ')');
     } else if (c === '`') {
@@ -208,6 +215,8 @@ function parse(src, start, closer, depth) {
       i += 1;
     }
   }
+  if (closer) throw new Error('unterminated substitution');
+  if (heredocs.length > 0) throw new Error('unterminated heredoc');
   endCommand();
   return { commands, pos: i };
 }

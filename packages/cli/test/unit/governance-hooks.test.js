@@ -426,6 +426,8 @@ const PUSH_MUST_DENY = [
   'git commit -m "`git push origin main`"',
   'echo $(git push origin main)',
   'git push origin \\\nmain',
+  "git push origin $'main'",
+  'git push origin $"staging"',
 ];
 
 const PUSH_STABLE_ALLOW = [
@@ -478,6 +480,21 @@ describe('governance-gate hook — command segments, promotion gate (D5)', () =>
     // still be gated by the v2.0.1 whole-text test, not allowed.
     const deep = `${'echo "$('.repeat(40)}git push origin main ${')"'.repeat(40)}`;
     assert.ok(blocked(run(deep).stdout), 'unparseable command must fall back, not allow');
+  });
+
+  it('falls back to the whole-text check on unterminated quotes, substitutions and heredocs', () => {
+    for (const cmd of [
+      'git push origin main "',
+      "git push origin main '",
+      'git push origin main $(echo',
+      'git push origin main `echo',
+      'git push origin main && cat <<EOF\nbody',
+    ]) {
+      assert.ok(blocked(run(cmd).stdout), `malformed command must fall back:\n${cmd}`);
+    }
+    // A malformed command whose push is only in quoted text is judged like v2.0.1.
+    const quoted = 'git commit -m "git push origin main ';
+    assert.equal(blocked(run(quoted).stdout), v201DeniesPush(quoted));
   });
 });
 
