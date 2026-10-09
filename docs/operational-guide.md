@@ -1,6 +1,6 @@
 # tierward - Operational Guide
 
-**Version**: 2.0.1
+**Version**: 2.0.2
 **Audience**: Builder PMs, tech leads, and senior developers using Claude Code - from first exploration to structured, reviewable delivery
 **Format**: Reference + step-by-step. Read section 1 and your target tier section first, then use the rest as a lookup.
 
@@ -69,13 +69,7 @@ You don't need a full pipeline yet. You need to get started, understand what Cla
 
 What you get: three files, one hard constraint (tests must pass before Claude declares done), and a `GETTING_STARTED.md` that walks you through the first session. Nothing else.
 
-When you're ready for more structure - usually after a few sessions, once Claude Code is part of the daily workflow:
-
-```bash
-npx tierward upgrade --tier=s
-```
-
-This adds the Fast Lane pipeline non-destructively. Your existing files are not overwritten.
+When you're ready for more structure, usually after a few sessions once Claude Code is part of the daily workflow, move to Tier S by re-running `init` on a branch, as described in [Changing tier](#changing-tier).
 
 **You do not need to understand the full tier model to start.** Read `GETTING_STARTED.md` and sections 4 and 6 (Tier 0) of this guide.
 
@@ -277,7 +271,7 @@ On every Claude Code session, Claude reads this file first. If the status is `PE
 
 ## 6. The four pipeline tiers
 
-The pipeline is the sequence of phases Claude follows for every development task. You choose the tier when running `init`. Change it later with: `npx tierward upgrade --tier=m`.
+The pipeline is the sequence of phases Claude follows for every development task. You choose the tier when running `init`. To change it later, see [Changing tier](#changing-tier).
 
 ### Tier 0 - Discovery
 
@@ -299,15 +293,7 @@ The pipeline is the sequence of phases Claude follows for every development task
 2. Read `GETTING_STARTED.md` for what to expect.
 3. Run `claude` from the project root.
 
-**Upgrading from Tier 0:**
-
-```bash
-npx tierward upgrade --tier=s   # adds branch discipline + commit rules
-npx tierward upgrade --tier=m   # adds phased pipeline + review gates + docs
-npx tierward upgrade --tier=l   # adds full governance + audit skills
-```
-
-Upgrade is non-destructive - it adds new files without overwriting your existing `CLAUDE.md` or `settings.json`.
+**Moving up from Tier 0:** Tier S adds branch discipline and commit rules, Tier M the phased pipeline, review gates and docs, Tier L full governance and the audit skills. [Changing tier](#changing-tier) explains how to switch.
 
 ---
 
@@ -421,6 +407,15 @@ When in doubt:
 - **Redesign a domain**, make architectural decisions, add a major new entity, or work with a team of 3+ -> Tier L
 
 You can start at Tier 0 or S and escalate. Claude notifies you when scope expands beyond the current tier.
+
+### Changing tier
+
+There is no in-place tier switch yet. `upgrade` keeps the tier you have, and running `init` again in "Existing project" mode skips the Tierward files that already exist, so the old pipeline and settings stay. To move to another tier, scaffold again on a branch and let git show what changed:
+
+1. Commit everything, then create a branch, for example `git switch -c tierward-tier-m`. Git is your only backup for the next step.
+2. Run `npx tierward init`, choose "New project", and answer the wizard with the new tier. It overwrites every file it generates, not only the Tierward ones: `CLAUDE.md`, `README.md`, `.gitignore`, `.pre-commit-config.yaml`, `.claude/settings.json`, `.claude/rules/`, the pipeline, the skills and the files under `docs/`. Then it adds what the new tier needs.
+3. Review the whole `git diff` and bring back everything of yours: the project README, ignore entries, extra pre-commit hooks, filled-in docs, notes in `CLAUDE.md`, permission changes. `git checkout HEAD -- <file>` restores a whole file, `git checkout -p HEAD -- <file>` one hunk at a time.
+4. Coming from Tier 0, delete `GETTING_STARTED.md` if you no longer need it. Commit, then merge the branch.
 
 ---
 
@@ -1195,13 +1190,13 @@ Imperative mood, under 72 characters. Scope is optional but encouraged.
 ### Upgrading
 
 ```bash
-npx tierward upgrade
-npx tierward upgrade --tier=m            # promote to higher tier
+npx tierward upgrade                     # refresh safe files, show diffs for the rest
+npx tierward upgrade --dry-run           # same report, writes nothing
 npx tierward upgrade --anthropic         # show diff for Anthropic-influenced files (dry-run)
 npx tierward upgrade --anthropic --apply # write the diff with .bak backup
 ```
 
-Non-destructive files are updated to the latest template version (rules, context-review, files-guide, PR template). Files containing your customizations (`CLAUDE.md`, `pipeline.md`, `settings.json`, `SKILL.md` files) are flagged for manual review.
+`upgrade` writes only the files you are not expected to edit, today `.claude/rules/output-style.md`. It saves a timestamped `.bak` before replacing one, and adds it if it is missing. The files the scaffold filled in with your project's values, or that you are meant to edit (`.claude/rules/git.md`, `security.md`, `context-review.md`, `.claude/files-guide.md`, the PR template), are never written: upgrade prints the template diff and you copy the changes you want. `CLAUDE.md`, `pipeline.md`, `settings.json` and the `SKILL.md` files are listed for manual review. Upgrade does not add files your tier or options left out, leaves alone a PR template of your own spelled in another letter case, and writes nothing in a directory without `.claude/settings.json`. It does not change tier: see [Changing tier](#changing-tier).
 
 **`--anthropic` flag** (added in v1.15.0): runs a separate refresh flow targeted at files that encode Anthropic spec / best practices. Default behavior is dry-run — prints a colourized unified diff for each file that differs from the installed template. `--apply` writes the new content with a timestamped backup (`<original>.bak.<ISO-timestamp>`) of the previous version. v1.15.0 scope is one file: `.claude/skills/arch-audit/advanced-checks.md`. Other Anthropic-touching files (`pipeline-standards.md`, `claudemd-standards.md`, `arch-audit/SKILL.md`) pass through the scaffold's placeholder substitution or section-stripping pipeline; expanding the registry needs a transformation-aware compare, tracked for v1.16+.
 
@@ -1449,7 +1444,7 @@ Rules: each worktree has its own branch. Merge to `staging` sequentially - smoke
 
 **Q: Can I switch tiers on an existing project?**
 
-Yes. Run `npx tierward upgrade --tier=m` to promote non-destructively. Or edit `.claude/rules/pipeline.md` directly if you need fine-grained control.
+Yes, by re-running `init` on a branch with the new tier; see [Changing tier](#changing-tier). Or edit `.claude/rules/pipeline.md` directly if you need fine-grained control.
 
 ---
 
@@ -1484,4 +1479,4 @@ Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy 
 
 ---
 
-_Last updated: 2026-10-09 - v2.0.1_
+_Last updated: 2026-10-09 - v2.0.2_

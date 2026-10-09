@@ -60,7 +60,9 @@ program
 
 program
   .command('upgrade')
-  .description('Update template files to the latest tierward version')
+  .description(
+    'Refresh template files you are not expected to edit, and show the template diff for the rest',
+  )
   .option('--dry-run', 'Show what would change without writing any files')
   .option(
     '--anthropic',

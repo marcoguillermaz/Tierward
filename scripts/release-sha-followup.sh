@@ -29,7 +29,10 @@ if [[ -n "$(git log origin/main..origin/staging --oneline)" ]]; then
   exit 1
 fi
 
-VERSION=$(node -p "require('./packages/cli/package.json').version")
+# Read the version from origin/staging, not the working tree: the operator
+# may run this from a stale branch, which would mislabel branch, commit and PR.
+VERSION=$(git show origin/staging:packages/cli/package.json \
+  | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
 BRANCH="fix/release-sha-${VERSION}"
 
 if [[ -n "$(git status --porcelain)" ]]; then
@@ -47,9 +50,7 @@ if [[ -z "$(git status --porcelain marketplace.json)" ]]; then
 fi
 
 git add marketplace.json
-git commit -m "fix(release): point marketplace sha at the ${VERSION} release commit
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "fix(release): point marketplace sha at the ${VERSION} release commit"
 git push -u origin "$BRANCH"
 
 PR_URL=$(gh pr create --base staging \

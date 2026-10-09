@@ -97,7 +97,7 @@ One contract across four tiers. Solo bugfix or fully governed team pipeline, the
 | **M - Standard**  | 13 phases, 3 STOP gates | Feature blocks, 1-2 collaborators     |
 | **L - Full**      | 14 phases, 4 STOP gates | Team projects, complex domain changes |
 
-Start at Tier 0. Move up when you need more structure: `npx tierward upgrade --tier=m`
+Start at Tier 0. Move up when you need more structure by re-running `init` with a higher tier ([how](docs/operational-guide.md#changing-tier)).
 
 ### 27 audit skills
 
@@ -193,8 +193,7 @@ npx tierward init --answers file.json  # skip prompts (CI/automation)
 npx tierward doctor                  # validate setup (28 checks)
 npx tierward doctor --report         # JSON output for CI
 npx tierward doctor --ci             # silent, exit 1 on failure
-npx tierward upgrade                 # update template files
-npx tierward upgrade --tier=m        # promote to higher tier
+npx tierward upgrade                 # refresh safe files, show diffs for the rest
 npx tierward upgrade --anthropic     # show diff for Anthropic-influenced files (dry-run)
 npx tierward upgrade --anthropic --apply  # write the diff (with .bak backup)
 npx tierward add skill <name>        # install one skill

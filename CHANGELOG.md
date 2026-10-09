@@ -11,6 +11,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.0.2] — 2026-10-09
+
+### Fixed
+
+- **`tierward upgrade` no longer damages the project it upgrades.** It compared the raw templates with files the scaffold had already filled in, so on any project, even one created a minute earlier, it rewrote `.claude/rules/git.md` and `security.md` (and `.claude/files-guide.md` on Tier M/L) with unfilled placeholders such as `[COMMIT_EXAMPLES]`, dropped any line your team had added, and kept no backup. It put `staging` back into `git.md` and the PR template on projects without a staging branch, added files your tier or options had left out (the workflow rules on Tier 0, `files-guide.md` on Tier S, a PR template after you opted out of GitHub files), replaced your own `pull_request_template.md` on case-insensitive disks, and wrote template files into directories that were not Tierward projects. It now writes only `.claude/rules/output-style.md`, which you are not expected to edit, and saves a timestamped `.bak` before replacing it. For the files the scaffold fills in, it prints the template diff and leaves the file alone. It adds no missing file except `output-style.md`, and writes nothing where `.claude/settings.json` is absent.
+
+  If you ran `tierward upgrade` before, look for damage. Some of it leaves a marker: literal `[COMMIT_EXAMPLES]`, `[BUILD_ARTIFACTS]` or `[VALIDATION_LIBRARIES]` in `.claude/rules/`; `staging` back in `git.md` or `.github/PULL_REQUEST_TEMPLATE.md` on a project without a staging branch; on Tier 0, a `git.md`, `security.md`, `context-review.md`, `.claude/files-guide.md` or PR template you never had; on Tier S, a `.claude/files-guide.md`; a PR template after you opted out of GitHub files; your own `pull_request_template.md` replaced by Tierward's (on macOS it shows up renamed to `PULL_REQUEST_TEMPLATE.md`). Some of it leaves none: lines your team had added to those rule files, the keyword list you set in `context-review.md`, edits to `output-style.md`. `git log -p -- .claude/ .github/` around the day you ran upgrade shows both kinds. To restore a file, find the last commit before the upgrade with `git log -- <file>` and run `git checkout <commit> -- <file>`. Delete the files upgrade added.
+
+- **`doctor` no longer sends you to `upgrade` for files it cannot add.** The hints for `docs/claudemd-standards.md`, `docs/pipeline-standards.md`, the commit skill, the context-review C12 check and the team-settings enforcement hook now name the command to run or the template to copy.
+
+- **The docs no longer show `tierward upgrade --tier`.** The README, the docs site and the operational guide gave it as the way to change tier, but the CLI rejects it with "unknown option". They now describe the path that works today: commit, scaffold again on a branch with `init`, choosing "New project" and the new tier, then review the whole `git diff` and bring back your own content. `init` overwrites every file it generates, including the project `README.md`, `.gitignore`, `.pre-commit-config.yaml` and `docs/`.
+
+- **The governance gate no longer mistakes text for a promotion push.** It used to search the whole text of a Bash command for `git push` and the name of a protected branch. That made it refuse a commit whose message mentioned pushing to `staging` or `main`, an `echo` of such a command, a heredoc commit body, and a feature-branch push followed by `gh pr create --base main`. It now checks the commands a call actually runs. Quoted strings, heredoc bodies and comments count as text, while `$(...)`, backticks and the script of `bash -c` count as commands. It also catches promotion pushes the old check let through, such as `git push origin +main` and `git push origin HEAD:refs/heads/main`. If a command can't be parsed, the gate falls back to the old whole-text check instead of allowing it. The commit gate reads commands the same way, so `git log --grep commit` no longer waits for requirements approval.
+
+  `tierward upgrade` doesn't replace the hook, because on projects without a staging branch the scaffold narrows it to `main`. Instead it now prints the diff between your `.claude/hooks/tierward-governance-gate.mjs` and the template. To update, copy `templates/common/.claude/hooks/tierward-governance-gate.mjs` from the tierward package over your copy. On a project without a staging branch, change `const PROTECTED = '(staging|main)';` to `'(main)'` afterwards.
+
+---
+
 ## [2.0.1] — 2026-10-09
 
 ### Changed

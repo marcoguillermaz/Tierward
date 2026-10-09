@@ -10,16 +10,28 @@ import { loadTeamSettingsOrExit } from '../utils/team-settings-cli.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
 
-// Files that are safe to upgrade (non-destructive - they don't contain user content)
-const UPGRADEABLE_FILES = [
-  { template: 'common/context-review.md', target: '.claude/rules/context-review.md' },
-  { template: 'common/rules/security.md', target: '.claude/rules/security.md' },
-  { template: 'common/rules/git.md', target: '.claude/rules/git.md' },
+// Files refreshed automatically: the scaffold copies them 1:1 and the user is
+// not expected to edit them. A file that differs is backed up before it is
+// replaced; a missing one is added (every tier ships output-style.md).
+export const UPGRADEABLE_FILES = [
   { template: 'common/rules/output-style.md', target: '.claude/rules/output-style.md' },
-  { template: 'common/rules/claudemd-standards.md', target: '.claude/rules/claudemd-standards.md' },
-  { template: 'common/rules/pipeline-standards.md', target: '.claude/rules/pipeline-standards.md' },
+];
+
+// Files the scaffold fills in (placeholders, staging stripping, reference
+// pruning) or that the user is told to edit, so the raw template is not what
+// the project should hold. Upgrade never writes or adds them: it prints the
+// template diff for the user to apply by hand.
+export const REVIEW_DIFF_FILES = [
+  { template: 'common/rules/git.md', target: '.claude/rules/git.md' },
+  { template: 'common/rules/security.md', target: '.claude/rules/security.md' },
+  { template: 'common/context-review.md', target: '.claude/rules/context-review.md' },
   { template: 'common/files-guide.md', target: '.claude/files-guide.md' },
   { template: 'common/PULL_REQUEST_TEMPLATE.md', target: '.github/PULL_REQUEST_TEMPLATE.md' },
+  // Narrowed to `main` on projects without staging, so not copied 1:1 there.
+  {
+    template: 'common/.claude/hooks/tierward-governance-gate.mjs',
+    target: '.claude/hooks/tierward-governance-gate.mjs',
+  },
 ];
 
 // Files that require user review before upgrade (they may contain customizations)
@@ -100,6 +112,22 @@ function resolveTemplatePath(entry, tier) {
   return null;
 }
 
+/**
+ * Looks up a target by exact file name, so a case-insensitive disk does not
+ * pass a project's own `pull_request_template.md` off as Tierward's
+ * `PULL_REQUEST_TEMPLATE.md`. Returns 'exact', 'variant' (same name in another
+ * letter case) or 'absent'.
+ */
+function findTarget(targetPath) {
+  const dir = path.dirname(targetPath);
+  const name = path.basename(targetPath);
+  if (!fs.existsSync(dir)) return 'absent';
+  const entries = fs.readdirSync(dir);
+  if (entries.includes(name)) return 'exact';
+  if (entries.some((e) => e.toLowerCase() === name.toLowerCase())) return 'variant';
+  return 'absent';
+}
+
 export async function upgrade(options) {
   const cwd = process.cwd();
   console.log();
@@ -134,7 +162,19 @@ export async function upgrade(options) {
 }
 
 async function runStandardUpgrade(cwd, options) {
+  // Every tier writes .claude/settings.json. Without it this is not a
+  // Tierward project, and upgrade must not seed template files into it.
+  if (!fs.existsSync(path.join(cwd, '.claude', 'settings.json'))) {
+    console.log(
+      chalk.yellow(
+        '⚠ No Tierward scaffold found (`.claude/settings.json` missing). Nothing to upgrade.',
+      ),
+    );
+    return;
+  }
+
   const updates = [];
+  const ownFiles = [];
 
   for (const file of UPGRADEABLE_FILES) {
     const templatePath = path.join(TEMPLATES_DIR, file.template);
@@ -142,7 +182,12 @@ async function runStandardUpgrade(cwd, options) {
 
     if (!fs.existsSync(templatePath)) continue;
 
-    if (!fs.existsSync(targetPath)) {
+    const found = findTarget(targetPath);
+    if (found === 'variant') {
+      ownFiles.push(file.target);
+      continue;
+    }
+    if (found === 'absent') {
       updates.push({ ...file, reason: 'new file' });
       continue;
     }
@@ -151,7 +196,7 @@ async function runStandardUpgrade(cwd, options) {
     const targetContent = fs.readFileSync(targetPath, 'utf8');
 
     if (templateContent !== targetContent) {
-      updates.push({ ...file, reason: 'updated in template' });
+      updates.push({ ...file, reason: 'updated in template', backup: true });
     }
   }
 
@@ -164,15 +209,72 @@ async function runStandardUpgrade(cwd, options) {
     );
   }
 
+  // Files the scaffold filled in: diff only, never written
+  const patches = [];
+  const absent = [];
+  for (const file of REVIEW_DIFF_FILES) {
+    const templatePath = path.join(TEMPLATES_DIR, file.template);
+    const targetPath = path.join(cwd, file.target);
+
+    if (!fs.existsSync(templatePath)) continue;
+
+    const found = findTarget(targetPath);
+    if (found === 'variant') {
+      ownFiles.push(file.target);
+      continue;
+    }
+    if (found === 'absent') {
+      absent.push(file.target);
+      continue;
+    }
+
+    const templateContent = fs.readFileSync(templatePath, 'utf8');
+    const targetContent = fs.readFileSync(targetPath, 'utf8');
+    if (templateContent !== targetContent) {
+      patches.push({
+        target: file.target,
+        patch: createPatch(file.target, targetContent, templateContent, 'current', 'template'),
+      });
+    }
+  }
+
   // Files that need manual review
   console.log();
   console.log(chalk.bold('Requires manual review (may contain your customizations):'));
+  patches.forEach((p) =>
+    console.log(`  ${chalk.yellow('⚠')} ${p.target} - differs from template, diff below`),
+  );
   REVIEW_REQUIRED.forEach((f) => {
     const exists = fs.existsSync(path.join(cwd, f));
     if (exists) {
       console.log(`  ${chalk.yellow('⚠')} ${f} - compare with template manually`);
     }
   });
+
+  if (patches.length > 0) {
+    console.log();
+    console.log(
+      chalk.dim(
+        'Upgrade never writes these files. Values filled in at init (commands, examples, libraries) and removed staging steps show up as differences: keep them, and copy only the template changes you want.',
+      ),
+    );
+    for (const p of patches) {
+      console.log();
+      console.log(chalk.bold(`── ${p.target} ──`));
+      process.stdout.write(colourizePatch(p.patch));
+    }
+  }
+
+  if (ownFiles.length > 0) {
+    console.log();
+    console.log(chalk.bold('Your own files under another letter case (left untouched):'));
+    ownFiles.forEach((f) => console.log(`  ${chalk.green('✓')} ${f}`));
+  }
+
+  if (absent.length > 0) {
+    console.log();
+    console.log(chalk.dim(`Not in this project, not added by upgrade: ${absent.join(', ')}`));
+  }
 
   // Detect and report custom skills (custom-* prefix - never touched by upgrade)
   const customSkillsDir = path.join(cwd, '.claude', 'skills');
@@ -195,9 +297,15 @@ async function runStandardUpgrade(cwd, options) {
   }
 
   console.log();
+  const now = new Date();
   for (const file of updates) {
     const templatePath = path.join(TEMPLATES_DIR, file.template);
     const targetPath = path.join(cwd, file.target);
+    if (file.backup) {
+      const backup = backupPath(targetPath, now);
+      await fs.copy(targetPath, backup);
+      console.log(`  ${chalk.dim('backup:')} ${backup}`);
+    }
     await fs.ensureDir(path.dirname(targetPath));
     await fs.copy(templatePath, targetPath);
     console.log(`  ${chalk.green('✓')} Updated ${file.target}`);

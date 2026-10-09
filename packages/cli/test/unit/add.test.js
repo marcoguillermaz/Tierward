@@ -193,6 +193,8 @@ describe('upgrade - custom skill preservation', () => {
     // Also add a Tierward-managed rule so upgrade has something to check
     await fs.ensureDir(path.join(UPGRADE_TMP, '.claude', 'rules'));
     fs.writeFileSync(path.join(UPGRADE_TMP, '.claude', 'rules', 'git.md'), 'old content');
+    // Every tier writes settings.json; upgrade treats it as the scaffold marker
+    fs.writeFileSync(path.join(UPGRADE_TMP, '.claude', 'settings.json'), '{}\n');
   });
 
   after(async () => {
