@@ -1,6 +1,6 @@
 # tierward - Operational Guide
 
-**Version**: 2.0.0
+**Version**: 2.0.1
 **Audience**: Builder PMs, tech leads, and senior developers using Claude Code - from first exploration to structured, reviewable delivery
 **Format**: Reference + step-by-step. Read section 1 and your target tier section first, then use the rest as a lookup.
 
@@ -1484,4 +1484,4 @@ Nine example fixtures are in `packages/cli/test/fixtures/wizard-answers/`. Copy 
 
 ---
 
-_Last updated: 2026-07-10 - v2.0.0_
+_Last updated: 2026-10-09 - v2.0.1_
