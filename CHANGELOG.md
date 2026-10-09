@@ -9,6 +9,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **The arch-audit skill knows the current Claude models.** Its model list still named Opus 5, Sonnet 5 and Haiku 4.5 as current and had no Fable, and its deprecated-model check (C16) told you to replace a retired ID with a model that is now legacy, for example `claude-sonnet-4-20250514` with `claude-sonnet-5`. The list now names Fable 5.1, Opus 5.5, Sonnet 5.5 and Haiku 5.5 as current, keeps the legacy models with their exact IDs, and gives the right retirement dates. C16 also flags `claude-3-7-sonnet-*`, `claude-opus-4-1-20250805` and the deprecated `claude-sonnet-4-5-20250929` (retiring November 30, 2026), and replaces a retired ID with the current model of the same line: `claude-haiku-5-5`, `claude-opus-5-5` or `claude-sonnet-5-5`. The skill now reads model IDs from `platform.claude.com/docs/en/models/overview` and dates from the model deprecations page; the old `docs.anthropic.com` address reached them only through redirects. The live pages remain the source of truth and the list is only a hint. The plugin copy of the skill gets the same update.
+
+  `tierward upgrade` lists `.claude/skills/arch-audit/SKILL.md` for manual review and does not write it. To update an existing project, copy `SKILL.md` and `BATCH_COMMANDS.md` from `templates/tier-<your tier>/.claude/skills/arch-audit/` in the tierward package over your copies, then re-apply any edits of your own.
+
+- **The context builder defaults to `claude-sonnet-5-5`** (was `claude-sonnet-4-6`). Current Claude models think by default and put a thinking block ahead of the text. The builder read only the first block of the reply and capped the reply at 512 tokens, so with a model that thinks first, including one set through `TIERWARD_CONTEXT_LLM_MODEL`, it found no text and skipped its LLM pass. It now reads the first text block and allows 4096 tokens. It sends no thinking setting, because every explicit value is rejected by at least one model you can choose. `TIERWARD_CONTEXT_LLM_MODEL` still overrides the default.
+
 ---
 
 ## [2.0.2] — 2026-10-09

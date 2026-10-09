@@ -17,7 +17,7 @@ Run every command in this table yourself during Step 3b and record one pass/fail
 | C13   | `grep -rL --include="SKILL.md" "context: fork" .claude/skills/` | 0 files returned |
 | C14   | `git check-ignore -q CLAUDE.md && echo "PASS" \|\| echo "FAIL"` | PASS |
 | C15   | `wc -l CLAUDE.md \| awk '{print $1}'` | ≤200 |
-| C16   | `grep -rn "claude-3-haiku\|claude-3-5-haiku\|claude-3-opus\|claude-3-sonnet\|claude-3-5-sonnet\|claude-sonnet-4-20250514\|claude-opus-4-20250514" .claude/skills/ .claude/settings.json` | 0 matches |
+| C16   | `grep -rn "claude-3-haiku\|claude-3-5-haiku\|claude-3-opus\|claude-3-sonnet\|claude-3-5-sonnet\|claude-3-7-sonnet\|claude-sonnet-4-20250514\|claude-opus-4-20250514\|claude-opus-4-1-20250805\|claude-sonnet-4-5-20250929" .claude/skills/ .claude/settings.json` | 0 matches |
 | C17   | `for f in .claude/skills/*/SKILL.md; do name=$(basename $(dirname "$f")); [ "$name" = "arch-audit" ] && continue; if grep -q "mcp__" "$f" && ! grep -q "^allowed-tools:" "$f"; then echo "MISSING allowed-tools: $f"; fi; done` | 0 MISSING lines |
 
 ## Judgment-tier standalone (C8)

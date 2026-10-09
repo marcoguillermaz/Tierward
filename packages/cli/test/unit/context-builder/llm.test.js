@@ -7,6 +7,7 @@ import {
   buildExtractionPrompt,
   parseLlmResponse,
   extractWithLlm,
+  __testing__,
 } from '../../../src/context-builder/inference/llm.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -159,5 +160,64 @@ describe('extractWithLlm (with mock client)', () => {
     });
     assert.equal(captured.model, 'claude-opus-test');
     assert.equal(captured.apiKey, 'fake-key');
+  });
+});
+
+describe('default LLM client (mocked fetch)', () => {
+  const { defaultLlmClient } = __testing__;
+  const JSON_REPLY = '{"description":"d","tier_rationale_hint":"r","pending_decisions":[]}';
+
+  // Current models think by default: the response opens with a thinking
+  // block (empty text under the default `omitted` display), then the text.
+  const mockFetch = (t, content) => {
+    const calls = [];
+    t.mock.method(globalThis, 'fetch', async (url, init) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return { ok: true, json: async () => ({ content }), text: async () => '' };
+    });
+    return calls;
+  };
+
+  it('reads the text block when a thinking block comes first', async (t) => {
+    mockFetch(t, [
+      { type: 'thinking', thinking: '', signature: 'sig' },
+      { type: 'text', text: JSON_REPLY },
+    ]);
+    const out = await defaultLlmClient({ system: 's', user: 'u', model: 'm', apiKey: 'k' });
+    assert.equal(out, JSON_REPLY);
+  });
+
+  it('throws when the response carries no text block', async (t) => {
+    mockFetch(t, [{ type: 'thinking', thinking: '', signature: 'sig' }]);
+    await assert.rejects(
+      defaultLlmClient({ system: 's', user: 'u', model: 'm', apiKey: 'k' }),
+      /text/,
+    );
+  });
+
+  it('leaves room for thinking and sends no model-specific thinking setting', async (t) => {
+    const calls = mockFetch(t, [{ type: 'text', text: JSON_REPLY }]);
+    await defaultLlmClient({ system: 's', user: 'u', model: 'm', apiKey: 'k' });
+    assert.equal(calls[0].body.max_tokens, 4096);
+    assert.equal('thinking' in calls[0].body, false);
+  });
+
+  it('defaults to claude-sonnet-5-5 when no model is configured', async (t) => {
+    const saved = {
+      TIERWARD_CONTEXT_LLM_MODEL: process.env.TIERWARD_CONTEXT_LLM_MODEL,
+      CDK_CONTEXT_LLM_MODEL: process.env.CDK_CONTEXT_LLM_MODEL,
+    };
+    delete process.env.TIERWARD_CONTEXT_LLM_MODEL;
+    delete process.env.CDK_CONTEXT_LLM_MODEL;
+    t.after(() => {
+      for (const [k, v] of Object.entries(saved)) if (v !== undefined) process.env[k] = v;
+    });
+    const calls = mockFetch(t, [{ type: 'text', text: JSON_REPLY }]);
+    await extractWithLlm({
+      dir: path.join(REPOS, 'node-ts-app'),
+      draft: {},
+      apiKey: 'fake-key',
+    });
+    assert.equal(calls[0].body.model, 'claude-sonnet-5-5');
   });
 });
