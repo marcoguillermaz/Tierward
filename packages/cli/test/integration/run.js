@@ -17,7 +17,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import { load as loadYaml } from 'js-yaml';
-import { scaffoldTier, scaffoldTierSafe } from '../../src/scaffold/index.js';
+import {
+  scaffoldTier,
+  scaffoldTierSafe,
+  PR_MODE_GH_ALLOW,
+  PR_MODE_GH_ASK,
+  PR_MODE_PUSH_DENY,
+} from '../../src/scaffold/index.js';
 import { generateClaudeMd } from '../../src/generators/claude-md.js';
 import { generateReadme } from '../../src/generators/readme.js';
 import {
@@ -2002,10 +2008,12 @@ async function scenarioRubricScore() {
         rubricFail('D7', `[${name}] deny missing force-push block`);
       }
 
-      if (Array.isArray(deny) && deny.some((d) => d.includes('push origin main'))) {
-        rubricPass('D7', `[${name}] deny blocks push to main`);
+      // A push to main is denied (`pr` mode) or asks for permission (other modes)
+      const guarded = [...(deny || []), ...(settings.permissions?.ask || [])];
+      if (guarded.some((d) => d.includes('push origin main'))) {
+        rubricPass('D7', `[${name}] deny or ask guards push to main`);
       } else {
-        rubricFail('D7', `[${name}] deny missing push-to-main block`);
+        rubricFail('D7', `[${name}] no deny or ask rule guards push to main`);
       }
     } else {
       rubricFail('D7', `[${name}] settings.json missing`);
@@ -4493,6 +4501,526 @@ async function scenarioScaffoldedYaml() {
   }
 }
 
+// The promotion setting reaches the scaffold from `--answers` and from
+// CONTEXT.md, and an invalid value stops `init` before any file is written.
+async function scenarioPromotionSetting() {
+  section('Promotion setting - reaches the scaffold, invalid values refused');
+
+  const CLI = path.resolve(__dirname, '../../src/index.js');
+  const webAnswers = {
+    mode: 'greenfield',
+    tier: 'm',
+    projectName: 'Promotion Project',
+    description: 'Promotion setting passthrough',
+    techStack: 'node-ts',
+    testCommand: 'npx vitest run',
+    devCommand: 'npm run dev',
+    hasApi: true,
+    hasDatabase: true,
+    hasFrontend: false,
+    hasPrd: false,
+    includePreCommit: true,
+    includeGithub: true,
+  };
+  const directMerge = 'git merge feature/block-name --no-ff && git push origin main';
+
+  // --answers: `direct` on a web stack drops the staging steps
+  const answersDir = path.join(OUTPUT_DIR, 'promotion-answers-direct');
+  fs.removeSync(answersDir);
+  fs.ensureDirSync(answersDir);
+  try {
+    execFileSync(
+      'node',
+      [CLI, 'init', '--answers', JSON.stringify({ ...webAnswers, promotion: 'direct' })],
+      {
+        cwd: answersDir,
+        stdio: 'pipe',
+      },
+    );
+    const pipeline = fs.readFileSync(path.join(answersDir, '.claude/rules/pipeline.md'), 'utf8');
+    if (!/staging/i.test(pipeline) && pipeline.includes(directMerge)) {
+      pass('promotion[--answers direct/web/m]: pipeline promotes straight to main, no staging');
+    } else {
+      fail('promotion[--answers direct/web/m]: setting did not reach the scaffold');
+    }
+  } catch (err) {
+    fail(
+      'promotion[--answers direct/web/m]: init failed',
+      err.stderr?.toString().trim().split('\n')[0],
+    );
+  }
+
+  // CONTEXT.md: scaffold_options.promotion is mapped into the init flow
+  const contextDir = path.join(OUTPUT_DIR, 'promotion-context-direct');
+  fs.removeSync(contextDir);
+  fs.ensureDirSync(contextDir);
+  fs.writeFileSync(
+    path.join(contextDir, 'CONTEXT.md'),
+    [
+      '---',
+      'schema_version: 1',
+      "generated_at: '2026-10-09T10:00:00Z'",
+      'generated_by: context-builder',
+      'generated_by_version: 2.1.0',
+      'project:',
+      '  name: promotion-context',
+      '  description: Promotion setting from CONTEXT.md',
+      '  mode: greenfield',
+      'stack:',
+      '  primary: node-ts',
+      'commands:',
+      '  install: npm install',
+      '  test: npx vitest run',
+      'tier:',
+      '  selected: m',
+      '  rationale: Feature blocks',
+      'scaffold_options:',
+      '  include_pre_commit: true',
+      '  include_github: true',
+      '  promotion: direct',
+      '---',
+      '',
+      'body',
+      '',
+    ].join('\n'),
+  );
+  try {
+    execFileSync('node', [CLI, 'init'], { cwd: contextDir, stdio: 'pipe' });
+    const pipeline = fs.readFileSync(path.join(contextDir, '.claude/rules/pipeline.md'), 'utf8');
+    if (!/staging/i.test(pipeline) && pipeline.includes(directMerge)) {
+      pass('promotion[CONTEXT.md direct/web/m]: setting reaches the scaffold');
+    } else {
+      fail('promotion[CONTEXT.md direct/web/m]: setting did not reach the scaffold');
+    }
+  } catch (err) {
+    fail(
+      'promotion[CONTEXT.md direct/web/m]: init failed',
+      err.stderr?.toString().trim().split('\n')[0],
+    );
+  }
+
+  // `staging` on a native stack, or an unknown value: refused, nothing written
+  for (const [label, override] of [
+    ['staging/swift', { techStack: 'swift', testCommand: 'swift test', promotion: 'staging' }],
+    ['unknown/web', { promotion: 'merge' }],
+  ]) {
+    const dir = path.join(OUTPUT_DIR, `promotion-invalid-${label.replace('/', '-')}`);
+    fs.removeSync(dir);
+    fs.ensureDirSync(dir);
+    let refused = false;
+    let message = '';
+    try {
+      execFileSync(
+        'node',
+        [CLI, 'init', '--answers', JSON.stringify({ ...webAnswers, ...override })],
+        {
+          cwd: dir,
+          stdio: 'pipe',
+        },
+      );
+    } catch (err) {
+      refused = true;
+      message = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+    }
+    const written = fs.existsSync(path.join(dir, '.claude'));
+    if (refused && /promotion mode/i.test(message) && !written) {
+      pass(`promotion[invalid ${label}]: init refused before writing any file`);
+    } else {
+      fail(
+        `promotion[invalid ${label}]: expected a refusal with no files written`,
+        `refused=${refused} written=${written}`,
+      );
+    }
+  }
+
+  // The in-place flow in `pr` mode; tier 0 has no pipeline and ignores the setting
+  const runInit = (name, answers) => {
+    const dir = path.join(OUTPUT_DIR, name);
+    fs.removeSync(dir);
+    fs.ensureDirSync(dir);
+    execFileSync('node', [CLI, 'init', '--answers', JSON.stringify(answers)], {
+      cwd: dir,
+      stdio: 'pipe',
+    });
+    return dir;
+  };
+  const parsedSettings = (dir) => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'));
+    } catch {
+      return null;
+    }
+  };
+  try {
+    const dir = runInit('promotion-inplace-pr', {
+      ...webAnswers,
+      mode: 'in-place',
+      promotion: 'pr',
+    });
+    const pipeline = fs.readFileSync(path.join(dir, '.claude/rules/pipeline.md'), 'utf8');
+    const allow = parsedSettings(dir)?.permissions?.allow || [];
+    if (
+      pipeline.includes('gh pr create --base main --fill') &&
+      allow.includes('Bash(gh pr create *)')
+    ) {
+      pass('promotion[in-place pr/web/m]: pipeline and settings use the pull request flow');
+    } else {
+      fail('promotion[in-place pr/web/m]: pull request flow missing');
+    }
+  } catch (err) {
+    fail('promotion[in-place pr/web/m]: init failed', err.stderr?.toString().trim().split('\n')[0]);
+  }
+  try {
+    const tier0 = { mode: 'greenfield', tier: '0', projectName: 'T0', description: 'Tier 0' };
+    const plain = parsedSettings(
+      runInit('promotion-tier0-none', { ...tier0, techStack: 'node-ts' }),
+    );
+    const withPr = parsedSettings(
+      runInit('promotion-tier0-pr', { ...tier0, techStack: 'node-ts', promotion: 'pr' }),
+    );
+    if (withPr && JSON.stringify(withPr) === JSON.stringify(plain)) {
+      pass('promotion[tier 0]: setting ignored, settings.json unchanged and valid');
+    } else {
+      fail('promotion[tier 0]: setting changed or broke settings.json');
+    }
+  } catch (err) {
+    fail('promotion[tier 0]: init failed', err.stderr?.toString().trim().split('\n')[0]);
+  }
+}
+
+// The governance gate also runs on MCP pull-request merge tools, and the
+// scaffolded gate treats `gh pr merge` as a promotion on every stack profile.
+async function scenarioMergeGate() {
+  section('Merge gate - PR merges are promotions, MCP merge tools are wired');
+
+  const gateHook = /tierward-governance-gate\.mjs/;
+  for (const tier of ['s', 'm', 'l']) {
+    for (const [stack, overrides] of [
+      ['web', {}],
+      ['swift', { techStack: 'swift', testCommand: 'swift test', typeCheckCommand: '' }],
+    ]) {
+      const label = `${stack}/${tier}`;
+      const dir = await scaffold(`merge-gate-${stack}-${tier}`, tier, {
+        ...BASE,
+        ...overrides,
+        tier,
+        isDiscovery: false,
+      });
+      const settings = JSON.parse(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'));
+      const wired = (settings.hooks?.PreToolUse || []).filter(
+        (e) => e.matcher !== 'Bash' && e.hooks?.some((h) => gateHook.test(h.command || '')),
+      );
+      const matches = (tool) => wired.some((e) => new RegExp(e.matcher).test(tool));
+      if (
+        matches('mcp__github__merge_pull_request') &&
+        matches('mcp__plugin_github_github__merge_pull_request') &&
+        !matches('mcp__github__create_pull_request')
+      ) {
+        pass(`merge-gate[${label}]: gate runs on MCP merge tools only`);
+      } else {
+        fail(`merge-gate[${label}]: MCP merge tools not wired to the gate`);
+      }
+      if (scaffoldedGateDenies(dir, `merge-${stack}-${tier}`, 'gh pr merge 12 --squash')) {
+        pass(`merge-gate[${label}]: scaffolded gate gates gh pr merge`);
+      } else {
+        fail(`merge-gate[${label}]: scaffolded gate lets gh pr merge through`);
+      }
+    }
+  }
+}
+
+// Approximates how Claude Code matches a Bash permission rule
+// (code.claude.com/docs/en/permissions, "Wildcard patterns" and "Compound
+// commands"): `*` matches any text, a trailing ` *` or `:*` that is the only
+// wildcard also matches the bare command, and a rule applies to each part of a
+// compound command. A test oracle, not Claude Code's own engine.
+function bashRuleMatches(rule, command) {
+  const m = /^Bash\((.*)\)$/.exec(rule);
+  if (!m) return false;
+  let pattern = m[1];
+  let bareToo = false;
+  if (pattern.endsWith(':*')) {
+    pattern = pattern.slice(0, -2);
+    bareToo = true;
+  } else if (pattern.endsWith(' *') && pattern.indexOf('*') === pattern.length - 1) {
+    pattern = pattern.slice(0, -2);
+    bareToo = true;
+  }
+  const body = pattern
+    .split('*')
+    .map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+    .join('.*');
+  const re = new RegExp(`^${body}${bareToo ? '( .*)?' : ''}$`);
+  return command.split(/\s*(?:&&|\|\||;|\|)\s*/).some((part) => re.test(part.trim()));
+}
+
+// Every git/gh command the pipeline and the cheatsheet show for pushing,
+// merging, pulling or opening a PR.
+function promotionStepCommands(dir) {
+  const commands = new Set();
+  for (const rel of ['.claude/rules/pipeline.md', '.claude/cheatsheet.md']) {
+    const file = path.join(dir, rel);
+    if (!fs.existsSync(file)) continue;
+    for (const [, code] of fs.readFileSync(file, 'utf8').matchAll(/`([^`\n]+)`/g)) {
+      if (/^(git|gh) /.test(code) && /\b(push|merge|pull|pr create)\b/.test(code)) {
+        commands.add(code);
+      }
+    }
+  }
+  return [...commands];
+}
+
+// Pushes that land on `main` without a pull request; `pr` mode denies each one.
+const PR_MODE_MAIN_PUSHES = [
+  'git push origin main',
+  'git push -u origin main',
+  'git push origin HEAD:main',
+  'git push origin feature/x:main',
+  'git push origin +main',
+  'git push origin HEAD:refs/heads/main',
+  'git push --force-with-lease origin main',
+  'git push origin HEAD:main --force',
+  'git status && git push origin HEAD:main',
+];
+
+// No command a promotion step tells the agent to run is refused by a deny
+// rule of the same tier and mode, and the gate refuses exactly the promotions
+// (a push naming a protected branch, a PR merge). A checkout of a protected
+// branch followed by a push that names no branch would slip past both.
+async function scenarioPromotionCommands() {
+  section('Promotion commands - not denied by the tier settings, gated only when promoting');
+
+  const isPromotion = (cmd) =>
+    (/\bgh pr merge\b/.test(cmd) && !cmd.includes('--disable-auto')) ||
+    /\bgit push( -\S+)* origin (main|staging)(\s|$)/.test(cmd);
+  const bareProtectedPush = /git checkout (main|staging)\b.*&& git push\s*$/;
+  const profiles = [
+    ['web-staging', {}],
+    ['web-direct', { promotion: 'direct' }],
+    ['web-pr', { promotion: 'pr' }],
+    ['swift-direct', { techStack: 'swift', testCommand: 'swift test', typeCheckCommand: '' }],
+    [
+      'swift-pr',
+      { techStack: 'swift', testCommand: 'swift test', typeCheckCommand: '', promotion: 'pr' },
+    ],
+  ];
+
+  for (const tier of ['s', 'm', 'l']) {
+    for (const [profile, overrides] of profiles) {
+      const label = `promotion-commands[${profile}/${tier}]`;
+      const dir = await scaffold(`promotion-commands-${profile}-${tier}`, tier, {
+        ...BASE,
+        ...overrides,
+        tier,
+        isDiscovery: false,
+      });
+      const settingsText = fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8');
+      const { allow, deny, ask = [] } = JSON.parse(settingsText).permissions;
+      const mode = overrides.promotion || (profile.startsWith('swift') ? 'direct' : 'staging');
+      const pushAsk = ['Bash(git push origin main*)'];
+      if (mode === 'staging' && tier === 'l') pushAsk.push('Bash(git push origin staging*)');
+      const openPr = 'git push -u origin feature/block-name && gh pr create --base main --fill';
+      const permissionProblems =
+        mode === 'pr'
+          ? [
+              ...PR_MODE_PUSH_DENY.filter((rule) => !deny.includes(rule)),
+              ...ask.filter((rule) => rule.startsWith('Bash(git push')),
+              ...PR_MODE_MAIN_PUSHES.filter((cmd) => !deny.some((r) => bashRuleMatches(r, cmd))),
+              // Open and check the PR without a prompt, ask on the merge
+              ...PR_MODE_GH_ALLOW.filter((rule) => !allow.includes(rule)),
+              ...PR_MODE_GH_ASK.filter((rule) => !ask.includes(rule)),
+              ...openPr
+                .split(' && ')
+                .filter((part) => !allow.some((rule) => bashRuleMatches(rule, part))),
+              ...(ask.some((rule) => bashRuleMatches(rule, 'gh pr merge --merge'))
+                ? []
+                : ['gh pr merge --merge does not ask']),
+            ]
+          : [
+              ...pushAsk.filter((rule) => !ask.includes(rule)),
+              ...pushAsk.filter((rule) => deny.includes(rule)),
+              ...(mode === 'direct' && /staging/i.test(settingsText) ? ['staging rule left'] : []),
+              ...[...allow, ...ask].filter((rule) => rule.startsWith('Bash(gh ')),
+            ];
+      if (permissionProblems.length === 0) {
+        pass(`${label}: settings.json push rules fit the ${mode} mode`);
+      } else {
+        fail(`${label}: settings.json push rules`, permissionProblems.join(' | '));
+      }
+      const commands = promotionStepCommands(dir);
+      if (commands.length === 0) {
+        fail(`${label}: no promotion command found in the pipeline`);
+        continue;
+      }
+      const denied = commands.filter((cmd) => deny.some((rule) => bashRuleMatches(rule, cmd)));
+      if (denied.length === 0) {
+        pass(`${label}: no promotion step command matches a deny rule (${commands.length})`);
+      } else {
+        fail(`${label}: promotion step refused by a deny rule`, denied.join(' | '));
+      }
+      const bare = commands.filter((cmd) => bareProtectedPush.test(cmd));
+      if (bare.length === 0) {
+        pass(`${label}: every push after a protected checkout names its branch`);
+      } else {
+        fail(`${label}: push without a branch after a protected checkout`, bare.join(' | '));
+      }
+      const wrong = commands.filter(
+        (cmd, i) =>
+          scaffoldedGateDenies(dir, `cmd-${profile}-${tier}-${i}`, cmd) !== isPromotion(cmd),
+      );
+      if (wrong.length === 0) {
+        pass(`${label}: gate refuses exactly the promotions without Promote`);
+      } else {
+        fail(`${label}: gate decision differs from the promotion oracle`, wrong.join(' | '));
+      }
+    }
+  }
+}
+
+// `pr` promotion mode: no staging, the promotion is a pull request merged
+// behind the gate, and every string-exact rewrite of the transform fired.
+async function scenarioPrPromotion() {
+  section('Promotion mode pr - pull request promotion, no staging, no direct push');
+
+  const read = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
+  const shared = [
+    'gh pr create --base main --fill',
+    'gh pr merge --merge',
+    'any pull request merge into `main`',
+  ];
+  const blockRewrites = [
+    'goes through the pull request (step 9)',
+    '9. **Open the pull request**',
+    '11. **Post-merge cleanup**',
+    'merged at Phase 8 step 10',
+    'one promotion (one pull request merge)',
+    'each pull request merge into `main`',
+    'WHY we stopped: block files are about to be removed',
+  ];
+  const expected = {
+    s: [
+      ...shared,
+      'the merge below is.',
+      'the local `fix/description` branch and its remote copy',
+      '`git push origin --delete fix/description`',
+      '`main` changes only through the pull request merged at FL-3',
+      '`Promote` authorizes one promotion only',
+    ],
+    m: [...shared, ...blockRewrites, 'is removed at the post-merge cleanup (step 11)'],
+    l: [
+      ...shared,
+      ...blockRewrites,
+      'are removed at the post-merge cleanup (step 11)',
+      '1c. **Worktree teardown**: runs at the post-merge cleanup',
+      '`git worktree remove .claude/worktrees/[block-name]`',
+      'then closure continues with step 2.',
+    ],
+  };
+  const forbidden = ['--no-ff', 'worktree teardown in 1c runs', 'BEFORE the worktree teardown'];
+
+  for (const tier of ['s', 'm', 'l']) {
+    const label = `pr-mode[node/${tier}]`;
+    const dir = await scaffold(`pr-mode-node-${tier}`, tier, {
+      ...BASE,
+      tier,
+      promotion: 'pr',
+      isDiscovery: false,
+    });
+    assertNoStagingResiduals(dir, label);
+    const pipeline = read(dir, '.claude/rules/pipeline.md');
+    const missing = expected[tier].filter((s) => !pipeline.includes(s));
+    const present = forbidden.filter((s) => pipeline.includes(s));
+    if (missing.length === 0 && present.length === 0 && !/push origin main/.test(pipeline)) {
+      pass(`${label}: pipeline promotes through a pull request, every rewrite applied`);
+    } else {
+      fail(`${label}: pipeline rewrite incomplete`, `missing ${missing} | left ${present}`);
+    }
+    if (tier !== 's') {
+      const cheatsheet = read(dir, '.claude/cheatsheet.md');
+      if (cheatsheet.includes('gh pr merge --merge') && !/Merge to staging/.test(cheatsheet)) {
+        pass(`${label}: cheatsheet shows the pull request promotion`);
+      } else {
+        fail(`${label}: cheatsheet promotion row not rewritten`);
+      }
+    }
+    if (tier === 'l' && read(dir, 'CLAUDE.md').includes('- Non-production DB:')) {
+      pass(`${label}: CLAUDE.md names a non-production DB, not a staging one`);
+    } else if (tier === 'l') {
+      fail(`${label}: CLAUDE.md staging DB line not rewritten`);
+    }
+    if (
+      scaffoldedGateDenies(dir, `pr-${tier}-merge`, 'gh pr merge --merge') &&
+      !scaffoldedGateDenies(
+        dir,
+        `pr-${tier}-open`,
+        'git push -u origin feature/block-name && gh pr create --base main --fill',
+      )
+    ) {
+      pass(`${label}: gate gates the merge, not the push of the branch and the PR`);
+    } else {
+      fail(`${label}: gate does not separate opening the PR from merging it`);
+    }
+  }
+
+  // `direct` on a web stack: local merge into main, no staging left anywhere
+  for (const tier of ['s', 'm', 'l']) {
+    const label = `direct-mode[node/${tier}]`;
+    const dir = await scaffold(`direct-mode-node-${tier}`, tier, {
+      ...BASE,
+      tier,
+      promotion: 'direct',
+      isDiscovery: false,
+    });
+    assertNoStagingResiduals(dir, label);
+    const pipeline = read(dir, '.claude/rules/pipeline.md');
+    const branch = tier === 's' ? 'fix/description' : 'feature/block-name';
+    if (
+      pipeline.includes(`git merge ${branch} --no-ff && git push origin main`) &&
+      !pipeline.includes('gh pr create')
+    ) {
+      pass(`${label}: pipeline promotes by a local merge into main`);
+    } else {
+      fail(`${label}: direct promotion missing or PR steps present`);
+    }
+  }
+
+  // `pr` on a native stack
+  const swiftDir = await scaffold('pr-mode-swift-m', 'm', {
+    ...BASE,
+    tier: 'm',
+    techStack: 'swift',
+    testCommand: 'swift test',
+    typeCheckCommand: '',
+    promotion: 'pr',
+    isDiscovery: false,
+  });
+  assertNoStagingResiduals(swiftDir, 'pr-mode[swift/m]');
+  if (read(swiftDir, '.claude/rules/pipeline.md').includes('gh pr create --base main --fill')) {
+    pass('pr-mode[swift/m]: native stack promotes through a pull request');
+  } else {
+    fail('pr-mode[swift/m]: pull request promotion missing');
+  }
+
+  // Default web profile (`staging`) keeps its flow; step 9 no longer assumes a PR
+  const stagingDir = await scaffold('staging-mode-node-m', 'm', {
+    ...BASE,
+    tier: 'm',
+    isDiscovery: false,
+  });
+  const stagingPipeline = read(stagingDir, '.claude/rules/pipeline.md');
+  if (
+    stagingPipeline.includes('if the block has a PR open and CI is green') &&
+    !stagingPipeline.includes('Open the pull request') &&
+    stagingPipeline.includes(
+      'git checkout main && git merge staging --no-ff && git push origin main',
+    )
+  ) {
+    pass('staging-mode[node/m]: staging promotion unchanged, step 9 conditional on an open PR');
+  } else {
+    fail('staging-mode[node/m]: staging flow changed or step 9 still assumes a PR');
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -4556,6 +5084,10 @@ async function main() {
   await scenarioTeamSettings();
   await scenarioMCPServer();
   await scenarioScaffoldedYaml();
+  await scenarioPromotionSetting();
+  await scenarioMergeGate();
+  await scenarioPrPromotion();
+  await scenarioPromotionCommands();
 
   // ── Summary ────────────────────────────────────────────────────────────────
 

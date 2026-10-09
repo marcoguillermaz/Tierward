@@ -99,6 +99,8 @@ One contract across four tiers. Solo bugfix or fully governed team pipeline, the
 
 Start at Tier 0. Move up when you need more structure by re-running `init` with a higher tier ([how](docs/operational-guide.md#changing-tier)).
 
+The wizard also asks how changes reach `main`: through a `staging` branch (the default for web stacks), by a `direct` local merge (the default for native apps), or by a pull request (`pr`), with no staging branch and no push to `main` ([promotion modes](docs/operational-guide.md#4d-how-changes-reach-main-promotion-modes)).
+
 ### 27 audit skills
 
 Executable multi-step programs that run inside Claude Code, not prompt instructions. Structured audit workflows with model routing (haiku for mechanical checks, sonnet for analysis).
@@ -244,6 +246,8 @@ The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legac
 ```
 
 **STOP gates** (Tier M/L) - Requirements reviewed before implementation. Spec-first or scope-confirm mode auto-selected per block.
+
+**Promotion gate** (Tier S/M/L) - While a block or fix is in progress, the governance gate holds a promotion until you reply with a bare `Promote`, one promotion per keyword. A push to `staging` or `main` counts, and so does a pull request merge (`gh pr merge` or a GitHub MCP merge tool). The gate reads the commands Claude runs, so a few forms escape it, such as a merge through the REST API ([details](docs/operational-guide.md#4d-how-changes-reach-main-promotion-modes)).
 
 **Audit logging** - Every tool use appended to `~/.claude/audit/project.jsonl`.
 

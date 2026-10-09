@@ -177,6 +177,91 @@ describe('validateContextFile — inter-field constraints', () => {
   });
 });
 
+describe('validateContextContent — scaffold_options.promotion (v2.1.0+)', () => {
+  // Minimal valid frontmatter; `promotion` appended to scaffold_options.
+  const context = ({ stack = 'node-ts', tier = 's', promotion }) =>
+    [
+      '---',
+      'schema_version: 1',
+      "generated_at: '2026-10-09T10:00:00Z'",
+      'generated_by: context-builder',
+      'generated_by_version: 2.1.0',
+      'project:',
+      '  name: demo-app',
+      '  description: A demo.',
+      '  mode: greenfield',
+      'stack:',
+      `  primary: ${stack}`,
+      'commands:',
+      '  install: npm install',
+      '  test: npm test',
+      'tier:',
+      `  selected: '${tier}'`,
+      '  rationale: Demo',
+      'scaffold_options:',
+      `  include_pre_commit: ${tier !== '0'}`,
+      '  include_github: false',
+      ...(promotion === undefined ? [] : [`  promotion: ${promotion}`]),
+      '---',
+      '',
+      'body',
+    ].join('\n');
+
+  it('absent promotion is valid (derived from the stack)', () => {
+    const result = validateContextContent(context({}));
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+  });
+
+  for (const promotion of ['staging', 'direct', 'pr']) {
+    it(`promotion=${promotion} on a web stack is valid`, () => {
+      const result = validateContextContent(context({ promotion }));
+      assert.equal(result.valid, true, JSON.stringify(result.errors));
+      assert.equal(result.data.scaffold_options.promotion, promotion);
+    });
+  }
+
+  it('promotion outside the enum fails', () => {
+    const result = validateContextContent(context({ promotion: 'merge' }));
+    assert.equal(result.valid, false);
+    assert.ok(
+      result.errors.some((e) => e.path.includes('promotion')),
+      JSON.stringify(result.errors),
+    );
+  });
+
+  it('C9: promotion=staging on a native stack fails', () => {
+    const result = validateContextContent(context({ stack: 'swift', promotion: 'staging' }));
+    assert.equal(result.valid, false);
+    assert.ok(
+      result.errors.some((e) => /not available for stack swift/.test(e.message)),
+      JSON.stringify(result.errors),
+    );
+  });
+
+  it('C9: promotion=pr on a native stack is valid', () => {
+    const result = validateContextContent(context({ stack: 'swift', promotion: 'pr' }));
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+  });
+
+  it('C9: promotion on tier 0 fails', () => {
+    const result = validateContextContent(context({ tier: '0', promotion: 'pr' }));
+    assert.equal(result.valid, false);
+    assert.ok(
+      result.errors.some((e) => /tier 0 has no pipeline/.test(e.message)),
+      JSON.stringify(result.errors),
+    );
+  });
+
+  it('scaffold_options.promotion is a valid dotted-path for pending_decisions', () => {
+    const src = context({}).replace(
+      '---\n\nbody',
+      'pending_decisions:\n  - field: scaffold_options.promotion\n    reason: ask the team\n---\n\nbody',
+    );
+    const result = validateContextContent(src);
+    assert.equal(result.valid, true, JSON.stringify(result.errors));
+  });
+});
+
 describe('validateContextContent (string input)', () => {
   it('rejects empty string', () => {
     const result = validateContextContent('');

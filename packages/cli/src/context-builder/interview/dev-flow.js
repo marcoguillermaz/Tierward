@@ -262,6 +262,10 @@ export function buildDevFrontmatter({ answers, mode, generatedByVersion, algoOut
       include_github: isTier0 ? false : (answers.includeGithub ?? false),
     },
   };
+  // v2.1.0+: promotion mode, only when chosen (absent = derived from the stack).
+  if (!isTier0 && answers.promotion !== undefined) {
+    fm.scaffold_options.promotion = answers.promotion;
+  }
 
   if (mode === 'in-place' || mode === 'from-context') {
     if (algoOutput) {

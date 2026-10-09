@@ -12,9 +12,9 @@
       "Bash(npm:*)",
       "Bash(npx:*)"
     ],
+    "ask": ["Bash(git push origin main*)"],
     "deny": [
       "Bash(git push --force*)",
-      "Bash(git push origin main*)",
       "Bash(rm -rf /*)",
       "Bash(npm publish*)",
       "Bash(DROP DATABASE*)"
@@ -34,6 +34,16 @@
       },
       {
         "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-governance-gate.mjs\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "^mcp__.+__merge_pull_request$",
         "hooks": [
           {
             "type": "command",

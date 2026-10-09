@@ -129,6 +129,26 @@ describe('buildFrontmatterFromAnswers', () => {
     const fm = buildFrontmatterFromAnswers(baseExperienced, { mode: 'in-place' });
     assert.equal(fm.project.mode, 'in-place');
   });
+
+  it('passes promotion through to scaffold_options and stays schema-valid', () => {
+    const fm = buildFrontmatterFromAnswers(
+      { ...baseExperienced, promotion: 'direct' },
+      { mode: 'greenfield' },
+    );
+    assert.equal(fm.scaffold_options.promotion, 'direct');
+    const result = validateContextContent(serializeContext(fm));
+    assert.equal(result.valid, true, `errors: ${JSON.stringify(result.errors)}`);
+  });
+
+  it('omits promotion when not chosen, and on tier 0', () => {
+    const absent = buildFrontmatterFromAnswers(baseExperienced, { mode: 'greenfield' });
+    assert.equal('promotion' in absent.scaffold_options, false);
+    const tier0 = buildFrontmatterFromAnswers(
+      { ...baseExperienced, familiarity: '0', tier: undefined, promotion: 'pr' },
+      { mode: 'greenfield' },
+    );
+    assert.equal('promotion' in tier0.scaffold_options, false);
+  });
 });
 
 describe('composeBodyFromAnswers', () => {

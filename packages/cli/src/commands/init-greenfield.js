@@ -9,7 +9,12 @@ import { generateGreenfieldContextImport } from '../generators/context-import.js
 import { scaffoldTier } from '../scaffold/index.js';
 import { printPlan, printNextSteps } from '../utils/print-plan.js';
 import { AUDIT_MODELS } from '../utils/constants.js';
-import { NATIVE_STACKS, WEB_STACKS } from '../scaffold/skill-registry.js';
+import {
+  NATIVE_STACKS,
+  WEB_STACKS,
+  promotionChoices,
+  promotionMode,
+} from '../scaffold/skill-registry.js';
 import { enforceTeamSettingsTier } from '../utils/team-settings-cli.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -326,6 +331,14 @@ export async function initGreenfield(options) {
         default: true,
         when: !isDiscovery,
       },
+      {
+        type: 'select',
+        name: 'promotion',
+        message: 'How do changes reach `main`?',
+        when: !isDiscovery,
+        choices: (a) => promotionChoices(a.techStack),
+        default: (a) => promotionMode({ techStack: a.techStack }),
+      },
     ]);
   } // end else (interactive path)
 
@@ -340,6 +353,8 @@ export async function initGreenfield(options) {
     isDiscovery,
     includePreCommit: isDiscovery ? false : answers.includePreCommit,
     includeGithub: isDiscovery ? false : answers.includeGithub,
+    // Tier 0 has no pipeline, so no promotion mode (as in CONTEXT.md, C9)
+    promotion: isDiscovery ? undefined : answers.promotion,
     hasE2E: answers.e2eCommand ? answers.e2eCommand.trim() !== '' : false,
     hasApi: answers.hasApi,
     hasDatabase: answers.hasDatabase,

@@ -7,9 +7,9 @@
   "includeGitInstructions": false,
   "permissions": {
     "allow": ["Bash(git:*)", "Bash(node:*)", "Bash(npm:*)", "Bash(npx:*)", "Bash(curl:*)"],
+    "ask": ["Bash(git push origin main*)"],
     "deny": [
       "Bash(git push --force*)",
-      "Bash(git push origin main*)",
       "Bash(rm -rf /*)",
       "Bash(DROP TABLE*)",
       "Bash(DROP DATABASE*)",
@@ -31,6 +31,16 @@
       },
       {
         "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-governance-gate.mjs\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "^mcp__.+__merge_pull_request$",
         "hooks": [
           {
             "type": "command",

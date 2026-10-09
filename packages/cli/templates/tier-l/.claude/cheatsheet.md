@@ -73,8 +73,8 @@ Run these on demand. Each skill reads the codebase, produces a structured report
 |---|---|
 | New feature branch | `git checkout -b feature/block-name` |
 | New fix branch | `git checkout -b fix/description` |
-| Merge to staging | `git checkout staging && git merge feature/name --no-ff && git push` |
-| Promote to production | `git checkout main && git merge staging --no-ff && git push` |
+| Merge to staging | `git checkout staging && git merge feature/name --no-ff && git push origin staging` |
+| Promote to production | `git checkout main && git merge staging --no-ff && git push origin main` |
 
 ---
 

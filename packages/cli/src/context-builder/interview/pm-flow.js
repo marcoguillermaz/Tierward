@@ -166,6 +166,10 @@ export function buildFrontmatterFromAnswers(answers, ctx) {
       include_github: isTier0 ? false : (answers.includeGithub ?? false),
     },
   };
+  // v2.1.0+: promotion mode, only when chosen (absent = derived from the stack).
+  if (!isTier0 && answers.promotion !== undefined) {
+    frontmatter.scaffold_options.promotion = answers.promotion;
+  }
 
   // v1.27.0+ tier M/L feature flags + audit_model.
   // Only emit features block when tier is M or L (schema C8).
