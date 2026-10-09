@@ -7,6 +7,7 @@ import {
   getSkillsToRemove,
   getActiveSkills,
   getCheatsheetSkillsToRemove,
+  promotionChoices,
   promotionMode,
   promotionError,
   remoteGovernanceEnabled,
@@ -56,6 +57,24 @@ describe('promotionMode', () => {
     assert.equal(remoteGovernanceEnabled({ techStack: 'node-ts', promotion: 'staging' }), true);
     assert.equal(remoteGovernanceEnabled({ techStack: 'node-ts', promotion: 'direct' }), false);
     assert.equal(remoteGovernanceEnabled({ techStack: 'node-ts', promotion: 'pr' }), false);
+  });
+});
+
+describe('promotionChoices', () => {
+  it('offers all three modes on web stacks, with the stack default among them', () => {
+    for (const techStack of ['node-ts', 'python', 'go', 'other']) {
+      const values = promotionChoices(techStack).map((c) => c.value);
+      assert.deepEqual(values, ['staging', 'direct', 'pr'], techStack);
+      assert.ok(values.includes(promotionMode({ techStack })), techStack);
+    }
+  });
+
+  it('offers direct and pr only on native stacks, default direct', () => {
+    for (const techStack of NATIVE_STACKS) {
+      const values = promotionChoices(techStack).map((c) => c.value);
+      assert.deepEqual(values, ['direct', 'pr'], techStack);
+      assert.equal(promotionMode({ techStack }), 'direct', techStack);
+    }
   });
 });
 

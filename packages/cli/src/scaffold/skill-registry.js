@@ -30,6 +30,25 @@ export function promotionMode(config) {
 }
 
 /**
+ * Wizard choices for "How do changes reach `main`?". Native stacks have no
+ * staging server, so they are offered `direct` and `pr` only.
+ */
+export function promotionChoices(techStack) {
+  const choices = [
+    {
+      name: 'Staging branch - merge into staging, smoke-test, then promote staging to main',
+      value: 'staging',
+    },
+    { name: 'Direct - merge the work branch into main locally', value: 'direct' },
+    {
+      name: 'Pull request - push the work branch, merge a PR into main (no staging)',
+      value: 'pr',
+    },
+  ];
+  return NATIVE_STACKS.includes(techStack) ? choices.filter((c) => c.value !== 'staging') : choices;
+}
+
+/**
  * Why `config.promotion` cannot be scaffolded, or null when it can.
  * `staging` assumes a staging server, which native stacks do not have.
  */

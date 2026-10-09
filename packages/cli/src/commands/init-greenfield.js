@@ -9,7 +9,12 @@ import { generateGreenfieldContextImport } from '../generators/context-import.js
 import { scaffoldTier } from '../scaffold/index.js';
 import { printPlan, printNextSteps } from '../utils/print-plan.js';
 import { AUDIT_MODELS } from '../utils/constants.js';
-import { NATIVE_STACKS, WEB_STACKS } from '../scaffold/skill-registry.js';
+import {
+  NATIVE_STACKS,
+  WEB_STACKS,
+  promotionChoices,
+  promotionMode,
+} from '../scaffold/skill-registry.js';
 import { enforceTeamSettingsTier } from '../utils/team-settings-cli.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -325,6 +330,14 @@ export async function initGreenfield(options) {
         message: 'Include .github/ (PR template + CODEOWNERS)?',
         default: true,
         when: !isDiscovery,
+      },
+      {
+        type: 'select',
+        name: 'promotion',
+        message: 'How do changes reach `main`?',
+        when: !isDiscovery,
+        choices: (a) => promotionChoices(a.techStack),
+        default: (a) => promotionMode({ techStack: a.techStack }),
       },
     ]);
   } // end else (interactive path)
