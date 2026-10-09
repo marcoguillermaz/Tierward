@@ -285,7 +285,9 @@ async function patchSettingsPermissions(targetDir, config) {
     const raw = await fs.readFile(settingsPath, 'utf8');
     const settings = JSON.parse(raw);
     if (stackPerms && settings.permissions && Array.isArray(settings.permissions.allow)) {
-      settings.permissions.allow = stackPerms;
+      // Keep the `gh` rules (`pr` promotion mode): they are not stack tools
+      const ghRules = settings.permissions.allow.filter((rule) => rule.startsWith('Bash(gh '));
+      settings.permissions.allow = [...stackPerms, ...ghRules];
     }
     if (stackDeny && settings.permissions && Array.isArray(settings.permissions.deny)) {
       settings.permissions.deny = [...settings.permissions.deny, ...stackDeny];
@@ -1312,13 +1314,28 @@ function toPullRequestPromotion(content) {
   );
 
   // settings.json: no push reaches `main`, so the push asks become denies,
-  // refspec forms included (`HEAD:main`, `+main`, `refs/heads/main`)
+  // refspec forms included (`HEAD:main`, `+main`, `refs/heads/main`); the PR
+  // merge asks for permission on top of `Promote` (DEC-19)
   result = result.replace(
     /^ {4}"ask": \["Bash\(git push origin main\*\)"\],\n {4}"deny": \[\n/m,
-    `    "deny": [\n${PR_MODE_PUSH_DENY.map((rule) => `      "${rule}",\n`).join('')}`,
+    `    "ask": ["${PR_MODE_GH_ASK.join('", "')}"],\n    "deny": [\n${PR_MODE_PUSH_DENY.map((rule) => `      "${rule}",\n`).join('')}`,
   );
+  // ...and opening, reading and checking a PR runs without a prompt (DEC-19)
+  result = result.replace(/("allow": \[)([^\]]*?)(\s*\])/, (_, open, rules, close) => {
+    const sep = rules.includes('\n') ? ',\n      ' : ', ';
+    return `${open}${rules}${sep}${PR_MODE_GH_ALLOW.map((rule) => `"${rule}"`).join(sep)}${close}`;
+  });
   return result;
 }
+
+// `gh` rules for `pr` mode (DEC-19): the agent opens and checks the pull
+// request on its own; the merge needs `Promote` and the permission prompt.
+export const PR_MODE_GH_ALLOW = [
+  'Bash(gh pr create *)',
+  'Bash(gh pr view *)',
+  'Bash(gh pr checks *)',
+];
+export const PR_MODE_GH_ASK = ['Bash(gh pr merge *)'];
 
 // Deny rules for `pr` mode. Claude Code matches each subcommand of a compound
 // command, and `*` matches any text (code.claude.com/docs/en/permissions).

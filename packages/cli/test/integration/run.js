@@ -17,7 +17,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import { load as loadYaml } from 'js-yaml';
-import { scaffoldTier, scaffoldTierSafe, PR_MODE_PUSH_DENY } from '../../src/scaffold/index.js';
+import {
+  scaffoldTier,
+  scaffoldTierSafe,
+  PR_MODE_GH_ALLOW,
+  PR_MODE_GH_ASK,
+  PR_MODE_PUSH_DENY,
+} from '../../src/scaffold/index.js';
 import { generateClaudeMd } from '../../src/generators/claude-md.js';
 import { generateReadme } from '../../src/generators/readme.js';
 import {
@@ -4755,21 +4761,32 @@ async function scenarioPromotionCommands() {
         isDiscovery: false,
       });
       const settingsText = fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8');
-      const { deny, ask = [] } = JSON.parse(settingsText).permissions;
+      const { allow, deny, ask = [] } = JSON.parse(settingsText).permissions;
       const mode = overrides.promotion || (profile.startsWith('swift') ? 'direct' : 'staging');
       const pushAsk = ['Bash(git push origin main*)'];
       if (mode === 'staging' && tier === 'l') pushAsk.push('Bash(git push origin staging*)');
+      const openPr = 'git push -u origin feature/block-name && gh pr create --base main --fill';
       const permissionProblems =
         mode === 'pr'
           ? [
               ...PR_MODE_PUSH_DENY.filter((rule) => !deny.includes(rule)),
               ...ask.filter((rule) => rule.startsWith('Bash(git push')),
               ...PR_MODE_MAIN_PUSHES.filter((cmd) => !deny.some((r) => bashRuleMatches(r, cmd))),
+              // DEC-19: open and check the PR without a prompt, ask on the merge
+              ...PR_MODE_GH_ALLOW.filter((rule) => !allow.includes(rule)),
+              ...PR_MODE_GH_ASK.filter((rule) => !ask.includes(rule)),
+              ...openPr
+                .split(' && ')
+                .filter((part) => !allow.some((rule) => bashRuleMatches(rule, part))),
+              ...(ask.some((rule) => bashRuleMatches(rule, 'gh pr merge --merge'))
+                ? []
+                : ['gh pr merge --merge does not ask']),
             ]
           : [
               ...pushAsk.filter((rule) => !ask.includes(rule)),
               ...pushAsk.filter((rule) => deny.includes(rule)),
               ...(mode === 'direct' && /staging/i.test(settingsText) ? ['staging rule left'] : []),
+              ...[...allow, ...ask].filter((rule) => rule.startsWith('Bash(gh ')),
             ];
       if (permissionProblems.length === 0) {
         pass(`${label}: settings.json push rules fit the ${mode} mode`);
