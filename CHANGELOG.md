@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [2.0.2] — 2026-10-09
+
 ### Fixed
 
 - **`tierward upgrade` no longer damages the project it upgrades.** It compared the raw templates with files the scaffold had already filled in, so on any project, even one created a minute earlier, it rewrote `.claude/rules/git.md` and `security.md` (and `.claude/files-guide.md` on Tier M/L) with unfilled placeholders such as `[COMMIT_EXAMPLES]`, dropped any line your team had added, and kept no backup. It put `staging` back into `git.md` and the PR template on projects without a staging branch, added files your tier or options had left out (the workflow rules on Tier 0, `files-guide.md` on Tier S, a PR template after you opted out of GitHub files), replaced your own `pull_request_template.md` on case-insensitive disks, and wrote template files into directories that were not Tierward projects. It now writes only `.claude/rules/output-style.md`, which you are not expected to edit, and saves a timestamped `.bak` before replacing it. For the files the scaffold fills in, it prints the template diff and leaves the file alone. It adds no missing file except `output-style.md`, and writes nothing where `.claude/settings.json` is absent.
