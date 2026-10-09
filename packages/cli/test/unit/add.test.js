@@ -150,6 +150,56 @@ describe('add rule', () => {
   });
 });
 
+// `add rule` copies the raw template: the values `init` fills in stay as
+// placeholders, and the staging wording is never stripped. The command must
+// say what is left to edit.
+describe('add rule - placeholders left in the copied rule', () => {
+  const PLACEHOLDER = /\[[A-Z][A-Z0-9_]{2,}\]/g;
+
+  function installedLines(name) {
+    return fs.readFileSync(path.join(TMP, `.claude/rules/${name}.md`), 'utf8').split('\n');
+  }
+
+  function placeholderEntries(name) {
+    return installedLines(name).flatMap((text, i) =>
+      (text.match(PLACEHOLDER) || []).map((p) => `line ${i + 1}: ${p}`),
+    );
+  }
+
+  before(async () => {
+    await fs.remove(TMP);
+    await fs.ensureDir(path.join(TMP, '.claude/rules'));
+  });
+
+  after(async () => {
+    await fs.remove(TMP);
+  });
+
+  for (const name of ['git', 'security']) {
+    it(`add rule ${name} lists each placeholder with its line`, () => {
+      const out = run(`add rule ${name}`);
+      const entries = placeholderEntries(name);
+      assert.ok(entries.length > 0, `template ${name}.md is expected to carry placeholders`);
+      for (const entry of entries) assert.ok(out.includes(entry), `missing "${entry}" in:\n${out}`);
+    });
+  }
+
+  it('add rule git names the lines that mention staging', () => {
+    const out = run('add rule git --force');
+    const lines = installedLines('git')
+      .map((text, i) => (/staging/.test(text) ? i + 1 : null))
+      .filter(Boolean);
+    assert.ok(lines.length > 0, 'template git.md is expected to mention staging');
+    assert.match(out, new RegExp(`Lines? ${lines.join(', ')} mentions? a \`staging\` branch`));
+  });
+
+  it('add rule output-style reports nothing left to edit', () => {
+    const out = run('add rule output-style');
+    assert.ok(out.includes('Installed'));
+    assert.ok(!/placeholder|staging/i.test(out), out);
+  });
+});
+
 describe('add skill - CLAUDE.md Active Skills integration', () => {
   before(async () => {
     await fs.remove(TMP);

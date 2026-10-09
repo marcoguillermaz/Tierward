@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { createPatch } from 'diff';
 import { violatesMinTier } from '../utils/team-settings.js';
 import { printStarCta } from '../utils/print-plan.js';
-import { loadTeamSettingsOrExit } from '../utils/team-settings-cli.js';
+import { loadTeamSettingsOrExit, tierChangeHint } from '../utils/team-settings-cli.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
@@ -144,9 +144,8 @@ export async function upgrade(options) {
           `✗ team-settings.json requires minTier=${required}, current scaffold is tier ${currentTier}.`,
         ),
       );
-      console.error(
-        `  Re-run ${chalk.cyan(`tierward init --tier=${required}`)} to promote, or edit .claude/team-settings.json.`,
-      );
+      for (const line of tierChangeHint(required)) console.error(line);
+      console.error('  Or edit .claude/team-settings.json.');
       process.exit(1);
     }
   }

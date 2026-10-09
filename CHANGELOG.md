@@ -17,6 +17,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **The context builder defaults to `claude-sonnet-5-5`** (was `claude-sonnet-4-6`). Current Claude models think by default and put a thinking block ahead of the text. The builder read only the first block of the reply and capped the reply at 512 tokens, so with a model that thinks first, including one set through `TIERWARD_CONTEXT_LLM_MODEL`, it found no text and skipped its LLM pass. It now reads the first text block and allows 4096 tokens. It sends no thinking setting, because every explicit value is rejected by at least one model you can choose. `TIERWARD_CONTEXT_LLM_MODEL` still overrides the default.
 
+### Fixed
+
+- **`tierward upgrade` now points to a tier change that works.** When `.claude/team-settings.json` sets a `minTier` above the project's tier, `upgrade` stops. It used to tell you to "Re-run `tierward init --tier=<x>` to promote", but re-running `init` on the project in "Existing project" mode skips every file that already exists, so the old pipeline and settings stay and the new tier's files land next to them. The message now gives the steps from "Changing tier" in the docs (commit, switch to a new branch, run `init --tier=<x>` in "New project" mode, restore your own edits from the git diff) and links that section.
+
+- **`tierward add rule` tells you what is left to fill in.** `add rule git` and `add rule security` copy the rule template as it ships, without the values `init` fills in. The installed file keeps placeholders such as `[COMMIT_EXAMPLES]`, `[BUILD_ARTIFACTS]` or `[VALIDATION_LIBRARIES]`, and `git.md` keeps its lines about a `staging` branch. Claude loads every file in `.claude/rules/`, placeholders included. The command now lists each placeholder with its line number, plus the lines that mention `staging`. With `--force` it still overwrites an existing rule and keeps no backup: to get back a rule `init` had filled in, run `git checkout HEAD -- .claude/rules/<name>.md`.
+
 ---
 
 ## [2.0.2] — 2026-10-09
