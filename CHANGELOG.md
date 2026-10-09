@@ -19,6 +19,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **The docs no longer show `tierward upgrade --tier`.** The README, the docs site and the operational guide gave it as the way to change tier, but the CLI rejects it with "unknown option". They now describe the path that works today: commit, scaffold again on a branch with `init`, choosing "New project" and the new tier, then review the whole `git diff` and bring back your own content. `init` overwrites every file it generates, including the project `README.md`, `.gitignore`, `.pre-commit-config.yaml` and `docs/`.
 
+- **The governance gate no longer mistakes text for a promotion push.** It used to search the whole text of a Bash command for `git push` and the name of a protected branch. That made it refuse a commit whose message mentioned pushing to `staging` or `main`, an `echo` of such a command, a heredoc commit body, and a feature-branch push followed by `gh pr create --base main`. It now checks the commands a call actually runs. Quoted strings, heredoc bodies and comments count as text, while `$(...)`, backticks and the script of `bash -c` count as commands. It also catches promotion pushes the old check let through, such as `git push origin +main` and `git push origin HEAD:refs/heads/main`. If a command can't be parsed, the gate falls back to the old whole-text check instead of allowing it. The commit gate reads commands the same way, so `git log --grep commit` no longer waits for requirements approval.
+
+  `tierward upgrade` doesn't replace the hook, because on projects without a staging branch the scaffold narrows it to `main`. Instead it now prints the diff between your `.claude/hooks/tierward-governance-gate.mjs` and the template. To update, copy `templates/common/.claude/hooks/tierward-governance-gate.mjs` from the tierward package over your copy. On a project without a staging branch, change `const PROTECTED = '(staging|main)';` to `'(main)'` afterwards.
+
 ---
 
 ## [2.0.1] — 2026-10-09

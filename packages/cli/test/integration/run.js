@@ -1184,6 +1184,30 @@ function assertNoStagingResiduals(dir, label) {
   }
 }
 
+// Runs the scaffolded governance gate on one command, with an active block and
+// no `Promote`. Returns true when the gate denies it. Guards the profile
+// rewrite of the gate's protected-branch list by behaviour, not by text.
+function scaffoldedGateDenies(dir, label, command) {
+  const project = path.join(OUTPUT_DIR, `gate-probe-${label}`);
+  fs.removeSync(project);
+  fs.ensureDirSync(path.join(project, '.claude', 'session'));
+  fs.writeFileSync(
+    path.join(project, '.claude', 'session', 'block-probe.md'),
+    '---\nblock: probe\nrequirements_approved: true\npromotion_approved: false\n---\n',
+  );
+  const stdout = execFileSync(
+    'node',
+    [path.join(dir, '.claude', 'hooks', 'tierward-governance-gate.mjs')],
+    {
+      input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }),
+      env: { ...process.env, CLAUDE_PROJECT_DIR: project },
+      encoding: 'utf8',
+    },
+  );
+  fs.removeSync(project);
+  return stdout.includes('"permissionDecision":"deny"');
+}
+
 async function scenarioNoRemoteGovernanceResiduals() {
   section('No-remote-governance profile - zero staging residuals on native scaffolds');
 
@@ -1201,6 +1225,11 @@ async function scenarioNoRemoteGovernanceResiduals() {
     };
     const dir = await scaffold(`no-remote-gov-swift-${tier}`, tier, config);
     assertNoStagingResiduals(dir, `no-remote-gov[swift/${tier}]`);
+    if (scaffoldedGateDenies(dir, `swift-${tier}`, 'git push origin HEAD:main')) {
+      pass(`no-remote-gov[swift/${tier}]: rewritten gate still gates a push to main`);
+    } else {
+      fail(`no-remote-gov[swift/${tier}]: rewritten gate lets a push to main through`);
+    }
   }
 
   const rustDir = await scaffold('no-remote-gov-rust-m', 'm', {
@@ -1231,6 +1260,14 @@ async function scenarioNoRemoteGovernanceResiduals() {
     pass('remote-gov[web/m]: staging governance intact (no over-strip)');
   } else {
     fail('remote-gov[web/m]: staging references missing - profile over-stripped');
+  }
+  if (
+    scaffoldedGateDenies(webDir, 'web-m-staging', 'git push origin staging') &&
+    scaffoldedGateDenies(webDir, 'web-m-main', 'git push origin main')
+  ) {
+    pass('remote-gov[web/m]: gate gates pushes to staging and main');
+  } else {
+    fail('remote-gov[web/m]: gate lets a push to staging or main through');
   }
 }
 
@@ -3870,6 +3907,31 @@ async function scenarioUpgradeSafety() {
       pass('custom: output-style.md edit kept or backed up');
     } else {
       fail('custom: output-style.md edit lost with no .bak');
+    }
+  }
+
+  // An older governance gate: upgrade shows the template diff, never rewrites it.
+  {
+    const dir = await scaffold('upgrade-safe-old-gate-m', 'm', {
+      ...BASE,
+      tier: 'm',
+      isDiscovery: false,
+    });
+    const gate = path.join(dir, '.claude/hooks/tierward-governance-gate.mjs');
+    const old = `${fs.readFileSync(gate, 'utf8')}\n// gate from an older Tierward release\n`;
+    fs.writeFileSync(gate, old);
+
+    const out = runCli(['upgrade'], dir);
+
+    if (fs.readFileSync(gate, 'utf8') === old) {
+      pass('old gate: upgrade leaves the hook byte-identical');
+    } else {
+      fail('old gate: upgrade rewrote the governance gate hook');
+    }
+    if (out.stdout.includes('── .claude/hooks/tierward-governance-gate.mjs ──')) {
+      pass('old gate: upgrade prints the gate diff');
+    } else {
+      fail('old gate: upgrade output has no diff for the governance gate');
     }
   }
 
