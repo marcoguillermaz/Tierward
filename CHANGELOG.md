@@ -9,6 +9,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`tierward upgrade` now points to a tier change that works.** When `.claude/team-settings.json` sets a `minTier` above the project's tier, `upgrade` stops. It used to tell you to "Re-run `tierward init --tier=<x>` to promote", but re-running `init` on the project in "Existing project" mode skips every file that already exists, so the old pipeline and settings stay and the new tier's files land next to them. The message now gives the steps from "Changing tier" in the docs (commit, switch to a new branch, run `init --tier=<x>` in "New project" mode, restore your own edits from the git diff) and links that section.
+
+- **`tierward add rule` tells you what is left to fill in.** `add rule git` and `add rule security` copy the rule template as it ships, without the values `init` fills in. The installed file keeps placeholders such as `[COMMIT_EXAMPLES]`, `[BUILD_ARTIFACTS]` or `[VALIDATION_LIBRARIES]`, and `git.md` keeps its lines about a `staging` branch. Claude loads every file in `.claude/rules/`, placeholders included. The command now lists each placeholder with its line number, plus the lines that mention `staging`. With `--force` it still overwrites an existing rule and keeps no backup: to get back a rule `init` had filled in, run `git checkout HEAD -- .claude/rules/<name>.md`.
+
 ---
 
 ## [2.0.2] — 2026-10-09
