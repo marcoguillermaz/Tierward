@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [2.1.0] — 2026-10-09
+
 ### Added
 
 - **A choice of how changes reach `main`.** `init` now asks "How do changes reach `main`?" in the greenfield and in-place flows, and `CONTEXT.md` accepts the answer as `scaffold_options.promotion`. `staging` is the flow web stacks had until now and stays their default. `direct` merges the work branch into `main` locally and stays the default for native apps, which are offered `direct` and `pr` only. `pr` is new: the pipeline pushes the work branch, opens a pull request to `main` (`gh pr create`, or the GitHub web UI) and merges it with `gh pr merge --merge` only after your bare `Promote` and a permission prompt. Opening and checking pull requests runs without a prompt, the usual forms of a push to `main` are denied (refspec forms such as `HEAD:main` included), and the work branch is removed at a short cleanup confirmation after the merge. Use it when changes should reach `main` only through a pull request, for example in a private repository on a personal GitHub Free account, where branch protection is not available.
