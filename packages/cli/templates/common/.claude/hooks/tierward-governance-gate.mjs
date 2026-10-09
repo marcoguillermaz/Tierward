@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 // Governance enforcement gate (Tierward v1.34+).
-// Wired as a `PreToolUse` hook on the `Bash` matcher. Blocks `git commit` when the
-// active block's requirements have not been approved by the human (see
-// tierward-capture-approval.mjs, which records approval from the human's prompt).
-// Also blocks `git push` toward a protected branch (staging/main) unless the human
-// authorized the promotion with a bare `Promote` — a one-shot flag consumed per push,
-// so no promotion is ever automatic and no prior execution keyword covers it.
+// Wired as a `PreToolUse` hook on the `Bash` matcher and on the MCP pull-request
+// merge tools. Blocks `git commit` when the active block's requirements have not
+// been approved by the human (see tierward-capture-approval.mjs, which records
+// approval from the human's prompt). Also blocks a promotion, meaning a `git push`
+// toward a protected branch (staging/main) or a pull request merge (`gh pr merge`,
+// an MCP `merge_pull_request` tool), unless the human authorized it with a bare
+// `Promote` — a one-shot flag consumed per promotion, so no promotion is ever
+// automatic and no prior execution keyword covers it.
 //
 // WHY PreToolUse, not Stop: approval requires Claude to YIELD THE TURN so the human
 // can type "Proceed". The Stop hook blocks the turn-yield — gating approval there is
@@ -20,8 +22,9 @@
 // human-attested, hook-enforced gate; it is not an adversarial sandbox.
 //
 // Spec reference: https://code.claude.com/docs/en/hooks
-//   - matcher: "Bash"
-//   - input: JSON on stdin with tool_name="Bash" and tool_input.command
+//   - matcher: "Bash", and a regex for MCP merge tools (`mcp__<server>__merge_pull_request`,
+//     `mcp__plugin_<plugin>_<server>__merge_pull_request`)
+//   - input: JSON on stdin with tool_name and tool_input (tool_input.command for Bash)
 //   - block: exit 0 with hookSpecificOutput.permissionDecision = "deny" + reason
 //   - allow: exit 0 silently (no output)
 //
@@ -50,10 +53,15 @@ const PROTECTED = '(staging|main)';
 // is not a push. `$(...)` and backticks, also inside double quotes, and the
 // script of `bash -c` are commands and are checked. A `git` word anywhere in a
 // simple command counts, so wrappers (`env`, `xargs`, `sudo`) do not hide it.
+// A pull request merge is a promotion whatever its base: `gh pr merge` (also
+// `--auto`, which schedules the merge) and any MCP tool named
+// `merge_pull_request`. `gh pr merge --disable-auto` cancels a merge and is not.
 // Known limitations: a bare `git push` while checked out on a protected branch
 // is not detected (the pipeline's prose gate, "promotion is never automatic",
-// still covers it), and neither is a substitution inside an unquoted heredoc.
+// still covers it), and neither is a substitution inside an unquoted heredoc,
+// nor a merge through the REST API (`gh api .../pulls/<n>/merge`).
 const PROTECTED_BRANCH_RE = new RegExp(`^(?:refs/heads/)?${PROTECTED}$`);
+const MCP_MERGE_TOOL_RE = /^mcp__.+__merge_pull_request$/;
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh']);
 const GIT_OPTIONS_WITH_VALUE = new Set([
   '-C',
@@ -70,6 +78,7 @@ const MAX_DEPTH = 16;
 const FALLBACK_PUSH_RE = /\bgit\s+([^\n]*\s)?push(\s|$)/;
 const FALLBACK_PROTECTED_RE = new RegExp(`(^|[\\s:'"])${PROTECTED.replace('(', '(?:')}(?=$|[\\s:'".])`);
 const FALLBACK_COMMIT_RE = /\bgit\s+([^\n]*\s)?commit(\s|$)/;
+const FALLBACK_MERGE_RE = /\bgh\s+pr\s+merge(\s|$)/;
 
 // Splits shell source into simple commands (arrays of words, quotes removed),
 // starting at `start` and stopping after `closer` (`)` or a backtick) when
@@ -228,9 +237,21 @@ function namesProtectedBranch(arg) {
   return PROTECTED_BRANCH_RE.test(ref.slice(ref.lastIndexOf(':') + 1));
 }
 
-// { push, commit }: whether the command runs a promotion push or a commit.
+// `gh pr merge`, except `--disable-auto`. Only `-R`/`--repo` take a value
+// that could sit before the subcommand.
+function isPrMerge(args) {
+  const positional = [];
+  for (let n = 0; n < args.length && positional.length < 2; n += 1) {
+    if (!args[n].startsWith('-')) positional.push(args[n]);
+    else if (args[n] === '-R' || args[n] === '--repo') n += 1;
+  }
+  return positional[0] === 'pr' && positional[1] === 'merge' && !args.includes('--disable-auto');
+}
+
+// { push, merge, commit }: whether the command runs a promotion push, a pull
+// request merge, or a commit.
 function analyze(command, depth) {
-  const found = { push: false, commit: false };
+  const found = { push: false, merge: false, commit: false };
   for (const words of parse(command, 0, null, depth).commands) {
     words.forEach((w, k) => {
       const name = path.basename(w);
@@ -243,6 +264,8 @@ function analyze(command, depth) {
         if (words[n] === 'push' && words.slice(n + 1).some(namesProtectedBranch)) {
           found.push = true;
         }
+      } else if (name === 'gh') {
+        if (isPrMerge(words.slice(k + 1))) found.merge = true;
       } else if (SHELLS.has(name)) {
         let n = k + 1;
         while (n < words.length && words[n].startsWith('-') && !/^-[a-z]*c[a-z]*$/i.test(words[n])) {
@@ -251,6 +274,7 @@ function analyze(command, depth) {
         if (n + 1 < words.length && /^-[a-z]*c[a-z]*$/i.test(words[n])) {
           const inner = analyze(words[n + 1], depth + 1);
           found.push ||= inner.push;
+          found.merge ||= inner.merge;
           found.commit ||= inner.commit;
         }
       }
@@ -265,6 +289,7 @@ function inspect(command) {
   } catch {
     return {
       push: FALLBACK_PUSH_RE.test(command) && FALLBACK_PROTECTED_RE.test(command),
+      merge: FALLBACK_MERGE_RE.test(command) && !command.includes('--disable-auto'),
       commit: FALLBACK_COMMIT_RE.test(command),
     };
   }
@@ -341,19 +366,21 @@ async function main() {
     const raw = await readStdin();
     if (!raw.trim()) process.exit(0);
     const payload = JSON.parse(raw);
-    const command = payload?.tool_input?.command || '';
-    const { push, commit } = inspect(command);
+    const { push, merge, commit } = MCP_MERGE_TOOL_RE.test(payload?.tool_name || '')
+      ? { push: false, merge: true, commit: false }
+      : inspect(payload?.tool_input?.command || '');
 
-    // Promotion gate first (stricter): a push naming a protected branch.
-    if (push) {
+    // Promotion gate first (stricter): a push naming a protected branch, or a
+    // pull request merge.
+    if (push || merge) {
       const file = activeSessionFile();
       if (!file) process.exit(0); // no active block → gate inactive, allow
       if (!promotionApproved(file)) {
         deny(
-          'Promotion to a protected branch (staging/main) requires its own authorization. Present the Promotion authorization gate (why / what runs / next step) and ask the developer to reply with the bare keyword `Promote`. No prior approval or execution keyword covers a promotion push.',
+          'Promotion to a protected branch (staging/main) requires its own authorization. Present the Promotion authorization gate (why / what runs / next step) and ask the developer to reply with the bare keyword `Promote`. No prior approval or execution keyword covers a promotion push or pull request merge.',
         );
       }
-      consumePromotionApproval(file); // one-shot: next push needs a fresh `Promote`
+      consumePromotionApproval(file); // one-shot: next promotion needs a fresh `Promote`
       process.exit(0);
     }
 

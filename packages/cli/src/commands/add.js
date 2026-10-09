@@ -152,4 +152,35 @@ export async function addRule(name, options) {
   const variantNote =
     name === 'security' && sourceFile !== 'security.md' ? ` (variant: ${sourceFile})` : '';
   console.log(`${chalk.green('✓')} Installed .claude/rules/${name}.md${variantNote}`);
+  reportLeftToEdit(name, await fs.readFile(targetPath, 'utf8'));
+}
+
+// `init` fills these placeholders with the project's values and drops the
+// staging wording when there is no staging branch. `add rule` copies the raw
+// template, so it names what is left to edit.
+const PLACEHOLDER = /\[[A-Z][A-Z0-9_]{2,}\]/g;
+
+function reportLeftToEdit(name, content) {
+  const lines = content.split('\n');
+  const placeholders = lines.flatMap((text, i) =>
+    (text.match(PLACEHOLDER) || []).map((p) => `line ${i + 1}: ${p}`),
+  );
+  const stagingLines = lines.flatMap((text, i) => (/staging/.test(text) ? [i + 1] : []));
+
+  if (placeholders.length > 0) {
+    console.log(
+      chalk.yellow(
+        `⚠ Replace the placeholders in .claude/rules/${name}.md with your project's values:`,
+      ),
+    );
+    for (const p of placeholders) console.log(`    ${p}`);
+  }
+  if (stagingLines.length > 0) {
+    const many = stagingLines.length > 1;
+    console.log(
+      chalk.yellow(
+        `⚠ ${many ? 'Lines' : 'Line'} ${stagingLines.join(', ')} ${many ? 'mention' : 'mentions'} a \`staging\` branch: edit ${many ? 'them' : 'it'} if your project has none.`,
+      ),
+    );
+  }
 }

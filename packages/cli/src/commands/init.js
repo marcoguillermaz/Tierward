@@ -90,6 +90,8 @@ async function dispatchFromContext(data, options) {
     includePreCommit: data.scaffold_options.include_pre_commit,
     includeGithub: data.scaffold_options.include_github,
   };
+  if (data.scaffold_options.promotion !== undefined)
+    answersFromContext.promotion = data.scaffold_options.promotion;
   // v1.27.0+ tier M/L: forward the optional feature flags and extra
   // commands so the legacy init-* sub-flows can scaffold M/L without
   // re-prompting.

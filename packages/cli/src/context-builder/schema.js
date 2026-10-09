@@ -8,6 +8,7 @@
  * Consumed by: utils/validate-context.js, context-builder/writer.js
  */
 import { z } from 'zod';
+import { NATIVE_STACKS, PROMOTION_MODES } from '../scaffold/skill-registry.js';
 
 export const SCHEMA_VERSION = 1;
 
@@ -36,6 +37,8 @@ export const TIER_VALUES = TIER_V1;
 
 export const CONFIDENCE = z.enum(['high', 'medium', 'low', 'declared']);
 
+export const PROMOTION = z.enum(PROMOTION_MODES);
+
 // ── Valid dotted-paths for confidence keys and pending_decisions[].field ─
 
 export const VALID_DOTTED_PATHS = [
@@ -53,6 +56,7 @@ export const VALID_DOTTED_PATHS = [
   'tier.rationale',
   'scaffold_options.include_pre_commit',
   'scaffold_options.include_github',
+  'scaffold_options.promotion',
   'sources.primary_repo',
   'features.has_api',
   'features.has_database',
@@ -115,6 +119,8 @@ const scaffoldOptionsSchema = z
   .object({
     include_pre_commit: z.boolean(),
     include_github: z.boolean(),
+    // v2.1.0+: how work reaches `main`. Absent = derived from the stack.
+    promotion: PROMOTION.optional(),
   })
   .strict();
 
@@ -266,6 +272,24 @@ export const CONTEXT_SCHEMA_V1 = baseContextSchema.superRefine((data, ctx) => {
       code: z.ZodIssueCode.custom,
       path: ['features'],
       message: `features block requires tier M or L; tier ${data.tier.selected} has no consumers for feature flags`,
+    });
+  }
+
+  // C9 (v2.1.0+) — promotion mode needs a pipeline (no tier 0), and `staging`
+  // needs a staging server (no native stack).
+  const promotion = data.scaffold_options.promotion;
+  if (promotion !== undefined && data.tier.selected === '0') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['scaffold_options', 'promotion'],
+      message: 'scaffold_options.promotion requires tier S, M or L; tier 0 has no pipeline',
+    });
+  }
+  if (promotion === 'staging' && NATIVE_STACKS.includes(data.stack.primary)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['scaffold_options', 'promotion'],
+      message: `scaffold_options.promotion=staging is not available for stack ${data.stack.primary} (no staging server); use direct or pr`,
     });
   }
 });

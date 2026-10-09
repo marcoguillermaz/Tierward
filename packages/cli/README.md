@@ -44,6 +44,8 @@ Start at the lowest tier that covers your risk. Move up when you need more struc
 | **M — Standard** | 13 phases, 3 STOP gates | Feature blocks, 1–2 collaborators |
 | **L — Full** | 14 phases, 4 STOP gates | Team projects, complex domain work |
 
+The wizard also asks how changes reach `main`: through a `staging` branch, by a local merge, or by a pull request with no staging branch and no push to `main`.
+
 ## What gets scaffolded
 
 - **`CLAUDE.md`** — project context Claude reads at session start (stack, commands, conventions)

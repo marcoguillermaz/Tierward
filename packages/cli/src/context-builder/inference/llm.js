@@ -19,7 +19,10 @@ import fs from 'fs-extra';
 import path from 'node:path';
 
 const ANTHROPIC_ENDPOINT = 'https://api.anthropic.com/v1/messages';
-const DEFAULT_MODEL = 'claude-sonnet-4-6';
+const DEFAULT_MODEL = 'claude-sonnet-5-5';
+// Current models think by default and thinking tokens count toward
+// max_tokens, so leave room for it on top of the JSON reply.
+const MAX_TOKENS = 4096;
 const SUMMARY_BUDGET_CHARS = 8000;
 
 const SKIP_DIRS = new Set([
@@ -124,9 +127,11 @@ async function defaultLlmClient({ system, user, model, apiKey }) {
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
     },
+    // No `thinking` field: every explicit value is rejected by some model a
+    // user can pick through TIERWARD_CONTEXT_LLM_MODEL.
     body: JSON.stringify({
       model,
-      max_tokens: 512,
+      max_tokens: MAX_TOKENS,
       system,
       messages: [{ role: 'user', content: user }],
     }),
@@ -136,8 +141,9 @@ async function defaultLlmClient({ system, user, model, apiKey }) {
     throw new Error(`Anthropic API ${response.status}: ${body.slice(0, 200)}`);
   }
   const data = await response.json();
-  const content = data.content?.[0]?.text;
-  if (!content) throw new Error('Empty content[].text in Anthropic response');
+  // Thinking blocks come before the text, so take the first text block.
+  const content = data.content?.find((block) => block.type === 'text')?.text;
+  if (!content) throw new Error('No text block in Anthropic response');
   return content;
 }
 

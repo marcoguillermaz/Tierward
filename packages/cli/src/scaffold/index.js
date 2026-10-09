@@ -2,6 +2,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import {
   NATIVE_STACKS,
+  promotionError,
+  promotionMode,
   remoteGovernanceEnabled,
   getSkillsToRemove,
   getCheatsheetSkillsToRemove,
@@ -55,6 +57,7 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
   if (tier === '0') {
     return scaffoldTier0(targetDir, config, templatesDir);
   }
+  assertPromotion(config);
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
 
@@ -158,6 +161,12 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
   await patchSettingsPermissions(targetDir, config);
 }
 
+// Refuse an invalid promotion mode before any file is written.
+function assertPromotion(config) {
+  const error = promotionError(config);
+  if (error) throw new Error(error);
+}
+
 /**
  * Remove optional docs that are not applicable based on project feature flags.
  * Docs are only pruned when a feature flag is explicitly set to false (not undefined).
@@ -199,10 +208,16 @@ async function pruneCheatsheet(targetDir, config) {
     content = content.replace(new RegExp(`^\\| \`\\/${skill}\` .*\\n`, 'm'), '');
   }
 
-  // Remove staging workflow rows when remote governance is off (no staging branch/URL)
+  // Remove staging workflow rows when remote governance is off (no staging branch/URL);
+  // in `pr` mode the production row becomes the pull request flow.
   if (!remoteGovernanceEnabled(config)) {
     content = content.replace(/^\| Merge to staging .*\n/m, '');
-    content = content.replace(/^\| Promote to production .*\n/m, '');
+    content = content.replace(
+      /^\| Promote to production .*\n/m,
+      promotionMode(config) === 'pr'
+        ? '| Promote to production | `git push -u origin feature/block-name && gh pr create --base main --fill`, then `gh pr merge --merge` after `Promote` |\n'
+        : '',
+    );
   }
 
   // Replace web-centric skill descriptions with native equivalents
@@ -270,7 +285,9 @@ async function patchSettingsPermissions(targetDir, config) {
     const raw = await fs.readFile(settingsPath, 'utf8');
     const settings = JSON.parse(raw);
     if (stackPerms && settings.permissions && Array.isArray(settings.permissions.allow)) {
-      settings.permissions.allow = stackPerms;
+      // Keep the `gh` rules (`pr` promotion mode): they are not stack tools
+      const ghRules = settings.permissions.allow.filter((rule) => rule.startsWith('Bash(gh '));
+      settings.permissions.allow = [...stackPerms, ...ghRules];
     }
     if (stackDeny && settings.permissions && Array.isArray(settings.permissions.deny)) {
       settings.permissions.deny = [...settings.permissions.deny, ...stackDeny];
@@ -343,6 +360,7 @@ async function copyTemplateDir(
  * Used for in-place and from-context init modes to avoid overwriting the user's existing files.
  */
 export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
+  assertPromotion(config);
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
 
@@ -1002,8 +1020,8 @@ function interpolate(content, config) {
       /\| 5c - Staging deploy \| Merge to staging \+ smoke test/g,
       '| 5c - Local build | Local build + smoke test',
     );
-    // Tier L settings.json push permission
-    result = result.replace(/^\s*"Bash\(git push origin staging\*\)",\n/m, '');
+    // Tier L settings.json push permission (ask list)
+    result = result.replace(', "Bash(git push origin staging*)"', '');
     // repo-hygiene scan script: protected-branch list
     result = result.replace('PROTECTED_BRANCHES="main staging"', 'PROTECTED_BRANCHES="main"');
     // Tier L CLAUDE.md worktree example comment
@@ -1060,6 +1078,13 @@ function interpolate(content, config) {
       /After writing a migration, before applying to staging/,
       'After writing a migration, before applying to the database',
     );
+  }
+
+  // ── Post-interpolation: `pr` promotion mode ───
+  // Runs after the staging strip above, which already turned every promotion
+  // into a local merge into `main`: here that merge becomes a pull request.
+  if (promotionMode(config) === 'pr') {
+    result = toPullRequestPromotion(result);
   }
 
   // ── Post-interpolation: adjust Phase 5b terminology for backend-only projects ───
@@ -1130,6 +1155,202 @@ bin/`,
 
   return result;
 }
+
+/**
+ * `pr` promotion mode: rewrite the promotion steps that the staging strip left
+ * as a local merge into `main`. The work branch is pushed and a pull request
+ * opened (neither is a promotion), then `gh pr merge --merge` runs behind the
+ * Promotion gate; a merge commit keeps the block's separate code, docs and
+ * context commits. The work branch, and a tier L worktree, stay out of the
+ * step-1 cleanup gate because the pull request needs them, and are removed at
+ * a post-merge cleanup confirmation. Replacements are string-exact; the
+ * integration suite asserts that each one fired.
+ */
+function toPullRequestPromotion(content) {
+  let result = content;
+  const isTierL = result.includes('## Worktree isolation');
+  const openPr = (branch) =>
+    `\`git push -u origin ${branch} && gh pr create --base main --fill\` (or push the branch and open the PR in the GitHub web UI)`;
+  const mergeWhat =
+    '`gh pr merge --merge` (or merge the PR in the GitHub web UI, with a merge commit if the repository allows it)';
+  const remoteGone = '(skip the remote delete if the branch is already gone)';
+
+  // Tier S FL-3: open the pull request, then merge it behind the gate
+  result = result.replace(
+    /## FL-3 - Promote to production\n[\s\S]*?(?=## FL-4)/,
+    [
+      '## FL-3 - Promote to production',
+      '',
+      `- Open the pull request: ${openPr('fix/description')}. Pushing the \`fix/\` branch and opening the PR are not promotions; the merge below is.`,
+      '- If the repository runs CI on pull requests, wait for it: `gh pr checks --watch`.',
+      '',
+      '***** STOP — Promotion authorization (production) *****',
+      '- WHY we stopped: merging the pull request writes to the protected `main` branch and ships the fix to production. No prior approval covers this merge - the protected branch gets its own gate.',
+      `- WHAT to do: confirm you want exactly this to run: ${mergeWhat}.`,
+      '- NEXT after action: reply with the bare keyword `Promote` to authorize this ONE merge; the merge runs, local `main` is updated, deploy is verified, then FL-4 cleanup closes the pipeline.',
+      '*****',
+      '',
+      '- Merge the pull request: `gh pr merge --merge`',
+      '- Update local `main`: `git checkout main && git pull --ff-only`',
+      '- Verify deploy completes.',
+      '',
+      '',
+    ].join('\n'),
+  );
+  // Tier S FL-4: the remote branch is a cleanup candidate too
+  result = result.replace(
+    'the local `fix/description` branch, and any screenshots',
+    'the local `fix/description` branch and its remote copy (GitHub may have deleted it already), and any screenshots',
+  );
+  result = result.replace(
+    '(session file, `git branch -d fix/description`, artifacts)',
+    `(session file, \`git branch -d fix/description\`, \`git push origin --delete fix/description\` ${remoteGone}, artifacts)`,
+  );
+
+  // Tier M/L Phase 8 step 1: the branch (and a tier L worktree) leave the gate
+  result = result.replace(
+    ', and the local `feature/block-name` branch. The spec archive move',
+    '. The `feature/block-name` branch is not a candidate here: it carries the closure commits and the pull request, and is removed at the post-merge cleanup (step 11). The spec archive move',
+  );
+  result = result.replace(
+    ', the block branch, and - if this block ran in a worktree - the worktree directory `.claude/worktrees/[block-name]` itself.',
+    '. The block branch and, if this block ran in a worktree, the worktree directory are not candidates here: they carry the closure commits and the pull request, and are removed at the post-merge cleanup (step 11).',
+  );
+  result = result.replace(', and BEFORE the worktree teardown in 1c):', '):');
+  const blockFilesWhy =
+    'block files are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.';
+  result = result.replace(
+    'WHY we stopped: files and branches are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.',
+    `WHY we stopped: ${blockFilesWhy}`,
+  );
+  result = result.replace(
+    'files, branches and (if applicable) the worktree are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here, before the worktree disappears with anything still inside it.',
+    blockFilesWhy,
+  );
+  result = result.replace(
+    'only the approved items are deleted, the worktree teardown in 1c runs, then closure continues with step 2.',
+    'only the approved items are deleted, then closure continues with step 2.',
+  );
+  result = result.replace(
+    /1c\. \*\*Worktree teardown\*\*[^\n]*\n(?: {4}- [^\n]*\n)+/,
+    '1c. **Worktree teardown**: runs at the post-merge cleanup (step 11), once the pull request is merged; the branch is needed until then.\n',
+  );
+
+  // Tier M/L step 8: closure commits reach `main` through the pull request
+  result = result.replace(
+    'Getting them onto `main` goes through the same Promotion authorization gate as any other push - never push them directly.',
+    'Getting them onto `main` goes through the pull request (step 9) and its merge behind the step-10 Promotion authorization gate - never push them to `main`.',
+  );
+
+  // Tier M/L step 9: open the pull request before the review
+  const blockBranch = isTierL
+    ? `${openPr('[block-branch]')}, where \`[block-branch]\` is \`feature/block-name\`, or \`worktree-[block-name]\` if this block runs in a worktree`
+    : openPr('feature/block-name');
+  result = result.replace(
+    '9. **PR review** (recommended): if the block has a PR open and CI is green, run',
+    `9. **Open the pull request**: ${blockBranch}. Pushing the work branch and opening the PR are not promotions; the step-10 merge is. If the repository runs CI on pull requests, wait for it: \`gh pr checks --watch\`.\n\n   **PR review** (recommended): once CI is green, run`,
+  );
+
+  // Tier M/L step 10: merge behind the gate; step 11: post-merge cleanup
+  const branchCleanup = (branch) =>
+    `\`git checkout main && git pull --ff-only\`, then \`git branch -d ${branch}\` and \`git push origin --delete ${branch}\` ${remoteGone}`;
+  const cleanupCommands = isTierL
+    ? [
+        `    - Not in a worktree: ${branchCleanup('feature/block-name')}.`,
+        `    - In a worktree: run \`ExitWorktree({action: "keep"})\` first (never \`"remove"\`), then from the main working tree \`git checkout main && git pull --ff-only\`, \`git worktree remove .claude/worktrees/[block-name]\`, \`git branch -d worktree-[block-name]\` and \`git push origin --delete worktree-[block-name]\` ${remoteGone}.`,
+      ]
+    : [`    ${branchCleanup('feature/block-name')}.`];
+  result = result.replace(
+    /10\. Promote to production - behind its own gate:\n[\s\S]*?(?=## Phase 8\.5)/,
+    [
+      '10. Promote to production - behind its own gate:',
+      '',
+      '    ***** STOP — Promotion authorization (production) *****',
+      '    - WHY we stopped: merging the pull request writes to the protected `main` branch and ships the block to production. No prior approval (Phase 6 sign-off, closure confirmation, or a `/pr-review` verdict) covers this merge.',
+      `    - WHAT to do: confirm you want exactly this to run: ${mergeWhat}.`,
+      '    - NEXT after action: reply with the bare keyword `Promote` to authorize this ONE merge; the merge runs, then the post-merge cleanup below.',
+      '    *****',
+      '',
+      '    `gh pr merge --merge`',
+      '',
+      '11. **Post-merge cleanup** (the branch left the step-1 cleanup gate because the pull request needed it):',
+      '',
+      '    ***** STOP — Post-merge cleanup confirmation *****',
+      '    - WHY we stopped: the merged branch is about to be removed; removal is never bundled into the promotion authorization.',
+      `    - WHAT to do: review the candidates: the local block branch and its remote copy (GitHub may have deleted it already)${isTierL ? ', and the worktree directory `.claude/worktrees/[block-name]` if this block ran in a worktree' : ''}.`,
+      '    - NEXT after action: confirm the list (or name what to keep); local `main` is updated, only the approved items are deleted, then Phase 8.5 context review closes the session.',
+      '    *****',
+      '',
+      ...cleanupCommands,
+      '',
+      '',
+    ].join('\n'),
+  );
+
+  // Promotion rules the agent reads: `main` changes only through a PR merge
+  result = result.replace(
+    "- **Never commit to `main` directly.** All development on `fix/` branches. The only sanctioned writes to these branches are this pipeline's merge-promotions (FL-3), each behind its own Promotion authorization gate.",
+    '- **Never commit or push to `main` directly.** All development on `fix/` branches. `main` changes only through the pull request merged at FL-3, behind its own Promotion authorization gate.',
+  );
+  result = result.replace(
+    "- **Never commit to `main` directly.** The only sanctioned writes to these branches are this pipeline's merge-promotions (Phase 5c, Phase 8 step 10), each behind its own Promotion authorization gate.",
+    '- **Never commit or push to `main` directly.** `main` changes only through the pull request merged at Phase 8 step 10, behind its own Promotion authorization gate.',
+  );
+  result = result.replace(
+    '**Promotion is never automatic**: any `git push` to `origin main`,',
+    '**Promotion is never automatic**: any pull request merge into `main` (`gh pr merge` or an MCP merge tool) and any `git push` to `origin main`,',
+  );
+  result = result.replace(
+    '`Promote` authorizes one push only',
+    '`Promote` authorizes one promotion only',
+  );
+  result = result.replace(
+    'it authorizes exactly one promotion push and nothing else',
+    'it authorizes exactly one promotion (one pull request merge) and nothing else',
+  );
+  result = result.replace(
+    'which the gate consumes on each push to `main`',
+    'which the gate consumes on each pull request merge into `main` (and on any push to `main`)',
+  );
+
+  // settings.json: `main` changes only through a PR, so the push asks become
+  // denies, refspec forms included (`HEAD:main`, `+main`, `refs/heads/main`);
+  // the PR merge asks for permission on top of `Promote`
+  result = result.replace(
+    /^ {4}"ask": \["Bash\(git push origin main\*\)"\],\n {4}"deny": \[\n/m,
+    `    "ask": ["${PR_MODE_GH_ASK.join('", "')}"],\n    "deny": [\n${PR_MODE_PUSH_DENY.map((rule) => `      "${rule}",\n`).join('')}`,
+  );
+  // ...and opening, reading and checking a PR runs without a prompt
+  result = result.replace(/("allow": \[)([^\]]*?)(\s*\])/, (_, open, rules, close) => {
+    const sep = rules.includes('\n') ? ',\n      ' : ', ';
+    const added = PR_MODE_GH_ALLOW.map((rule) => `"${rule}"`).join(sep);
+    return `${open}${rules}${rules.trim() ? sep : ''}${added}${close}`;
+  });
+  return result;
+}
+
+// `gh` rules for `pr` mode: the agent opens and checks the pull request on
+// its own; the merge needs `Promote` and the permission prompt.
+export const PR_MODE_GH_ALLOW = [
+  'Bash(gh pr create *)',
+  'Bash(gh pr view *)',
+  'Bash(gh pr checks *)',
+];
+export const PR_MODE_GH_ASK = ['Bash(gh pr merge *)'];
+
+// Deny rules for `pr` mode. Claude Code matches each subcommand of a compound
+// command, and `*` matches any text (code.claude.com/docs/en/permissions).
+export const PR_MODE_PUSH_DENY = [
+  'Bash(git push origin main*)',
+  'Bash(git push * main)',
+  'Bash(git push * main *)',
+  'Bash(git push *:main)',
+  'Bash(git push *:main *)',
+  'Bash(git push * +main)',
+  'Bash(git push * +main *)',
+  'Bash(git push *refs/heads/main)',
+  'Bash(git push *refs/heads/main *)',
+];
 
 // Named export - used by generators/claude-md.js to resolve all template placeholders
 export { interpolate };

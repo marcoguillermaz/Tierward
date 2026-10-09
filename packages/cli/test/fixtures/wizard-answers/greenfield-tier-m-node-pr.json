@@ -1,0 +1,17 @@
+{
+  "mode": "greenfield",
+  "tier": "m",
+  "projectName": "Pull Request Project",
+  "description": "A Tier M node project promoting by pull request, no staging",
+  "techStack": "node-ts",
+  "testCommand": "npx vitest run",
+  "typeCheckCommand": "npx tsc --noEmit",
+  "devCommand": "npm run dev",
+  "hasApi": true,
+  "hasDatabase": true,
+  "hasFrontend": false,
+  "hasPrd": false,
+  "includePreCommit": true,
+  "includeGithub": true,
+  "promotion": "pr"
+}

@@ -11,7 +11,12 @@ import { generateClaudeMd } from '../generators/claude-md.js';
 import { generateContextImport } from '../generators/context-import.js';
 import { printPlan, printNextSteps } from '../utils/print-plan.js';
 import { AUDIT_MODELS } from '../utils/constants.js';
-import { NATIVE_STACKS, WEB_STACKS } from '../scaffold/skill-registry.js';
+import {
+  NATIVE_STACKS,
+  WEB_STACKS,
+  promotionChoices,
+  promotionMode,
+} from '../scaffold/skill-registry.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
@@ -311,6 +316,13 @@ export async function initInPlace(options) {
         name: 'includeGithub',
         message: `Include .github/ (PR template + CODEOWNERS)?${!hasGithubRemote ? chalk.dim(' (no GitHub remote detected)') : ''}`,
         default: hasGithubRemote,
+      },
+      {
+        type: 'select',
+        name: 'promotion',
+        message: 'How do changes reach `main`?',
+        choices: (a) => promotionChoices(a.techStack),
+        default: (a) => promotionMode({ techStack: a.techStack }),
       },
     ]);
   } // end else (interactive path)

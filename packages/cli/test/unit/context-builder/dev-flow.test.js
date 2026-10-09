@@ -136,6 +136,32 @@ describe('buildDevFrontmatter', () => {
     });
     assert.equal(fm.project.description, 'LLM-extracted description');
   });
+
+  it('passes promotion through to scaffold_options and stays schema-valid', () => {
+    const fm = buildDevFrontmatter({
+      answers: { ...baseGreenfield, promotion: 'pr' },
+      mode: 'greenfield',
+      generatedByVersion: '2.1.0',
+    });
+    assert.equal(fm.scaffold_options.promotion, 'pr');
+    const result = validateContextContent(serializeContext(fm));
+    assert.equal(result.valid, true, `errors: ${JSON.stringify(result.errors)}`);
+  });
+
+  it('omits promotion when not chosen, and on tier 0', () => {
+    const absent = buildDevFrontmatter({
+      answers: baseGreenfield,
+      mode: 'greenfield',
+      generatedByVersion: '2.1.0',
+    });
+    assert.equal('promotion' in absent.scaffold_options, false);
+    const tier0 = buildDevFrontmatter({
+      answers: { ...baseGreenfield, familiarity: '0', tier: undefined, promotion: 'pr' },
+      mode: 'greenfield',
+      generatedByVersion: '2.1.0',
+    });
+    assert.equal('promotion' in tier0.scaffold_options, false);
+  });
 });
 
 describe('assembleDevQuestions', () => {
