@@ -214,7 +214,7 @@ Expected: ≤ 200. Any count above 200 = WARN.
 RECOMMEND if failing: invoke P1 and P5 to identify sections to remove or convert to `@import` references. Do not auto-fix - pruning requires judgment.
 
 **C16 - Deprecated model IDs**
-Check: no SKILL.md file or `.claude/settings.json` should reference a retired or deprecated model ID. Retired: the Claude 3 family (`claude-3-haiku-*`, `claude-3-5-haiku-*`, `claude-3-opus-*`, `claude-3-sonnet-*`, `claude-3-5-sonnet-*`, `claude-3-7-sonnet-*`), `claude-sonnet-4-20250514` and `claude-opus-4-20250514` (June 15, 2026), `claude-opus-4-1-20250805` (August 5, 2026). Deprecated: `claude-sonnet-4-5-20250929` (retires November 30, 2026).
+Check: no SKILL.md file or `.claude/settings.json` should reference a retired or deprecated model ID. Retired: the Claude 3 family (`claude-3-haiku-*`, `claude-3-5-haiku-*`, `claude-3-opus-*`, `claude-3-sonnet-*`, `claude-3-5-sonnet-*`, `claude-3-7-sonnet-*`), `claude-sonnet-4-20250514` and `claude-opus-4-20250514` (June 15, 2026), `claude-opus-4-1-20250805` (August 5, 2026). Deprecated: `claude-sonnet-4-5-20250929` (retires November 30, 2026). The check skips the arch-audit skill folder, which lists these IDs on purpose.
 Expected: 0 matches. Any match = FAIL.
 AUTO-FIX: replace deprecated model IDs with the current equivalents:
 
