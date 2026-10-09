@@ -45,7 +45,7 @@ Claude Code is a powerful CLI assistant that can read, write, and reason about y
 - Pre-wired hooks that enforce the pipeline mechanically, not just as instructions
 - A tiered system matching process overhead to task complexity: a two-line bugfix does not go through the same process as a multi-week feature
 - 26 audit skills - executable multi-step programs with model routing (haiku for mechanical checks, sonnet for analysis)
-- Audit trails, commit attribution, secret scanning, and CODEOWNERS gates for full visibility over AI-generated changes
+- Audit trails, commit attribution, secret scanning, and CODEOWNERS review requests for full visibility over AI-generated changes
 - A discovery mechanism that teaches Claude about your existing codebase in a single structured session
 
 **What it does not do:**
@@ -1138,18 +1138,22 @@ Every commit made during a Claude Code session includes `Co-authored-by: Claude 
 
 ### CODEOWNERS
 
-`.github/CODEOWNERS` requires tech lead review on `.claude/` changes. No change to the governance layer can be merged without a human review. Claude cannot silently modify its own constraints.
+`.github/CODEOWNERS` names the tech lead as owner of `.claude/`, so GitHub requests their review on every pull request that changes it. The review becomes a merge requirement only when branch protection or a ruleset on the target branch enables "Require review from Code Owners".
+
+GitHub supports code owners and branch protection in public repositories on every plan, and in private repositories only on Pro, Team and Enterprise plans. In a private repository on a free personal account the file has no effect: changes to `.claude/` get no review gate from GitHub.
 
 ---
 
 ### Pre-commit hooks
 
-`.pre-commit-config.yaml` includes **gitleaks** (scans for secrets) and **AI commit audit** (flags Claude co-authored commits for team awareness).
+`.pre-commit-config.yaml` includes **gitleaks** (scans for secrets) and **AI commit audit**. The audit reads the commit message: when it carries a `Co-authored-by: Claude` trailer, the hook prints a reminder that a human should review the changes before merge. It never blocks a commit.
 
 ```bash
 pip install pre-commit
 pre-commit install
 ```
+
+The config sets `default_install_hook_types: [pre-commit, commit-msg]`, so a plain `pre-commit install` sets up both hooks. This needs pre-commit 2.18.0 or later. If you installed the hooks from an older config, run `pre-commit install` again.
 
 If gitleaks finds a secret: the commit is blocked. Fix by removing the secret and adding the file to `.gitignore`.
 

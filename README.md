@@ -46,7 +46,7 @@ If your team uses other AI coding tools alongside Claude Code, Tierward governs 
 
 **3. Run audit skills on demand.** Skills like `/security-audit`, `/arch-audit`, and `/systematic-debugging` are multi-step programs that run inside Claude Code. Call them when you need them: before a deploy, when a test fails, after a migration wave. Each produces a structured report.
 
-**4. You or your team decides.** STOP gates pause Claude to present its plan, and a commit gate blocks `git commit` until you have approved. CODEOWNERS guards `.claude/`. A Stop hook also verifies your tests pass before a task can close. No autonomous merges.
+**4. You or your team decides.** STOP gates pause Claude to present its plan, and a commit gate blocks `git commit` until you have approved. On GitHub plans that support code owners, CODEOWNERS sends changes to `.claude/` to a human reviewer, and blocks the merge too when branch protection requires code owner review. A Stop hook also verifies your tests pass before a task can close. No autonomous merges.
 
 ---
 
@@ -252,7 +252,7 @@ The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legac
 
 **Weekly arch-audit** - SessionStart hook checks if `/arch-audit` ran in the last 7 days.
 
-**CODEOWNERS** - Changes to `.claude/` require tech lead review.
+**CODEOWNERS** - Pull requests that change `.claude/` request the tech lead's review. The review becomes mandatory only when branch protection or a ruleset enables "Require review from Code Owners". GitHub supports code owners in public repositories on every plan, and in private repositories only on Pro, Team and Enterprise plans.
 
 ---
 
