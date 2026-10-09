@@ -27,6 +27,11 @@ export const REVIEW_DIFF_FILES = [
   { template: 'common/context-review.md', target: '.claude/rules/context-review.md' },
   { template: 'common/files-guide.md', target: '.claude/files-guide.md' },
   { template: 'common/PULL_REQUEST_TEMPLATE.md', target: '.github/PULL_REQUEST_TEMPLATE.md' },
+  // Narrowed to `main` on projects without staging, so not copied 1:1 there.
+  {
+    template: 'common/.claude/hooks/tierward-governance-gate.mjs',
+    target: '.claude/hooks/tierward-governance-gate.mjs',
+  },
 ];
 
 // Files that require user review before upgrade (they may contain customizations)

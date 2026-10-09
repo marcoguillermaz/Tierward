@@ -356,3 +356,183 @@ describe('governance-gate hook — promotion push gate', () => {
     assert.equal(stdout.trim(), '');
   });
 });
+
+// The gate reads the commands a Bash call runs, not its whole text: quoted
+// strings and heredoc bodies are data, `$(...)` and backticks are code.
+// Baseline for the differential checks: the v2.0.1 whole-string regexes,
+// copied here so CI needs no old file. A command they deny that the new gate
+// allows must be listed as an intended fix; anything else is a regression.
+const V201_PUSH_RE = /\bgit\s+([^\n]*\s)?push(\s|$)/;
+const V201_PROTECTED_REF_RE = /(^|[\s:'"])(staging|main)(?=$|[\s:'".])/;
+const V201_COMMIT_RE = /\bgit\s+([^\n]*\s)?commit(\s|$)/;
+const v201DeniesPush = (cmd) => V201_PUSH_RE.test(cmd) && V201_PROTECTED_REF_RE.test(cmd);
+
+const CLAUDE_COMMIT = [
+  `git commit -m "$(cat <<'EOF'`,
+  `fix: don't git push origin main by hand`,
+  ``,
+  `Co-Authored-By: Claude <noreply@anthropic.com>`,
+  `EOF`,
+  `)"`,
+].join('\n');
+
+// Denied by v2.0.1 as promotions, allowed now: protected names in data only.
+const PUSH_INTENDED_FIXES = [
+  'git commit -m "docs: explain push to staging or main"',
+  'git commit -m "chore: git push origin main is gated"',
+  'echo "git push origin main"',
+  `printf '%s\\n' 'git push origin staging'`,
+  'git push -u origin feature/x && gh pr create --base main',
+  'git push -u origin feature/x && gh pr create --base main --title "Push to main"',
+  ['git commit -F - <<EOF', 'fix: stop git push origin main from slipping', 'EOF'].join('\n'),
+  CLAUDE_COMMIT,
+  'git push origin feature/x # git push origin main comes later',
+  // Destination is not protected: pushes local main to a feature branch.
+  'git push origin main:feature/x',
+];
+
+const PUSH_MUST_DENY = [
+  'git push origin staging',
+  'git push origin main',
+  'git push origin "main"',
+  "git push origin 'staging'",
+  'git push origin HEAD:main',
+  'git push origin +main',
+  'git push origin HEAD:refs/heads/main',
+  'git push origin refs/heads/staging',
+  'git push -f origin main',
+  'git push --force-with-lease origin main',
+  'git commit -m "x" && git push origin main',
+  'git checkout staging && git merge feature/x --no-ff && git push origin staging',
+  'git status; git push origin main',
+  'git status\ngit push origin main',
+  'git fetch || git push origin main',
+  'git push origin main 2>&1 | tail -n 5',
+  'git push origin main >/dev/null',
+  'git -C repo push origin main',
+  'git -c push.default=current push origin main',
+  'git --git-dir=.git --work-tree=. push origin main',
+  'git --no-pager push origin main',
+  '/usr/bin/git push origin main',
+  'GIT_TRACE=1 git push origin main',
+  'env GIT_TRACE=1 git push origin main',
+  'command git push origin main',
+  'time git push origin staging',
+  "bash -c 'git push origin main'",
+  'sh -lc "git push origin staging"',
+  "zsh -c 'cd repo && git push origin main'",
+  '(cd repo && git push origin main)',
+  'git commit -m "$(git push origin main)"',
+  'git commit -m "`git push origin main`"',
+  'echo $(git push origin main)',
+  'git push origin \\\nmain',
+  "git push origin $'main'",
+  'git push origin $"staging"',
+];
+
+const PUSH_STABLE_ALLOW = [
+  'git push origin feature/main-nav',
+  'git push -u origin fix/bug-123',
+  'git log --oneline main',
+  'git status',
+  'ls -la',
+];
+
+describe('governance-gate hook — command segments, promotion gate (D5)', () => {
+  const blocked = (out) => out.includes('"permissionDecision":"deny"');
+  const FM = 'block: test\nrequirements_approved: true\npromotion_approved: false';
+  const run = (command) =>
+    runHook(GATE, { tool_name: 'Bash', tool_input: { command } }, { sessionFrontMatter: FM });
+
+  it('allows commands that name a protected branch only in data', () => {
+    for (const cmd of PUSH_INTENDED_FIXES) {
+      assert.equal(run(cmd).stdout.trim(), '', `must not be gated as a promotion:\n${cmd}`);
+    }
+  });
+
+  it('still denies every real promotion push form', () => {
+    for (const cmd of PUSH_MUST_DENY) {
+      const { stdout } = run(cmd);
+      assert.ok(blocked(stdout) && stdout.includes('Promote'), `must be gated:\n${cmd}`);
+    }
+  });
+
+  it('keeps allowing pushes and commands that never touch a protected branch', () => {
+    for (const cmd of PUSH_STABLE_ALLOW) {
+      assert.equal(run(cmd).stdout.trim(), '', `must stay allowed:\n${cmd}`);
+    }
+  });
+
+  it('differential: nothing v2.0.1 denied is allowed now unless listed as a fix', () => {
+    for (const cmd of PUSH_INTENDED_FIXES) {
+      assert.ok(v201DeniesPush(cmd), `stale intended-fix entry, v2.0.1 allowed it:\n${cmd}`);
+    }
+    const intended = new Set(PUSH_INTENDED_FIXES);
+    for (const cmd of [...PUSH_INTENDED_FIXES, ...PUSH_MUST_DENY, ...PUSH_STABLE_ALLOW]) {
+      if (v201DeniesPush(cmd) && !blocked(run(cmd).stdout)) {
+        assert.ok(intended.has(cmd), `newly allowed, not an intended fix:\n${cmd}`);
+      }
+    }
+  });
+
+  it('falls back to the whole-text check when the command cannot be parsed', () => {
+    // Nesting beyond the parser's depth limit makes it give up; the push must
+    // still be gated by the v2.0.1 whole-text test, not allowed.
+    const deep = `${'echo "$('.repeat(40)}git push origin main ${')"'.repeat(40)}`;
+    assert.ok(blocked(run(deep).stdout), 'unparseable command must fall back, not allow');
+  });
+
+  it('falls back to the whole-text check on unterminated quotes, substitutions and heredocs', () => {
+    for (const cmd of [
+      'git push origin main "',
+      "git push origin main '",
+      'git push origin main $(echo',
+      'git push origin main `echo',
+      'git push origin main && cat <<EOF\nbody',
+    ]) {
+      assert.ok(blocked(run(cmd).stdout), `malformed command must fall back:\n${cmd}`);
+    }
+    // A malformed command whose push is only in quoted text is judged like v2.0.1.
+    const quoted = 'git commit -m "git push origin main ';
+    assert.equal(blocked(run(quoted).stdout), v201DeniesPush(quoted));
+  });
+});
+
+describe('governance-gate hook — command segments, commit gate (D5)', () => {
+  const blocked = (out) => out.includes('"permissionDecision":"deny"');
+  const FM = 'block: test\nrequirements_approved: false\npromotion_approved: false';
+  const run = (command) =>
+    runHook(GATE, { tool_name: 'Bash', tool_input: { command } }, { sessionFrontMatter: FM });
+
+  const COMMIT_INTENDED_FIXES = ['git log --grep commit', 'echo "git commit -m x"'];
+  const COMMIT_MUST_DENY = [
+    'git commit -m "x"',
+    'git add src/a.js && git commit -m "x"',
+    'git -C repo commit -m x',
+    "bash -c 'git commit -m x'",
+    'git status; git commit --amend --no-edit',
+    CLAUDE_COMMIT,
+  ];
+
+  it('denies a real commit before approval, also inside a compound', () => {
+    for (const cmd of COMMIT_MUST_DENY) {
+      const { stdout } = run(cmd);
+      assert.ok(blocked(stdout), `commit must be gated:\n${cmd}`);
+    }
+  });
+
+  it('allows commands that only mention `commit`', () => {
+    for (const cmd of COMMIT_INTENDED_FIXES) {
+      assert.equal(run(cmd).stdout.trim(), '', `must not be gated as a commit:\n${cmd}`);
+    }
+  });
+
+  it('differential: nothing v2.0.1 denied as a commit is allowed now unless listed', () => {
+    const intended = new Set(COMMIT_INTENDED_FIXES);
+    for (const cmd of [...COMMIT_INTENDED_FIXES, ...COMMIT_MUST_DENY]) {
+      if (V201_COMMIT_RE.test(cmd) && !blocked(run(cmd).stdout)) {
+        assert.ok(intended.has(cmd), `newly allowed commit, not an intended fix:\n${cmd}`);
+      }
+    }
+  });
+});
