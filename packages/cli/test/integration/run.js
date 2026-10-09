@@ -4667,6 +4667,150 @@ async function scenarioMergeGate() {
   }
 }
 
+// `pr` promotion mode: no staging, the promotion is a pull request merged
+// behind the gate, and every string-exact rewrite of the transform fired.
+async function scenarioPrPromotion() {
+  section('Promotion mode pr - pull request promotion, no staging, no direct push');
+
+  const read = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
+  const shared = [
+    'gh pr create --base main --fill',
+    'gh pr merge --merge',
+    'any pull request merge into `main`',
+  ];
+  const blockRewrites = [
+    'goes through the pull request (step 9)',
+    '9. **Open the pull request**',
+    '11. **Post-merge cleanup**',
+    'merged at Phase 8 step 10',
+    'one promotion (one pull request merge)',
+    'each pull request merge into `main`',
+    'WHY we stopped: block files are about to be removed',
+  ];
+  const expected = {
+    s: [
+      ...shared,
+      'the merge below is.',
+      'the local `fix/description` branch and its remote copy',
+      '`git push origin --delete fix/description`',
+      '`main` changes only through the pull request merged at FL-3',
+      '`Promote` authorizes one promotion only',
+    ],
+    m: [...shared, ...blockRewrites, 'is removed at the post-merge cleanup (step 11)'],
+    l: [
+      ...shared,
+      ...blockRewrites,
+      'are removed at the post-merge cleanup (step 11)',
+      '1c. **Worktree teardown**: runs at the post-merge cleanup',
+      '`git worktree remove .claude/worktrees/[block-name]`',
+      'then closure continues with step 2.',
+    ],
+  };
+  const forbidden = ['--no-ff', 'worktree teardown in 1c runs', 'BEFORE the worktree teardown'];
+
+  for (const tier of ['s', 'm', 'l']) {
+    const label = `pr-mode[node/${tier}]`;
+    const dir = await scaffold(`pr-mode-node-${tier}`, tier, {
+      ...BASE,
+      tier,
+      promotion: 'pr',
+      isDiscovery: false,
+    });
+    assertNoStagingResiduals(dir, label);
+    const pipeline = read(dir, '.claude/rules/pipeline.md');
+    const missing = expected[tier].filter((s) => !pipeline.includes(s));
+    const present = forbidden.filter((s) => pipeline.includes(s));
+    if (missing.length === 0 && present.length === 0 && !/push origin main/.test(pipeline)) {
+      pass(`${label}: pipeline promotes through a pull request, every rewrite applied`);
+    } else {
+      fail(`${label}: pipeline rewrite incomplete`, `missing ${missing} | left ${present}`);
+    }
+    if (tier !== 's') {
+      const cheatsheet = read(dir, '.claude/cheatsheet.md');
+      if (cheatsheet.includes('gh pr merge --merge') && !/Merge to staging/.test(cheatsheet)) {
+        pass(`${label}: cheatsheet shows the pull request promotion`);
+      } else {
+        fail(`${label}: cheatsheet promotion row not rewritten`);
+      }
+    }
+    if (tier === 'l' && read(dir, 'CLAUDE.md').includes('- Non-production DB:')) {
+      pass(`${label}: CLAUDE.md names a non-production DB, not a staging one`);
+    } else if (tier === 'l') {
+      fail(`${label}: CLAUDE.md staging DB line not rewritten`);
+    }
+    if (
+      scaffoldedGateDenies(dir, `pr-${tier}-merge`, 'gh pr merge --merge') &&
+      !scaffoldedGateDenies(
+        dir,
+        `pr-${tier}-open`,
+        'git push -u origin feature/block-name && gh pr create --base main --fill',
+      )
+    ) {
+      pass(`${label}: gate gates the merge, not the push of the branch and the PR`);
+    } else {
+      fail(`${label}: gate does not separate opening the PR from merging it`);
+    }
+  }
+
+  // `direct` on a web stack: local merge into main, no staging left anywhere
+  for (const tier of ['s', 'm', 'l']) {
+    const label = `direct-mode[node/${tier}]`;
+    const dir = await scaffold(`direct-mode-node-${tier}`, tier, {
+      ...BASE,
+      tier,
+      promotion: 'direct',
+      isDiscovery: false,
+    });
+    assertNoStagingResiduals(dir, label);
+    const pipeline = read(dir, '.claude/rules/pipeline.md');
+    const branch = tier === 's' ? 'fix/description' : 'feature/block-name';
+    if (
+      pipeline.includes(`git merge ${branch} --no-ff && git push origin main`) &&
+      !pipeline.includes('gh pr create')
+    ) {
+      pass(`${label}: pipeline promotes by a local merge into main`);
+    } else {
+      fail(`${label}: direct promotion missing or PR steps present`);
+    }
+  }
+
+  // `pr` on a native stack
+  const swiftDir = await scaffold('pr-mode-swift-m', 'm', {
+    ...BASE,
+    tier: 'm',
+    techStack: 'swift',
+    testCommand: 'swift test',
+    typeCheckCommand: '',
+    promotion: 'pr',
+    isDiscovery: false,
+  });
+  assertNoStagingResiduals(swiftDir, 'pr-mode[swift/m]');
+  if (read(swiftDir, '.claude/rules/pipeline.md').includes('gh pr create --base main --fill')) {
+    pass('pr-mode[swift/m]: native stack promotes through a pull request');
+  } else {
+    fail('pr-mode[swift/m]: pull request promotion missing');
+  }
+
+  // Default web profile (`staging`) keeps its flow; step 9 no longer assumes a PR
+  const stagingDir = await scaffold('staging-mode-node-m', 'm', {
+    ...BASE,
+    tier: 'm',
+    isDiscovery: false,
+  });
+  const stagingPipeline = read(stagingDir, '.claude/rules/pipeline.md');
+  if (
+    stagingPipeline.includes('if the block has a PR open and CI is green') &&
+    !stagingPipeline.includes('Open the pull request') &&
+    stagingPipeline.includes(
+      'git checkout main && git merge staging --no-ff && git push origin main',
+    )
+  ) {
+    pass('staging-mode[node/m]: staging promotion unchanged, step 9 conditional on an open PR');
+  } else {
+    fail('staging-mode[node/m]: staging flow changed or step 9 still assumes a PR');
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -4732,6 +4876,7 @@ async function main() {
   await scenarioScaffoldedYaml();
   await scenarioPromotionSetting();
   await scenarioMergeGate();
+  await scenarioPrPromotion();
 
   // ── Summary ────────────────────────────────────────────────────────────────
 

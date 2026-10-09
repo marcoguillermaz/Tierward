@@ -2,7 +2,11 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { interpolate } from '../scaffold/index.js';
-import { getActiveSkills, NATIVE_STACKS } from '../scaffold/skill-registry.js';
+import {
+  getActiveSkills,
+  NATIVE_STACKS,
+  remoteGovernanceEnabled,
+} from '../scaffold/skill-registry.js';
 import { STACK_COMMANDS } from '../utils/stack-commands.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -62,6 +66,20 @@ export async function generateClaudeMd(config, targetDir) {
     content = content.replace(
       /## Environment[\s\S]*$/,
       `## Environment\n- **Distribution**: _native (DMG / TestFlight / App Store)_\n- **Signing**: _configure in Xcode Signing & Capabilities_\n`,
+    );
+  }
+
+  // No staging environment (`direct` and `pr` promotion on web stacks): drop the
+  // staging URL; the staging DB becomes a non-production one.
+  if (!remoteGovernanceEnabled(config)) {
+    content = content.replace(/^- Staging: .*\n/m, '');
+    content = content.replace(
+      /^- Staging DB: .*$/m,
+      '- Non-production DB: [non-production identifier]',
+    );
+    content = content.replace(
+      'staging credentials only in local dev',
+      'non-production credentials only in local dev',
     );
   }
 
