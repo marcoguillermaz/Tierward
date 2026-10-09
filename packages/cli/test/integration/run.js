@@ -2008,7 +2008,7 @@ async function scenarioRubricScore() {
         rubricFail('D7', `[${name}] deny missing force-push block`);
       }
 
-      // A push to main is denied (`pr` mode) or asks for permission (DEC-7)
+      // A push to main is denied (`pr` mode) or asks for permission (other modes)
       const guarded = [...(deny || []), ...(settings.permissions?.ask || [])];
       if (guarded.some((d) => d.includes('push origin main'))) {
         rubricPass('D7', `[${name}] deny or ask guards push to main`);
@@ -4632,6 +4632,60 @@ async function scenarioPromotionSetting() {
       );
     }
   }
+
+  // The in-place flow in `pr` mode; tier 0 has no pipeline and ignores the setting
+  const runInit = (name, answers) => {
+    const dir = path.join(OUTPUT_DIR, name);
+    fs.removeSync(dir);
+    fs.ensureDirSync(dir);
+    execFileSync('node', [CLI, 'init', '--answers', JSON.stringify(answers)], {
+      cwd: dir,
+      stdio: 'pipe',
+    });
+    return dir;
+  };
+  const parsedSettings = (dir) => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'));
+    } catch {
+      return null;
+    }
+  };
+  try {
+    const dir = runInit('promotion-inplace-pr', {
+      ...webAnswers,
+      mode: 'in-place',
+      promotion: 'pr',
+    });
+    const pipeline = fs.readFileSync(path.join(dir, '.claude/rules/pipeline.md'), 'utf8');
+    const allow = parsedSettings(dir)?.permissions?.allow || [];
+    if (
+      pipeline.includes('gh pr create --base main --fill') &&
+      allow.includes('Bash(gh pr create *)')
+    ) {
+      pass('promotion[in-place pr/web/m]: pipeline and settings use the pull request flow');
+    } else {
+      fail('promotion[in-place pr/web/m]: pull request flow missing');
+    }
+  } catch (err) {
+    fail('promotion[in-place pr/web/m]: init failed', err.stderr?.toString().trim().split('\n')[0]);
+  }
+  try {
+    const tier0 = { mode: 'greenfield', tier: '0', projectName: 'T0', description: 'Tier 0' };
+    const plain = parsedSettings(
+      runInit('promotion-tier0-none', { ...tier0, techStack: 'node-ts' }),
+    );
+    const withPr = parsedSettings(
+      runInit('promotion-tier0-pr', { ...tier0, techStack: 'node-ts', promotion: 'pr' }),
+    );
+    if (withPr && JSON.stringify(withPr) === JSON.stringify(plain)) {
+      pass('promotion[tier 0]: setting ignored, settings.json unchanged and valid');
+    } else {
+      fail('promotion[tier 0]: setting changed or broke settings.json');
+    }
+  } catch (err) {
+    fail('promotion[tier 0]: init failed', err.stderr?.toString().trim().split('\n')[0]);
+  }
 }
 
 // The governance gate also runs on MCP pull-request merge tools, and the
@@ -4729,7 +4783,7 @@ const PR_MODE_MAIN_PUSHES = [
   'git status && git push origin HEAD:main',
 ];
 
-// P4f: no command a promotion step tells the agent to run is refused by a deny
+// No command a promotion step tells the agent to run is refused by a deny
 // rule of the same tier and mode, and the gate refuses exactly the promotions
 // (a push naming a protected branch, a PR merge). A checkout of a protected
 // branch followed by a push that names no branch would slip past both.
@@ -4772,7 +4826,7 @@ async function scenarioPromotionCommands() {
               ...PR_MODE_PUSH_DENY.filter((rule) => !deny.includes(rule)),
               ...ask.filter((rule) => rule.startsWith('Bash(git push')),
               ...PR_MODE_MAIN_PUSHES.filter((cmd) => !deny.some((r) => bashRuleMatches(r, cmd))),
-              // DEC-19: open and check the PR without a prompt, ask on the merge
+              // Open and check the PR without a prompt, ask on the merge
               ...PR_MODE_GH_ALLOW.filter((rule) => !allow.includes(rule)),
               ...PR_MODE_GH_ASK.filter((rule) => !ask.includes(rule)),
               ...openPr

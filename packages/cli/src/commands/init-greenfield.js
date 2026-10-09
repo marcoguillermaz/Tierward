@@ -353,6 +353,8 @@ export async function initGreenfield(options) {
     isDiscovery,
     includePreCommit: isDiscovery ? false : answers.includePreCommit,
     includeGithub: isDiscovery ? false : answers.includeGithub,
+    // Tier 0 has no pipeline, so no promotion mode (as in CONTEXT.md, C9)
+    promotion: isDiscovery ? undefined : answers.promotion,
     hasE2E: answers.e2eCommand ? answers.e2eCommand.trim() !== '' : false,
     hasApi: answers.hasApi,
     hasDatabase: answers.hasDatabase,

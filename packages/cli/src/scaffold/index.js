@@ -1313,23 +1313,24 @@ function toPullRequestPromotion(content) {
     'which the gate consumes on each pull request merge into `main` (and on any push to `main`)',
   );
 
-  // settings.json: no push reaches `main`, so the push asks become denies,
-  // refspec forms included (`HEAD:main`, `+main`, `refs/heads/main`); the PR
-  // merge asks for permission on top of `Promote` (DEC-19)
+  // settings.json: `main` changes only through a PR, so the push asks become
+  // denies, refspec forms included (`HEAD:main`, `+main`, `refs/heads/main`);
+  // the PR merge asks for permission on top of `Promote`
   result = result.replace(
     /^ {4}"ask": \["Bash\(git push origin main\*\)"\],\n {4}"deny": \[\n/m,
     `    "ask": ["${PR_MODE_GH_ASK.join('", "')}"],\n    "deny": [\n${PR_MODE_PUSH_DENY.map((rule) => `      "${rule}",\n`).join('')}`,
   );
-  // ...and opening, reading and checking a PR runs without a prompt (DEC-19)
+  // ...and opening, reading and checking a PR runs without a prompt
   result = result.replace(/("allow": \[)([^\]]*?)(\s*\])/, (_, open, rules, close) => {
     const sep = rules.includes('\n') ? ',\n      ' : ', ';
-    return `${open}${rules}${sep}${PR_MODE_GH_ALLOW.map((rule) => `"${rule}"`).join(sep)}${close}`;
+    const added = PR_MODE_GH_ALLOW.map((rule) => `"${rule}"`).join(sep);
+    return `${open}${rules}${rules.trim() ? sep : ''}${added}${close}`;
   });
   return result;
 }
 
-// `gh` rules for `pr` mode (DEC-19): the agent opens and checks the pull
-// request on its own; the merge needs `Promote` and the permission prompt.
+// `gh` rules for `pr` mode: the agent opens and checks the pull request on
+// its own; the merge needs `Promote` and the permission prompt.
 export const PR_MODE_GH_ALLOW = [
   'Bash(gh pr create *)',
   'Bash(gh pr view *)',
