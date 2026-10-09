@@ -498,6 +498,92 @@ describe('governance-gate hook — command segments, promotion gate (D5)', () =>
   });
 });
 
+// A pull request merge is a promotion in every mode: the `pr` promotion mode
+// merges into `main` this way, and an agent could use it to bypass the push gate.
+describe('governance-gate hook — pull request merge (D3)', () => {
+  const blocked = (out) => out.includes('"permissionDecision":"deny"');
+  const FM = 'block: test\nrequirements_approved: true\npromotion_approved: false';
+  const bash = (command, fm = FM) =>
+    runHook(GATE, { tool_name: 'Bash', tool_input: { command } }, { sessionFrontMatter: fm });
+  const mcp = (toolName, fm = FM) =>
+    runHook(
+      GATE,
+      { tool_name: toolName, tool_input: { owner: 'o', repo: 'r', pullNumber: 12 } },
+      { sessionFrontMatter: fm },
+    );
+
+  const MERGE_MUST_DENY = [
+    'gh pr merge 12 --squash',
+    'gh pr merge --squash --delete-branch',
+    'gh pr merge 12 --merge --auto',
+    'gh pr merge -R owner/repo 12 --rebase',
+    '/opt/homebrew/bin/gh pr merge 12 --squash',
+    'git push -u origin feature/x && gh pr merge 12 --squash',
+    "bash -c 'gh pr merge 12 --squash'",
+    'gh pr checks 12 --watch && gh pr merge 12 --squash --delete-branch',
+  ];
+  const MERGE_ALLOW = [
+    'gh pr merge 12 --disable-auto',
+    'gh pr create --base main --fill',
+    'gh pr view 12',
+    'gh pr checks 12 --watch',
+    'git push -u origin feature/x && gh pr create --base main --fill',
+    'git commit -m "gh pr merge comes later"',
+    'echo "gh pr merge 12"',
+  ];
+  const MCP_MERGE_TOOLS = [
+    'mcp__github__merge_pull_request',
+    'mcp__plugin_github_github__merge_pull_request',
+  ];
+
+  it('denies `gh pr merge` without `Promote`, in every command form', () => {
+    for (const cmd of MERGE_MUST_DENY) {
+      const { stdout } = bash(cmd);
+      assert.ok(blocked(stdout) && stdout.includes('Promote'), `must be gated:\n${cmd}`);
+    }
+  });
+
+  it('allows the PR commands that do not merge, and data that mentions a merge', () => {
+    for (const cmd of MERGE_ALLOW) {
+      assert.equal(bash(cmd).stdout.trim(), '', `must not be gated:\n${cmd}`);
+    }
+  });
+
+  it('allows the merge once with `Promote`, then the flag is consumed', () => {
+    const fm = 'block: test\nrequirements_approved: true\npromotion_approved: true';
+    const { stdout, sessionContent } = bash('gh pr merge 12 --squash --delete-branch', fm);
+    assert.equal(stdout.trim(), '', 'authorized merge must pass');
+    assert.match(sessionContent, /promotion_approved:\s*false/, 'flag must be consumed');
+  });
+
+  it('falls back to the whole-text check when the merge command cannot be parsed', () => {
+    assert.ok(blocked(bash('gh pr merge 12 --squash "').stdout));
+  });
+
+  it('denies MCP merge tools without `Promote` (server and plugin naming)', () => {
+    for (const tool of MCP_MERGE_TOOLS) {
+      const { stdout } = mcp(tool);
+      assert.ok(blocked(stdout) && stdout.includes('Promote'), `must be gated: ${tool}`);
+    }
+  });
+
+  it('allows an MCP merge once with `Promote`, then the flag is consumed', () => {
+    const fm = 'block: test\nrequirements_approved: true\npromotion_approved: true';
+    const { stdout, sessionContent } = mcp('mcp__github__merge_pull_request', fm);
+    assert.equal(stdout.trim(), '');
+    assert.match(sessionContent, /promotion_approved:\s*false/);
+  });
+
+  it('ignores other MCP tools, and is inactive without a session file', () => {
+    assert.equal(mcp('mcp__github__create_pull_request').stdout.trim(), '');
+    const { stdout } = runHook(GATE, {
+      tool_name: 'mcp__github__merge_pull_request',
+      tool_input: { pullNumber: 12 },
+    });
+    assert.equal(stdout.trim(), '');
+  });
+});
+
 describe('governance-gate hook — command segments, commit gate (D5)', () => {
   const blocked = (out) => out.includes('"permissionDecision":"deny"');
   const FM = 'block: test\nrequirements_approved: false\npromotion_approved: false';

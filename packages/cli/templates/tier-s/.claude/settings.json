@@ -41,6 +41,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "^mcp__.+__merge_pull_request$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-governance-gate.mjs\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "Stop": [

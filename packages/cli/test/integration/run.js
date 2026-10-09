@@ -4626,6 +4626,47 @@ async function scenarioPromotionSetting() {
   }
 }
 
+// The governance gate also runs on MCP pull-request merge tools, and the
+// scaffolded gate treats `gh pr merge` as a promotion on every stack profile.
+async function scenarioMergeGate() {
+  section('Merge gate - PR merges are promotions, MCP merge tools are wired');
+
+  const gateHook = /tierward-governance-gate\.mjs/;
+  for (const tier of ['s', 'm', 'l']) {
+    for (const [stack, overrides] of [
+      ['web', {}],
+      ['swift', { techStack: 'swift', testCommand: 'swift test', typeCheckCommand: '' }],
+    ]) {
+      const label = `${stack}/${tier}`;
+      const dir = await scaffold(`merge-gate-${stack}-${tier}`, tier, {
+        ...BASE,
+        ...overrides,
+        tier,
+        isDiscovery: false,
+      });
+      const settings = JSON.parse(fs.readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'));
+      const wired = (settings.hooks?.PreToolUse || []).filter(
+        (e) => e.matcher !== 'Bash' && e.hooks?.some((h) => gateHook.test(h.command || '')),
+      );
+      const matches = (tool) => wired.some((e) => new RegExp(e.matcher).test(tool));
+      if (
+        matches('mcp__github__merge_pull_request') &&
+        matches('mcp__plugin_github_github__merge_pull_request') &&
+        !matches('mcp__github__create_pull_request')
+      ) {
+        pass(`merge-gate[${label}]: gate runs on MCP merge tools only`);
+      } else {
+        fail(`merge-gate[${label}]: MCP merge tools not wired to the gate`);
+      }
+      if (scaffoldedGateDenies(dir, `merge-${stack}-${tier}`, 'gh pr merge 12 --squash')) {
+        pass(`merge-gate[${label}]: scaffolded gate gates gh pr merge`);
+      } else {
+        fail(`merge-gate[${label}]: scaffolded gate lets gh pr merge through`);
+      }
+    }
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -4690,6 +4731,7 @@ async function main() {
   await scenarioMCPServer();
   await scenarioScaffoldedYaml();
   await scenarioPromotionSetting();
+  await scenarioMergeGate();
 
   // ── Summary ────────────────────────────────────────────────────────────────
 
