@@ -247,7 +247,7 @@ The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legac
 
 **STOP gates** (Tier M/L) - Requirements reviewed before implementation. Spec-first or scope-confirm mode auto-selected per block.
 
-**Promotion gate** (Tier S/M/L) - While a block or fix is in progress, Claude promotes only after you reply with a bare `Promote`, one promotion per keyword. A push to `staging` or `main` counts, and so does a pull request merge (`gh pr merge` or a GitHub MCP merge tool).
+**Promotion gate** (Tier S/M/L) - While a block or fix is in progress, the governance gate holds a promotion until you reply with a bare `Promote`, one promotion per keyword. A push to `staging` or `main` counts, and so does a pull request merge (`gh pr merge` or a GitHub MCP merge tool). The gate reads the commands Claude runs, so a few forms escape it, such as a merge through the REST API ([details](docs/operational-guide.md#4d-how-changes-reach-main-promotion-modes)).
 
 **Audit logging** - Every tool use appended to `~/.claude/audit/project.jsonl`.
 
