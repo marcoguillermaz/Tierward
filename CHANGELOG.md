@@ -30,6 +30,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     verbose: true
   ```
 
+- **The docs no longer overstate what CODEOWNERS enforces.** The README, the npm README, the docs site, the operational guide and the README generated into each project said that CODEOWNERS guards `.claude/` or blocks unreviewed changes to it. GitHub only requests a review from code owners. Approval becomes mandatory only when branch protection or a ruleset enables "Require review from Code Owners", and private repositories get code owners and branch protection only on paid plans. The docs and the header comment of the scaffolded `.github/CODEOWNERS` now state both conditions.
+
 ---
 
 ## [2.0.0] — 2026-07-10

@@ -43,7 +43,7 @@ your-project/
 │   │   └── output-style.md      # Communication rules
 │   └── skills/                  # Audit skills (conditional per project)
 ├── .github/
-│   ├── CODEOWNERS               # Protects .claude/ from unreviewed changes
+│   ├── CODEOWNERS               # Requests human review of .claude/ changes
 │   └── PULL_REQUEST_TEMPLATE.md
 └── .pre-commit-config.yaml      # Secret scanning
 ```

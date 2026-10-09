@@ -4,13 +4,18 @@
 # Paths are matched in order — last match wins.
 # Use GitHub usernames or team names (@org/team-name).
 #
+# Owners are requested for review automatically. Their approval is required only
+# when branch protection or a ruleset enables "Require review from Code Owners".
+# GitHub honors this file in public repositories on every plan, and in private
+# repositories only on Pro, Team and Enterprise plans.
+#
 # Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # Default owner for everything not listed below
 *                           @[TECH_LEAD]
 
 # Claude Code configuration — changes affect what AI can do
-# Always require tech lead or platform team review
+# Request tech lead or platform team review on every change
 /.claude/                   @[TECH_LEAD]
 /.claude/settings.json      @[TECH_LEAD]
 /.claude/rules/             @[TECH_LEAD]

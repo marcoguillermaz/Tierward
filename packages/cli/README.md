@@ -14,7 +14,7 @@ npx tierward init
 
 Claude Code is fast. The gap it creates is not in the code; it is in the review. When an AI agent writes autonomously, decisions accumulate faster than anyone can verify them. Tierward closes that gap by enforcing a review contract directly in the development session, not as a prompt Claude may or may not follow, but as a process it cannot bypass.
 
-You stay the decision-maker. STOP gates stop Claude before implementation: it presents its plan and waits for your explicit approval before writing code. A commit gate then blocks `git commit` until that approval is on record, and CODEOWNERS prevents anyone from modifying `.claude/` without a human reviewer.
+You stay the decision-maker. STOP gates stop Claude before implementation: it presents its plan and waits for your explicit approval before writing code. A commit gate then blocks `git commit` until that approval is on record, and CODEOWNERS sends every change to `.claude/` to a human reviewer, which blocks the merge when your branch protection requires code owner review.
 
 Verification is built in at the same level. The Stop hook is a shell command in `.claude/settings.json`: when Claude tries to declare a task done, it runs your test suite, and if tests fail Claude is blocked and keeps working. It can't skip this step.
 
@@ -51,7 +51,7 @@ Start at the lowest tier that covers your risk. Move up when you need more struc
 - **`.claude/rules/pipeline.md`** — the development pipeline Claude follows, phase by phase
 - **`.claude/rules/security.md`** — stack-aware security rules (11 stacks supported)
 - **`.claude/skills/`** — audit slash-commands: `/arch-audit`, `/security-audit`, `/systematic-debugging`, and more
-- **`.github/CODEOWNERS`** — gates `.claude/` changes behind human review
+- **`.github/CODEOWNERS`** — requests human review of `.claude/` changes; the review is mandatory only with branch protection that requires code owner review (public repos, or private repos on paid GitHub plans)
 - **`team-settings.json`** (opt-in) — enforce `minTier`, `allowedSkills`, `blockedSkills` across every team clone
 
 ## Audit skills
