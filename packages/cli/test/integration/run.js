@@ -5083,6 +5083,20 @@ async function scenarioHookLogs() {
       }
     }
 
+    // The generated README states what this tier logs, not "every tool use".
+    const readme = fs.readFileSync(path.join(dir, 'README.md'), 'utf8');
+    const auditRow = readme.split('\n').find((l) => l.startsWith('| Audit log |')) || '';
+    const logsBash = /shell commands/.test(auditRow);
+    if (
+      auditRow.includes('~/.claude/audit/') &&
+      !/every tool use/i.test(auditRow) &&
+      logsBash === (tier !== 's')
+    ) {
+      pass(`hook-logs[${tier}]: generated README audit row matches the tier`);
+    } else {
+      fail(`hook-logs[${tier}]: generated README audit row is wrong`, auditRow);
+    }
+
     const gitignore = fs.readFileSync(path.join(dir, '.gitignore'), 'utf8');
     if (/^\.claude\/logs\/$/m.test(gitignore)) pass(`hook-logs[${tier}]: .claude/logs/ gitignored`);
     else fail(`hook-logs[${tier}]: .claude/logs/ missing from .gitignore`);
