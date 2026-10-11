@@ -163,7 +163,7 @@ Parse the JSON output and present the report in this format. Use the actual valu
 
 Skill:       <basename of resolved_path>
 Source:      <resolved_path>
-Analysis:    [Static only | Static + LLM (claude-opus-4-6)]
+Analysis:    [Static only | Static + LLM (Anthropic or OpenAI)]
 
 Risk Score:  <risk_score>/100
 Severity:    <risk_severity>

@@ -34,7 +34,7 @@
 |---|---|---|
 | H-1 | Security-audit does not check for secrets in logs | Common leak vector; recoverable via manual check but gap is painful |
 | H-2 | UI skill labels every cross-origin image Critical on API-only project | Invocation context ignored; ~100% FP on wrong stack drops below Critical per FP cap |
-| H-3 | `effort: high` present on 6 skills (non-documented frontmatter field) | Spec violation, mechanical to fix, but does not block execution |
+| H-3 | A non-documented frontmatter key present on several skills | Spec violation, mechanical to fix, but does not block execution |
 
 ### Medium anchors (3)
 
@@ -61,8 +61,8 @@ Trap = a pattern that has historically caused mislabeling in Tierward. Read once
 **T-1. Staff-manager literal contamination**
 Any reference to `Color.red`, SwiftUI-specific types, Vapor routes, or the pilot project's domain model (staff, shifts, invitations) in a scaffold skill is **Critical**. These artifacts survived extraction and produce false positives on every other stack.
 
-**T-2. `effort: high` on 6 files (arch-audit × 3 + security-audit × 3)**
-Non-documented field. **High** per P4 §3. Do not escalate to Critical on grounds of "frontmatter violation" - the skill still runs. Do not downgrade to Low - the spec is clear.
+**T-2. Non-documented frontmatter key on several files**
+Non-documented field. **High** per P4 §3. Check P4 §2 first: `effort`, the historical case (arch-audit × 3 + security-audit × 3), is now documented and valid. Do not escalate to Critical on grounds of "frontmatter violation" - the skill still runs. Do not downgrade to Low - the spec is clear.
 
 **T-3. Abstract inherited thinking**
 Harder to detect than literal contamination. Examples: remediation written as if the stack has a design-token system (UI bias), severity defaults inherited from web-app mental model, architecture assumptions like "there is a database". Flag as **High** under project-agnosticity (P2 mental-model dimension), not Critical - fix is judgment-heavy.
