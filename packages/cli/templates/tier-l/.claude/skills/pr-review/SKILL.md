@@ -4,6 +4,7 @@ description: Autonomous local code review. Reviews either an open PR's diff (via
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 allowed-tools: Bash(gh pr view:*) Bash(gh pr list:*) Bash(gh pr diff:*) Bash(gh pr comment:*) Bash(gh repo view:*) Bash(git branch:*) Bash(git rev-parse:*) Bash(git diff:*) Bash(git merge-base:*) Bash(mkdir -p .tierward/tmp) Read Glob Grep Agent
 argument-hint: [PR_NUMBER] [--local] [--base <branch>] [--deep] [--with-context]
 ---

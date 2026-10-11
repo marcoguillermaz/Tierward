@@ -4,6 +4,7 @@ description: Responsive audit: test pages at 375/768/1024px breakpoints via Play
 user-invocable: true
 model: opus
 context: fork
+background: false
 argument-hint: [quick|full|wcag] [target:page:<route>|target:role:<role>|target:section:<section>]
 allowed-tools: Read Glob Grep Bash(rm:*) mcp__playwright__browser_navigate mcp__playwright__browser_resize mcp__playwright__browser_take_screenshot mcp__playwright__browser_snapshot mcp__playwright__browser_type mcp__playwright__browser_click mcp__playwright__browser_wait_for mcp__playwright__browser_evaluate
 ---

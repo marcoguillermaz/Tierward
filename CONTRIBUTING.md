@@ -175,6 +175,7 @@ description: One-paragraph summary that describes the audit surface and lists ke
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [target:path:<dir>|target:file:<glob>|mode:all]
 allowed-tools: Read Glob Grep Bash
 ---

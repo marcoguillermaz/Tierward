@@ -22,13 +22,16 @@ Every skill file has two parts: YAML frontmatter (between `---` delimiters) and 
 | Field | Required | Values | Purpose |
 |---|---|---|---|
 | `name` | yes | kebab-case string | Skill identifier. Invoked as `/name`. |
-| `description` | yes | 1-2 sentences, max 250 chars | Shown in skill list. Helps Claude decide when to suggest the skill. |
+| `description` | yes | 1-2 sentences, max 250 chars (Tierward convention) | Shown in skill list. Helps Claude decide when to suggest the skill. Claude Code itself truncates `description` plus `when_to_use` at 1,536 characters in the skill listing; the 250 limit is Tierward's, enforced by `tierward new skill`. |
 | `user-invocable` | yes | `true` / `false` | Whether users can invoke via `/name`. Set `false` for skills only called by other skills. |
 | `model` | yes | `haiku` / `sonnet` / `opus` | Which model runs the skill. See model selection below. |
 | `context` | yes | `fork` | Execution context. Always use `fork` to prevent context pollution. |
+| `background` | yes | `false` | Since Claude Code v2.1.218 a forked skill runs in the background by default and the invoking turn moves on. `false` makes the turn wait for the result. Older versions ignore the field. |
 | `effort` | no | `low` / `medium` / `high` / `xhigh` / `max` (available levels depend on the model) | Effort level while the skill runs; overrides the session's effort level. |
 | `argument-hint` | no | `[opt1\|opt2\|opt3]` | Parameter syntax shown when invoking. Use `target:type:value` pattern for structured args. |
-| `allowed-tools` | no | YAML list of tool names | MCP tools the skill needs. Declared upfront for permission requests. |
+| `allowed-tools` | no | Space- or comma-separated string, or YAML list | MCP tools the skill needs. Declared upfront for permission requests. |
+
+These fields work in Claude Code. If you package a skill for claude.ai uploads, the Skills API or `package_skill.py`, only `name`, `description`, `license`, `compatibility`, `metadata` and `allowed-tools` are accepted there, and any other key (`user-invocable`, `model`, `context`, `background`, `effort`, `argument-hint`) makes packaging or upload fail ([skills docs](https://code.claude.com/docs/en/skills), frontmatter reference).
 
 ### Model selection
 
@@ -45,6 +48,7 @@ description: One-line summary of what this skill does and when to use it.
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 ---
 
 **Scope**: what this skill covers.
@@ -89,16 +93,15 @@ Read `CLAUDE.md` and check the Framework field.
 - **Native project**: skip to Step 4
 ```
 
-**Subagent delegation**: For skills with independent sub-checks, delegate to subagents for parallel execution:
+**Subagent delegation**: Do the work inside the skill. A skill with `context: fork` already runs in its own context, and a subagent it launches can outlive it. In a test on Claude Code 2.1.295 (October 2026), a subagent launched from a forked skill ran in the background, the skill finished without its result, and the result reached the main conversation instead. Run independent sub-checks one after the other:
 
 ```markdown
-## Step 2 - Run checks in parallel
+## Step 2 - Run checks
 
-Launch two agents concurrently:
-- Agent 1: [check A] with model haiku
-- Agent 2: [check B] with model haiku
+- Check A: [check A]
+- Check B: [check B]
 
-Collect results before proceeding.
+Record both results before proceeding.
 ```
 
 **Structured output**: End with a defined report format so results are consistent across runs.
@@ -114,6 +117,7 @@ description: Check for outdated dependencies and report which ones have major ve
 user-invocable: true
 model: haiku
 context: fork
+background: false
 ---
 
 ## Step 1 - Check outdated packages

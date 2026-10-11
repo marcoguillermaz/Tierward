@@ -4,6 +4,7 @@ description: Audit UI for design token compliance and component adoption. Static
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [target:section:<section-name>]
 allowed-tools: Read Glob Grep Agent Edit Write
 ---

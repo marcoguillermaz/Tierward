@@ -4,6 +4,7 @@ description: Infrastructure and CI/CD security audit - GitHub Actions workflows 
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [target:layer:<gha|docker|k8s|terraform|gitlab>|target:file:<glob>|mode:all]
 allowed-tools: Read Glob Grep Bash(git ls-files:*) Bash(grep:*)
 ---

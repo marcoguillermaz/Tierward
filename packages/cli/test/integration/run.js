@@ -26,11 +26,7 @@ import {
 } from '../../src/scaffold/index.js';
 import { generateClaudeMd } from '../../src/generators/claude-md.js';
 import { generateReadme } from '../../src/generators/readme.js';
-import {
-  parseSkillFile,
-  countBodyLines,
-  allowedToolsHasCommas,
-} from '../../src/utils/skill-frontmatter.js';
+import { parseSkillFile, countBodyLines } from '../../src/utils/skill-frontmatter.js';
 import { SKILL_MD_MAX_LINES } from '../../src/utils/constants.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2601,7 +2597,7 @@ async function scenarioSkillMdSpecCompliance() {
       .filter((name) => fs.statSync(path.join(skillsDir, name)).isDirectory());
 
     const tierOversize = [];
-    const tierCommas = [];
+    const tierForeground = [];
 
     for (const skill of skillDirs) {
       const skillFile = path.join(skillsDir, skill, 'SKILL.md');
@@ -2619,8 +2615,9 @@ async function scenarioSkillMdSpecCompliance() {
         tierOversize.push(`${skill} (${lines} lines)`);
       }
 
-      if (allowedToolsHasCommas(fields.allowedTools)) {
-        tierCommas.push(skill);
+      // A forked skill runs in the background unless it sets `background: false`
+      if (fields.context === 'fork' && fields.background !== 'false') {
+        tierForeground.push(skill);
       }
     }
 
@@ -2632,10 +2629,10 @@ async function scenarioSkillMdSpecCompliance() {
       );
     }
 
-    if (tierCommas.length === 0) {
-      pass(`Tier ${tier}: all allowed-tools values use space-separated syntax`);
+    if (tierForeground.length === 0) {
+      pass(`Tier ${tier}: every forked skill sets background: false`);
     } else {
-      fail(`Tier ${tier}: allowed-tools uses comma syntax (not spec): ${tierCommas.join(', ')}`);
+      fail(`Tier ${tier}: forked skills without background: false: ${tierForeground.join(', ')}`);
     }
   }
 }
@@ -2895,10 +2892,10 @@ async function scenarioDocAuditPresent() {
 
       const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
       const parsed = parseSkillFile(skillMd);
-      if (parsed.fields.allowedTools && !allowedToolsHasCommas(parsed.fields.allowedTools)) {
-        pass(`Tier ${tier}: doc-audit allowed-tools is space-separated`);
+      if (parsed.fields.allowedTools) {
+        pass(`Tier ${tier}: doc-audit declares allowed-tools`);
       } else {
-        fail(`Tier ${tier}: doc-audit allowed-tools uses commas or missing`);
+        fail(`Tier ${tier}: doc-audit allowed-tools missing`);
       }
       const bodyLines = countBodyLines(parsed.body);
       if (bodyLines <= SKILL_MD_MAX_LINES) {
@@ -2970,10 +2967,10 @@ async function assertSkillPresent(dir, tier, skillName, opts = {}) {
 
   const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
   const parsed = parseSkillFile(skillMd);
-  if (parsed.fields.allowedTools && !allowedToolsHasCommas(parsed.fields.allowedTools)) {
-    pass(`Tier ${tier}: ${skillName} allowed-tools is space-separated`);
+  if (parsed.fields.allowedTools) {
+    pass(`Tier ${tier}: ${skillName} declares allowed-tools`);
   } else {
-    fail(`Tier ${tier}: ${skillName} allowed-tools uses commas or missing`);
+    fail(`Tier ${tier}: ${skillName} allowed-tools missing`);
   }
   const bodyLines = countBodyLines(parsed.body);
   if (bodyLines <= SKILL_MD_MAX_LINES) {

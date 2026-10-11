@@ -184,7 +184,7 @@ For experienced users, the wizard asks:
   - "Do you use a component library or design system?" -> installs `/ui-audit`
   - "Design system name?" -> populates `[DESIGN_SYSTEM_NAME]` placeholder
   - "Track a PRD per feature block?" -> determines if `docs/prd/prd.md` is referenced in context review
-  - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-sonnet-4-6` (override with any current model id)
+  - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-sonnet-5-5` (override with any current model id). The `init` wizard offers the same question as a list: `claude-sonnet-5-5` (default), `claude-opus-5-5`, `claude-fable-5-1`
 - Whether to include pre-commit config and `.github/` files
 - How changes reach `main`: through a staging branch, by a direct merge, or by a pull request (see [4d](#4d-how-changes-reach-main-promotion-modes)). Native stacks get the last two only.
 
@@ -781,7 +781,7 @@ All skill applicability rules are managed by a central skill registry (`packages
 
 - Code-audit skills are **audit-only** - no code is modified (except `/simplify`, which applies changes directly). Findings go to `docs/refactoring-backlog.md` with severity-ranked IDs (`PERF-`, `API-`, `DB-`, `MIG-`, `DEV-`, `SEC-`, `UX-`, `A11Y-`, `TEST-`).
 - Live-browser skills (`/responsive-audit`, `/ux-audit`, `/visual-audit`, `/accessibility-audit`) require the Playwright MCP server configured in `.claude/settings.json` and the dev server running. `/ui-audit` is static and does not require Playwright.
-- Each skill runs in an isolated context fork (`context: fork`) - it does not pollute the main session window.
+- Each skill runs in an isolated context fork (`context: fork`) - it does not pollute the main session window. It also sets `background: false`, so the turn that runs it waits for the result.
 - Each skill delegates grep-heavy scanning to a Haiku Explore subagent to protect the main context window.
 - Before first run: fill in the `## Configuration` placeholders at the top of each `SKILL.md`.
 - Skills not installed at init can be added later: `npx tierward add skill <name>`.
@@ -1051,7 +1051,7 @@ Periodic cleanup sweep: orphaned or merged branches, stray worktrees, stale `.cl
 
 ## 11. Pipeline-integrated skills (Tier M / L)
 
-Two pipeline-integrated skills are scaffolded in `.claude/skills/`. They are invoked during specific pipeline phases as forked-context sub-processes, returning structured results to the main session.
+Two pipeline-integrated skills are scaffolded in `.claude/skills/`. They are invoked during specific pipeline phases as forked-context sub-processes, returning structured results to the main session. Both set `background: false`: since Claude Code v2.1.218 a forked skill runs in the background unless told to wait, and the phase needs the result before its STOP gate.
 
 ### Design principle
 
@@ -1102,7 +1102,7 @@ Place custom skills in `.claude/skills/custom-<name>/SKILL.md`. The `custom-` pr
 
 Every skill file has YAML frontmatter and a markdown body with step-by-step instructions.
 
-**Required frontmatter fields**: `name`, `description` (max 250 chars), `user-invocable` (true/false), `model` (haiku/sonnet/opus), `context` (always `fork`).
+**Required frontmatter fields**: `name`, `description` (max 250 chars, a Tierward convention; Claude Code truncates `description` plus `when_to_use` at 1,536 characters), `user-invocable` (true/false), `model` (haiku/sonnet/opus), `context` (always `fork`), `background` (always `false`, so the invoking turn waits for the result).
 
 **Optional fields**: `effort` (low/medium/high/xhigh/max, depending on the model), `argument-hint` (parameter syntax), `allowed-tools` (MCP tools the skill needs).
 
@@ -1121,6 +1121,7 @@ description: Check for outdated dependencies and report major version bumps.
 user-invocable: true
 model: haiku
 context: fork
+background: false
 ---
 
 ## Step 1 - Check outdated packages
@@ -1266,7 +1267,7 @@ npx tierward doctor --report  # JSON compliance output for CI pipelines
 npx tierward doctor --ci      # silent mode: exit 1 if any check fails
 ```
 
-Runs 28 checks:
+Runs 27 checks:
 
 1. Claude Code CLI is installed and reachable
 2. `CLAUDE.md` is present
@@ -1284,18 +1285,17 @@ Runs 28 checks:
 14. `docs/pipeline-standards.md` present (Tier M/L - warn if missing)
 15. `.claude/skills/commit/` present (Tier M/L - warn if missing)
 16. Skills invoking Playwright `browser_*` tools declare `allowed-tools` frontmatter (warn if missing)
-17. Skills use space-separated `allowed-tools` per Anthropic spec (warn on commas)
-18. Skill bodies respect Anthropic ≤ 500 lines guideline (warn if oversized)
-19. `.claude/settings.json` has no unfilled `[UPPERCASE]` placeholders (warn)
-20. CLAUDE.md Key Commands include the Stop hook test command (warn on drift)
-21. CLAUDE.md `## Active Skills` matches `.claude/skills/` directories (warn on mismatch)
-22. `pipeline.md` H1 matches its phase structure — Tier S/M/L self-consistency (warn)
-23. `.claude/rules/context-review.md` includes C12 (warn if not present - upgrade needed)
-24. Stop hook has `timeout` configured and ≤ 600s (warn if missing - prevents hanging test commands)
-25. Anthropic-influenced files match the installed Tierward template — `arch-audit/advanced-checks.md` in v1.15.0 (warn on drift, suggest `upgrade --anthropic`)
-26. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
-27. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
-28. No duplicate entries in `permissions.deny` list (warn if duplicates found)
+17. Skill bodies respect Anthropic ≤ 500 lines guideline (warn if oversized)
+18. `.claude/settings.json` has no unfilled `[UPPERCASE]` placeholders (warn)
+19. CLAUDE.md Key Commands include the Stop hook test command (warn on drift)
+20. CLAUDE.md `## Active Skills` matches `.claude/skills/` directories (warn on mismatch)
+21. `pipeline.md` H1 matches its phase structure — Tier S/M/L self-consistency (warn)
+22. `.claude/rules/context-review.md` includes C12 (warn if not present - upgrade needed)
+23. Stop hook has `timeout` configured and ≤ 600s (warn if missing - prevents hanging test commands)
+24. Anthropic-influenced files match the installed Tierward template — `arch-audit/advanced-checks.md` in v1.15.0 (warn on drift, suggest `upgrade --anthropic`)
+25. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
+26. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
+27. No duplicate entries in `permissions.deny` list (warn if duplicates found)
 
 Checks 13-28 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier.
 
@@ -1333,7 +1333,7 @@ Enforcement points: `init` (refuse + explain), `upgrade` (refuse + suggest), `ad
 
 `init-from-context` does not enforce `team-settings.json` because the target directory is greenfield; a parent `team-settings.json` doesn't propagate by design.
 
-v1.16.0 introduced CLI-side enforcement only; native `Skill()` permission rules in `.claude/settings.json` were not generated at the time because Claude Code's permission grammar for skills was not part of the documented public schema. v1.21.0 closed that gap with a `PreToolUse` hook on the `Skill` matcher (`.claude/hooks/team-settings-enforcement.mjs`) that refuses skill invocations violating `blockedSkills` or `allowedSkills` at runtime — covered by doctor check #28 (`team-settings-runtime-hook`).
+v1.16.0 introduced CLI-side enforcement only; native `Skill()` permission rules in `.claude/settings.json` were not generated at the time because Claude Code's permission grammar for skills was not part of the documented public schema. v1.21.0 closed that gap with a `PreToolUse` hook on the `Skill` matcher (`.claude/hooks/team-settings-enforcement.mjs`) that refuses skill invocations violating `blockedSkills` or `allowedSkills` at runtime — covered by doctor check #26 (`team-settings-runtime-hook`).
 
 ### MCP server
 

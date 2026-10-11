@@ -166,7 +166,7 @@ The Stop hook in `settings.json` is the enforcement mechanism. When Claude tries
 npx tierward init                    # scaffold wizard
 npx tierward init --dry-run          # preview without writing
 npx tierward init --answers file.json  # skip prompts (CI/automation)
-npx tierward doctor                  # validate setup (28 checks)
+npx tierward doctor                  # validate setup (27 checks)
 npx tierward doctor --report         # JSON output for CI
 npx tierward doctor --ci             # silent, exit 1 on failure
 npx tierward upgrade                 # refresh safe files, show diffs for the rest
