@@ -5016,6 +5016,14 @@ async function scenarioDefaultPermissions() {
         fail(`${label}: broad or mid-rule allow`, [...broad, ...wildcardFirst].join(' | '));
       }
 
+      // pr-review and dependency-audit (Tier M/L) write their temp files there
+      const tmpRule = 'Edit(/.tierward/tmp/**)';
+      if (allow.includes(tmpRule) === (tier !== 's')) {
+        pass(`${label}: temp-file edit rule ${tier === 's' ? 'absent' : 'present'}`);
+      } else {
+        fail(`${label}: temp-file edit rule ${tier === 's' ? 'unexpected' : 'missing'}`);
+      }
+
       const usual = [
         ...USUAL_COMMANDS,
         ...[config.testCommand, config.typeCheckCommand].filter((c) => c && c.trim()),

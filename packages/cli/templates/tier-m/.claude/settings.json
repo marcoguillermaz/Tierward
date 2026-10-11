@@ -28,7 +28,8 @@
       "Bash(git rev-list *)",
       "Bash(git merge-base *)",
       "Bash(git ls-files *)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Edit(/.tierward/tmp/**)"
     ],
     "ask": [
       "Bash(git push origin main*)",

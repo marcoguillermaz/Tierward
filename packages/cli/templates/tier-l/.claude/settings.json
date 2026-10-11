@@ -32,6 +32,7 @@
       "Bash(git merge-base *)",
       "Bash(git ls-files *)",
       "Bash(git check-ignore *)",
+      "Edit(/.tierward/tmp/**)",
       "Bash(docker:*)"
     ],
     "ask": [
