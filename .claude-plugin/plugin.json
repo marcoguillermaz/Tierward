@@ -19,6 +19,5 @@
     "tierward"
   ],
   "defaultEnabled": true,
-  "skills": "./plugin/skills/",
-  "hooks": "./plugin/hooks/hooks.json"
+  "skills": "./plugin/skills/"
 }
