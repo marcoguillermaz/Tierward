@@ -13,6 +13,8 @@ credentials/
 .claude/settings.local.json
 .claude/session/
 .claude/worktrees/
+.claude/logs/
+.tierward/tmp/
 
 # CLAUDE.md — decide per project:
 # Commit it if it contains no sensitive data (recommended for team projects).

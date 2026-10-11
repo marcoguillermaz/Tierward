@@ -16,9 +16,9 @@ hero:
 features:
   - icon: 🔒
     title: Mechanical enforcement
-    details: Claude can't commit until you approve the plan. STOP gates and a commit gate enforce that mechanically. A Stop hook also blocks task completion until your tests pass. These are hard blocks in the control flow, not configuration you tune.
+    details: Claude can't commit until you approve the plan. STOP gates and a commit gate enforce that mechanically. A Stop hook also runs your tests when Claude says it is done and sends it back when they fail. These are hard blocks in the control flow, not configuration you tune.
   - icon: 📋
-    title: 26 audit skills
+    title: 27 audit skills
     details: Executable multi-step programs that run inside Claude Code. Security, performance, architecture, accessibility, compliance. Each produces a structured report.
   - icon: 🪜
     title: Tier by tier

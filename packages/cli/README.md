@@ -16,7 +16,7 @@ Claude Code is fast. The gap it creates is not in the code; it is in the review.
 
 You stay the decision-maker. STOP gates stop Claude before implementation: it presents its plan and waits for your explicit approval before writing code. A commit gate then blocks `git commit` until that approval is on record, and, on GitHub plans that support code owners, CODEOWNERS sends every change to `.claude/` to a human reviewer, which blocks the merge when branch protection requires code owner review.
 
-Verification is built in at the same level. The Stop hook is a shell command in `.claude/settings.json`: when Claude tries to declare a task done, it runs your test suite, and if tests fail Claude is blocked and keeps working. It can't skip this step.
+Verification is built in at the same level. The Stop hook is a shell command in `.claude/settings.json`: when Claude tries to declare a task done, it runs your test suite, and if tests fail Claude is sent back to fix them.
 
 ## Quick start
 
@@ -58,7 +58,7 @@ The wizard also asks how changes reach `main`: through a `staging` branch, by a 
 
 ## Audit skills
 
-26 executable multi-step programs that run inside Claude Code. Not one-shot prompts: structured workflows with STOP gates, model routing (haiku for mechanical checks, sonnet for analysis), and structured output.
+27 executable multi-step programs that run inside Claude Code. Not one-shot prompts: structured workflows with STOP gates, model routing (haiku for mechanical checks, sonnet for analysis), and structured output.
 
 `/security-audit` `/arch-audit` `/doc-audit` `/test-audit` `/accessibility-audit` `/compliance-audit` `/api-contract-audit` `/infra-audit` `/dependency-audit` `/perf-audit` `/visual-audit` `/responsive-audit` `/ux-audit` `/migration-audit` `/pr-review` `/systematic-debugging` `/simplify` and more.
 

@@ -7,9 +7,17 @@ const tierDescriptions = {
   l: 'Full (Tier L) - complete governance pipeline for complex, long-running projects',
 };
 
+// What the PostToolUse audit hook records on each tier (matcher in the tier's settings.json).
+const auditLogged = {
+  s: 'File writes and edits (tool, file path, session)',
+  m: 'File writes, edits and shell commands (tool, file path or command, session)',
+  l: 'File writes, edits and shell commands (tool, file path or command, session)',
+};
+
 export async function generateReadme(config, targetDir) {
   const tier = (config.tier || 's').toLowerCase();
   const tierDesc = tierDescriptions[tier] || '';
+  const auditDesc = auditLogged[tier] || auditLogged.s;
 
   const content = `# ${config.projectName}
 
@@ -57,7 +65,7 @@ and should be reviewed by a human before merging to shared branches.
 | Control | How it works |
 |---|---|
 | Test gate | Claude cannot complete a task until \`${config.testCommand || 'npm test'}\` passes (Stop hook) |
-| Audit log | Every tool use is logged to \`~/.claude/audit/\` |
+| Audit log | ${auditDesc} are logged to \`~/.claude/audit/<project>.jsonl\` on your machine |
 | Secret scanning | Pre-commit hook blocks accidental credential commits |
 | CODEOWNERS | PRs that change \`.claude/\` request tech lead review (public repos, or private repos on paid GitHub plans); mandatory only with branch protection requiring code owner review |
 

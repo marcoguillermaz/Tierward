@@ -21,6 +21,19 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
 
+// An existing .gitignore is kept, so these entries are appended when missing.
+// .claude/logs/ holds the instructions log, .tierward/tmp/ the pr-review and
+// dependency-audit temp files (PR diffs, test output).
+export const IN_PLACE_GITIGNORE_ENTRIES = [
+  '.claude/session/',
+  '.claude/context/',
+  '.claude/logs/',
+  '.tierward/tmp/',
+  '.claude/CLAUDE.local.md',
+  '.claude/settings.local.json',
+  'CONTEXT_IMPORT.md',
+];
+
 export async function initInPlace(options) {
   const cwd = process.cwd();
 
@@ -394,14 +407,8 @@ export async function initInPlace(options) {
     process.exit(1);
   }
 
-  // Append .claude/session to existing .gitignore if needed
-  await appendIfMissing(cwd, [
-    '.claude/session/',
-    '.claude/context/',
-    '.claude/CLAUDE.local.md',
-    '.claude/settings.local.json',
-    'CONTEXT_IMPORT.md',
-  ]);
+  // Append .claude/session and friends to existing .gitignore if needed
+  await appendIfMissing(cwd, IN_PLACE_GITIGNORE_ENTRIES);
 
   // ── Summary ──────────────────────────────────────────────────────────
 

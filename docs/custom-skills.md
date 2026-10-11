@@ -26,7 +26,7 @@ Every skill file has two parts: YAML frontmatter (between `---` delimiters) and 
 | `user-invocable` | yes | `true` / `false` | Whether users can invoke via `/name`. Set `false` for skills only called by other skills. |
 | `model` | yes | `haiku` / `sonnet` / `opus` | Which model runs the skill. See model selection below. |
 | `context` | yes | `fork` | Execution context. Always use `fork` to prevent context pollution. |
-| `effort` | no | `low` / `medium` / `high` | Execution time signal for the user. |
+| `effort` | no | `low` / `medium` / `high` / `xhigh` / `max` (available levels depend on the model) | Effort level while the skill runs; overrides the session's effort level. |
 | `argument-hint` | no | `[opt1\|opt2\|opt3]` | Parameter syntax shown when invoking. Use `target:type:value` pattern for structured args. |
 | `allowed-tools` | no | YAML list of tool names | MCP tools the skill needs. Declared upfront for permission requests. |
 
