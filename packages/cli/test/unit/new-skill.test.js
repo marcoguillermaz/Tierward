@@ -76,6 +76,8 @@ describe('buildSkillMd', () => {
     assert.ok(md.includes('model: sonnet'));
     assert.ok(md.includes('user-invocable: true'));
     assert.ok(md.includes('context: fork'));
+    // Forked skills run in the background by default (Claude Code v2.1.218+)
+    assert.ok(md.includes('background: false'));
     assert.ok(md.includes('effort: medium'));
   });
 

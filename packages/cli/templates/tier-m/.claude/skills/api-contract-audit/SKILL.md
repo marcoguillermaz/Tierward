@@ -4,6 +4,7 @@ description: Static OpenAPI contract audit - endpoint drift (spec vs code), sche
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [target:spec:<path>|target:endpoint:<path>|mode:drift|mode:richardson|mode:all]
 allowed-tools: Read Glob Grep Bash(curl:*) Bash(git:*)
 ---

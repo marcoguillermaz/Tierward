@@ -48,8 +48,9 @@ test -f pnpm-lock.yaml && PM=pnpm || (test -f yarn.lock && PM=yarn || PM=npm)
 $PM exec tsc --noEmit 2>&1 | tail -10
 
 # Test runner — detect from package.json scripts
-$PM test --silent > /tmp/dependency-audit-test-baseline.log 2>&1
-tail -10 /tmp/dependency-audit-test-baseline.log
+mkdir -p .tierward/tmp
+$PM test --silent > .tierward/tmp/dependency-audit-test-baseline.log 2>&1
+tail -10 .tierward/tmp/dependency-audit-test-baseline.log
 
 # E2E count if Playwright is wired
 ls e2e/*.spec.ts 2>/dev/null | wc -l
@@ -103,8 +104,9 @@ test -f uv.lock && PYRUN="uv run" || (test -f poetry.lock && PYRUN="poetry run" 
 $PYRUN mypy . 2>&1 | tail -10
 
 # Tests
-$PYRUN pytest --no-header -q > /tmp/dependency-audit-test-baseline.log 2>&1
-tail -10 /tmp/dependency-audit-test-baseline.log
+mkdir -p .tierward/tmp
+$PYRUN pytest --no-header -q > .tierward/tmp/dependency-audit-test-baseline.log 2>&1
+tail -10 .tierward/tmp/dependency-audit-test-baseline.log
 ```
 
 ### Per-package test mapping
@@ -130,7 +132,8 @@ Swift Package Manager has no native equivalent of `npm outdated`. The skill must
 
 ```bash
 # List declared packages with current resolved version
-swift package show-dependencies --format json > /tmp/dependency-audit-swift-deps.json 2>&1
+mkdir -p .tierward/tmp
+swift package show-dependencies --format json > .tierward/tmp/dependency-audit-swift-deps.json 2>&1
 
 # For each package, check the upstream Git tags via `gh api` if hosted on GitHub:
 #   gh api repos/<owner>/<repo>/tags --jq '.[0:5][].name'
@@ -167,8 +170,9 @@ Document this composition in the audit report — it's not a single command like
 ```bash
 # Build + test
 swift build 2>&1 | tail -10
-swift test > /tmp/dependency-audit-test-baseline.log 2>&1
-tail -10 /tmp/dependency-audit-test-baseline.log
+mkdir -p .tierward/tmp
+swift test > .tierward/tmp/dependency-audit-test-baseline.log 2>&1
+tail -10 .tierward/tmp/dependency-audit-test-baseline.log
 
 # Xcode-driven projects:
 # xcodebuild -scheme <Scheme> -destination 'platform=iOS Simulator,name=iPhone 15' test

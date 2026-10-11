@@ -85,7 +85,8 @@ Apply this test to every line: **"Would removing this cause Claude to make mista
 - **Exit 2 = blocking error**: blocks the action, sends stderr to Claude. Use for hard HITL gates. *(Source: 2)*
 - **Exit 0 + JSON = structured control**: parse stdout as JSON for `decision`, `additionalContext`, `updatedInput`, etc. *(Source: 2)*
 - **NEVER print to stdout** in shell startup files (`.bashrc`, `.zshrc`) - breaks JSON parsing. *(Source: 2)*
-- **Stop hook infinite loop guard**: MUST check `stop_hook_active` env var in Stop hooks to prevent infinite loops. *(Source: 2)*
+- **Stop hook infinite loop guard**: MUST check the `stop_hook_active` field of the hook's stdin JSON in Stop hooks to prevent infinite loops. It is not an environment variable. *(Source: 2)*
+- **Hook input comes from stdin**: session and tool data (`session_id`, `tool_name`, `tool_input`) arrive as JSON on stdin. Claude Code sets no `CLAUDE_TOOL_*`, `CLAUDE_SESSION_ID` or `CLAUDE_MODEL` variable for hooks. *(Source: 2)*
 - **`async: true`**: run hook in background without blocking execution - use for notifications, logging. *(Source: 2)*
 - **Speed matters**: keep hook execution under a few seconds for fast feedback loops. *(Source: 5)*
 - **Run silently on success**: hook stdout/stderr only reaches agent context on failure or when explicitly structured. *(Source: 5)*

@@ -11,6 +11,55 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.2.0] — 2026-10-11
+
+### Changed
+
+- **New projects allow named commands, not all of git, npx and curl.** `.claude/settings.json` allowed `Bash(git:*)` and `Bash(npx:*)`, plus `Bash(curl:*)` on Tier M/L and, on every tier, for the stacks other than Node.js. Claude could run any package from the npm registry through `npx`, download or upload anything with `curl`, and run any git command without asking, including `git -c <key>=<program>`, which makes git run a program you name. The allow list now names the git subcommands the pipeline uses (status, diff, log, show, add, commit, checkout, switch, branch, fetch, pull, merge, push, worktree, stash and a few read-only helpers), one `npx` rule per tool your configured commands run (for example `npx tsc` and `npx vitest`), and `npx tierward`, which is new on the stacks other than Node.js. On Tier M/L, `Edit(/.tierward/tmp/**)` lets the pr-review and dependency-audit skills write their temporary files without a prompt. Anything else follows your permission mode: in the default mode Claude Code asks first.
+
+  Some commands now ask in every mode, `bypassPermissions` included: a push to `main` written as a refspec (`HEAD:main`, `+main`, `refs/heads/main`, and on Tier L with a staging branch the same forms for `staging`), `git -c`, `npm exec`, `npm x`, and every call to an MCP tool named `merge_pull_request`, `push_files`, `create_or_update_file` or `delete_file`, on any server. `git add -A`, `git add --all` and `git add .` are denied, so name the files you stage, as the pipeline already does. In `pr` mode the pushes to `main` stay denied.
+
+  In the default mode, these now ask first: `curl` (smoke tests, the API contract and accessibility audits), npx packages your commands don't use, `git clone` and the less common git commands (rebase, reset, cherry-pick, tag, clean). "Yes, and don't ask again" saves a rule for that command. These rules match the command text Claude usually writes and are not a security boundary: `npm install <package>` (which runs the package's install scripts), `node -e`, your stack's own tools (`uv run`, `cargo run`) and `docker` on Tier L still run any code.
+
+- **Skills wait for their own result again.** Since Claude Code v2.1.218 a skill with `context: fork` runs in the background by default: the turn that invoked it moves on, and the result arrives in a later turn. The pipeline reads each skill's result in the same turn, for example the `/dependency-scan` report before the Phase 1 STOP gate and the `/context-review` checks at closure. Every skill Tierward ships, plugin skills included, now sets `background: false`, and `tierward new skill` writes it too. Claude Code versions before v2.1.218 ignore the field.
+- **The audit-model question offers current models.** The `init` wizard lists `claude-sonnet-5-5` (default), `claude-opus-5-5` and `claude-fable-5-1`, in place of `claude-sonnet-4-6` and `claude-opus-4-7`, and the `context` interviews default to `claude-sonnet-5-5`.
+
+### Removed
+
+- **`tierward doctor` no longer warns on commas in `allowed-tools`.** Claude Code accepts a space- or comma-separated string or a YAML list there, so the warning was wrong. Doctor now runs 27 checks.
+- **The plugin's skill reminder.** The Claude Code plugin registered a `UserPromptSubmit` hook meant to list the `/tierward:*` skills on every prompt. It never worked: its `hooks.json` was malformed, so Claude Code never loaded it (`claude plugin validate` rejects the file), and the hook wrote to a field Claude Code does not read. The hook is gone, since Claude Code already lists installed skills on its own.
+
+Existing projects: `tierward upgrade` rewrites neither `.claude/settings.json` nor the skills, so apply these changes by hand.
+
+- To make your skills wait for their result, add `background: false` below `context: fork` in each `.claude/skills/*/SKILL.md`. This command does it in the frontmatter only and skips files that already have the line: `perl -0pi -e 's/\A(---\n(?:(?!---\n).*\n)*?)context: fork\n(?!background:)/$1context: fork\nbackground: false\n/' .claude/skills/*/SKILL.md`.
+
+For the new permission defaults, the simplest way is to scaffold a scratch project with the same tier, stack and promotion mode (`npx tierward init --answers '{...}'` in an empty directory) and copy its `permissions` block over yours, keeping the rules you added yourself. To edit instead, take the lists from `templates/tier-<your tier>/.claude/settings.json` in the tierward package:
+
+- In `permissions.allow`, replace `Bash(git:*)` with the `Bash(git <subcommand> *)` rules, replace `Bash(npx:*)` with one `Bash(npx <tool> *)` rule per tool your test, type-check, lint, build and dev commands run, plus `Bash(npx tierward *)`, and remove `Bash(curl:*)`. On Tier M/L add `Edit(/.tierward/tmp/**)`.
+- In `permissions.ask`, add the refspec forms of the push to `main` (not in `pr` mode, where they belong in `deny`), `Bash(git -c *)`, `Bash(npm exec *)`, `Bash(npm x *)` and the four `mcp__*__...` rules.
+- In `permissions.deny`, add the seven `Bash(git add ...)` rules.
+
+### Fixed
+
+- **The audit log records what Claude did, and no hook writes to `/tmp`.** The template hooks read `CLAUDE_TOOL_NAME`, `CLAUDE_TOOL_INPUT`, `CLAUDE_TOOL_INPUT_FILE_PATH`, `CLAUDE_SESSION_ID` and `CLAUDE_MODEL`. Claude Code sets none of them: it passes hook data as JSON on stdin. The Tier M/L audit log held timestamps only, Tier S wrote lines without a file path to `/tmp/claude-audit.log`, and every tier appended each loaded instruction file to a shared `/tmp/claude-instructions-YYYYMMDD.log`. A new hook, `.claude/hooks/tierward-audit-log.mjs`, reads stdin. Every tier now logs to `~/.claude/audit/<project>.jsonl` with the session, the tool and the file path or command, never file contents: file writes and edits on Tier S, shell commands too on Tier M and L. Tier L records the model at session start when Claude Code provides it. The instructions log moves to `.claude/logs/` in the project, which the scaffold gitignores.
+- **The Tier L destructive-command check fires.** It read the same missing variable and never matched. It now reads the command from stdin and asks for your confirmation on `rm -rf /`, `DROP DATABASE` and similar patterns, also inside another command such as `psql -c "DROP DATABASE prod"`.
+- **The Stop hook's loop guard works.** On every tier the test gate looked for a `stop_hook_active` environment variable that does not exist, so after a failing run it blocked every further stop until the tests passed. It now reads `stop_hook_active` from stdin: the first stop with failing tests is blocked and Claude goes back to fix them, and a second stop in the same turn goes through, so a failure Claude cannot fix does not turn into a loop.
+- **`/pr-review` and `/dependency-audit` keep their temp files in the project.** They wrote the PR diff, the review, test output and changelog caches to fixed names under `/tmp`, readable by other users of the machine and shared between projects. They now write to `.tierward/tmp/` at the project root, which the scaffold gitignores. The folder is outside `.claude/` on purpose: Claude Code treats `.claude/` as a protected path and asks before every write there, whatever the permission rules say. `init` on an existing project now also appends `.claude/logs/` and `.tierward/tmp/` to its `.gitignore`.
+- **Docs.** MCP setup points to a `.mcp.json` file at the project root or to `claude mcp add --scope user`, which stores the server in `~/.claude.json`. Claude Code does not read `~/.claude/.mcp.json`, and `init` creates no MCP file. The operational guide counts 27 skills, `/repo-hygiene` included, lists `xhigh` and `max` among the `effort` values and describes each hook per tier. The README keeps short versions of the skills table, the MCP reference and the Stop hook, and links to the guide for the details.
+- **`/skill-review` accepts the `effort` field.** Its spec snapshot still listed `effort` as an undocumented field, and its calibration kit graded it High. Claude Code documents the field, and `/skill-security` and `/skill-db` both use it.
+- **The npm package ships its license.** `LICENSE` sat only at the repository root, outside the files npm packs.
+- **Smaller corrections.** The `/skill-security` report no longer names a fixed model for LLM analysis, since the scanner's provider decides that. The README no longer claims the plugin wires up the MCP server, and the npm README no longer says the VS Code extension sets up the MCP server and the plugin.
+
+Existing projects: `tierward upgrade` does not add hook files or rewrite `.claude/settings.json`, so apply these by hand, in this order.
+
+1. Add `.claude/logs/` and `.tierward/tmp/` to `.gitignore` first, so the new logs never show up as files to commit.
+2. Copy `templates/common/.claude/hooks/tierward-audit-log.mjs` from the tierward package to `.claude/hooks/`.
+3. In `.claude/settings.json`, set the command of the `PostToolUse` audit entry, of the `InstructionsLoaded` entry and, on Tier L, of the `SessionStart` hook that writes `sessions.log` to `node "$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-audit-log.mjs"`. On Tier L, copy the destructive-command `PreToolUse` command from the Tier L template. In the `Stop` test gate, replace `[ "$stop_hook_active" = "1" ] && exit 0;` with `cat 2>/dev/null | grep -q '"stop_hook_active": *true' && exit 0;`.
+4. On Tier M and L, copy `.claude/skills/pr-review/SKILL.md` and `.claude/skills/dependency-audit/` from the template of your tier, or replace `/tmp/` with `.tierward/tmp/` in them, add `mkdir -p .tierward/tmp` before the first write, and add `Bash(mkdir -p .tierward/tmp)` to the `allowed-tools` line of `pr-review`.
+5. Delete `/tmp/claude-audit.log` and `/tmp/claude-instructions-*.log` once you no longer need them.
+
+---
+
 ## [2.1.0] — 2026-10-09
 
 ### Added

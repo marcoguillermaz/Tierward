@@ -17,6 +17,7 @@
  */
 import inquirer from 'inquirer';
 import { DEFAULT_BODY } from '../writer.js';
+import { DEFAULT_AUDIT_MODEL } from '../../utils/constants.js';
 
 // HARD_STOP_TIERS was used in v1.0-v1.2 to block tier M/L. Kept as an
 // empty array in v1.27.0+ so legacy callers (tests, plugins) still find
@@ -400,7 +401,7 @@ export function assembleQuestions({ projectNameDefault } = {}) {
       name: 'auditModel',
       message: 'Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?',
       when: (a) => (a.tier === 'm' || a.tier === 'l') && a.hasFrontend === true,
-      default: 'claude-sonnet-4-6',
+      default: DEFAULT_AUDIT_MODEL,
     },
     // ──────────────────────────────────────────────────────────────
     {

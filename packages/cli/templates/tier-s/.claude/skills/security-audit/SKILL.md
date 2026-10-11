@@ -4,6 +4,7 @@ description: Security audit: auth/authz on API routes, input validation, row-lev
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [target:page:<route>|target:role:<role>|target:section:<section>]
 allowed-tools: Bash Read Glob Grep WebFetch Agent mcp__mcp-nvd__get_cve mcp__mcp-nvd__search_cve
 ---
@@ -187,7 +188,7 @@ If no automated advisors are available, skip this step and note it in the report
 
 ## Step 3c - Dependency CVE audit
 
-**Pinned MCP server (v1.20+): `mcp-nvd`** ([github.com/marcoeg/mcp-nvd](https://github.com/marcoeg/mcp-nvd)) — exposes the NVD CVE database via two tools: `mcp__mcp-nvd__get_cve` (lookup by CVE ID) and `mcp__mcp-nvd__search_cve` (keyword + product search). Wire it up in `~/.claude/.mcp.json` or project-scoped `.mcp.json` with the user's NVD API key.
+**Pinned MCP server (v1.20+): `mcp-nvd`** ([github.com/marcoeg/mcp-nvd](https://github.com/marcoeg/mcp-nvd)) — exposes the NVD CVE database via two tools: `mcp__mcp-nvd__get_cve` (lookup by CVE ID) and `mcp__mcp-nvd__search_cve` (keyword + product search). Wire it up in the project's `.mcp.json` or for the user with `claude mcp add --scope user` (stored in `~/.claude.json`), with the user's NVD API key.
 
 ### Step 3c.A — MCP-aware path (when available)
 

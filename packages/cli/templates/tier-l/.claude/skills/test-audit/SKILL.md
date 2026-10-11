@@ -4,6 +4,7 @@ description: Static test-suite quality audit - coverage from lcov/Istanbul/Cober
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [target:path:<dir>|target:file:<glob>|target:coverage:<path>|mode:all]
 allowed-tools: Read Glob Grep Bash
 ---

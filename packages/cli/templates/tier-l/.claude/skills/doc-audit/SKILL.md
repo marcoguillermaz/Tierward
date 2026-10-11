@@ -4,6 +4,7 @@ description: Static documentation drift audit - relative-link resolution, code-b
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [target:path:<dir>|target:file:<glob>|mode:all]
 allowed-tools: Read Glob Grep Bash(node:*) Bash(python3:*) Bash(ls:*) Bash(grep:*) Bash(wc:*) Bash(git:*)
 ---

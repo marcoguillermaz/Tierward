@@ -10,7 +10,7 @@ import { scaffoldTierSafe } from '../scaffold/index.js';
 import { generateClaudeMd } from '../generators/claude-md.js';
 import { generateContextImport } from '../generators/context-import.js';
 import { printPlan, printNextSteps } from '../utils/print-plan.js';
-import { AUDIT_MODELS } from '../utils/constants.js';
+import { AUDIT_MODELS, DEFAULT_AUDIT_MODEL } from '../utils/constants.js';
 import {
   NATIVE_STACKS,
   WEB_STACKS,
@@ -20,6 +20,19 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
+
+// An existing .gitignore is kept, so these entries are appended when missing.
+// .claude/logs/ holds the instructions log, .tierward/tmp/ the pr-review and
+// dependency-audit temp files (PR diffs, test output).
+export const IN_PLACE_GITIGNORE_ENTRIES = [
+  '.claude/session/',
+  '.claude/context/',
+  '.claude/logs/',
+  '.tierward/tmp/',
+  '.claude/CLAUDE.local.md',
+  '.claude/settings.local.json',
+  'CONTEXT_IMPORT.md',
+];
 
 export async function initInPlace(options) {
   const cwd = process.cwd();
@@ -303,7 +316,7 @@ export async function initInPlace(options) {
           return (tier === 'm' || tier === 'l') && a.hasFrontend === true;
         },
         choices: AUDIT_MODELS,
-        default: 'claude-sonnet-4-6',
+        default: DEFAULT_AUDIT_MODEL,
       },
       {
         type: 'confirm',
@@ -343,7 +356,7 @@ export async function initInPlace(options) {
     hasFrontend: answers.hasFrontend,
     hasDesignSystem: answers.hasDesignSystem,
     designSystemName: answers.designSystemName || 'component library',
-    auditModel: answers.auditModel || 'claude-sonnet-4-6',
+    auditModel: answers.auditModel || DEFAULT_AUDIT_MODEL,
     hasPrd: answers.hasPrd ?? false,
   };
 
@@ -394,14 +407,8 @@ export async function initInPlace(options) {
     process.exit(1);
   }
 
-  // Append .claude/session to existing .gitignore if needed
-  await appendIfMissing(cwd, [
-    '.claude/session/',
-    '.claude/context/',
-    '.claude/CLAUDE.local.md',
-    '.claude/settings.local.json',
-    'CONTEXT_IMPORT.md',
-  ]);
+  // Append .claude/session and friends to existing .gitignore if needed
+  await appendIfMissing(cwd, IN_PLACE_GITIGNORE_ENTRIES);
 
   // ── Summary ──────────────────────────────────────────────────────────
 

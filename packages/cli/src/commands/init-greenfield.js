@@ -8,7 +8,7 @@ import { generateReadme } from '../generators/readme.js';
 import { generateGreenfieldContextImport } from '../generators/context-import.js';
 import { scaffoldTier } from '../scaffold/index.js';
 import { printPlan, printNextSteps } from '../utils/print-plan.js';
-import { AUDIT_MODELS } from '../utils/constants.js';
+import { AUDIT_MODELS, DEFAULT_AUDIT_MODEL } from '../utils/constants.js';
 import {
   NATIVE_STACKS,
   WEB_STACKS,
@@ -303,7 +303,7 @@ export async function initGreenfield(options) {
           return (tier === 'm' || tier === 'l') && a.hasFrontend === true;
         },
         choices: AUDIT_MODELS,
-        default: 'claude-sonnet-4-6',
+        default: DEFAULT_AUDIT_MODEL,
       },
       {
         type: 'confirm',
@@ -361,7 +361,7 @@ export async function initGreenfield(options) {
     hasFrontend: answers.hasFrontend,
     hasDesignSystem: answers.hasDesignSystem,
     designSystemName: answers.designSystemName || 'component library',
-    auditModel: answers.auditModel || 'claude-sonnet-4-6',
+    auditModel: answers.auditModel || DEFAULT_AUDIT_MODEL,
     hasPrd: answers.hasPrd ?? false,
   };
 

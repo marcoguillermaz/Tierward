@@ -39,7 +39,7 @@ Both must be set in `.env` at the repo root:
 
 Optional overrides:
 
-- `ANTHROPIC_OPUS_MODEL` (default `claude-opus-4-7`)
+- `ANTHROPIC_OPUS_MODEL` (default `claude-opus-4-8`)
 - `ANTHROPIC_SONNET_MODEL` (default `claude-sonnet-4-6`)
 - `GEMINI_MODEL` (default `gemini-2.5-pro`)
 
@@ -47,7 +47,7 @@ Optional overrides:
 
 | Field               | Value                                                      |
 | ------------------- | ---------------------------------------------------------- |
-| Jury                | `claude-opus-4-7` + `claude-sonnet-4-6` + `gemini-2.5-pro` |
+| Jury                | `claude-opus-4-8` + `claude-sonnet-4-6` + `gemini-2.5-pro` |
 | Aggregation         | Median per criterion across 3 models                       |
 | PASS                | All medians ≥ 2 **AND** ≥ 80 % of criteria with median ≥ 2 |
 | Greenfield criteria | Q1, Q2, Q3                                                 |

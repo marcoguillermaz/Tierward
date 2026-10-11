@@ -4,7 +4,7 @@
 
 # CLI source and templates — core product
 /packages/cli/src/       @marcoguillermaz
-/packages/templates/     @marcoguillermaz
+/packages/cli/templates/ @marcoguillermaz
 
 # CI/CD and GitHub config
 /.github/                @marcoguillermaz

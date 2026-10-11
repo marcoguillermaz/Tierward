@@ -39,6 +39,8 @@ function buildSkillMd(answers) {
   lines.push(`user-invocable: ${answers.userInvocable !== false}`);
   lines.push(`model: ${answers.model || 'sonnet'}`);
   lines.push('context: fork');
+  // A forked skill runs in the background unless told to wait (Claude Code v2.1.218+)
+  lines.push('background: false');
   if (answers.effort && answers.effort !== '(skip)') {
     lines.push(`effort: ${answers.effort}`);
   }

@@ -1,6 +1,6 @@
 # tierward - Operational Guide
 
-**Version**: 2.1.0
+**Version**: 2.2.0
 **Audience**: Builder PMs, tech leads, and senior developers using Claude Code - from first exploration to structured, reviewable delivery
 **Format**: Reference + step-by-step. Read section 1 and your target tier section first, then use the rest as a lookup.
 
@@ -44,7 +44,7 @@ Claude Code is a powerful CLI assistant that can read, write, and reason about y
 - A development pipeline Claude follows strictly - requirements reviewed before code is written, tests verified before declaring done
 - Pre-wired hooks that enforce the pipeline mechanically, not just as instructions
 - A tiered system matching process overhead to task complexity: a two-line bugfix does not go through the same process as a multi-week feature
-- 26 audit skills - executable multi-step programs with model routing (haiku for mechanical checks, sonnet for analysis)
+- 27 audit skills - executable multi-step programs with model routing (haiku for mechanical checks, sonnet for analysis)
 - Audit trails, commit attribution, secret scanning, and CODEOWNERS review requests for full visibility over AI-generated changes
 - A discovery mechanism that teaches Claude about your existing codebase in a single structured session
 
@@ -184,7 +184,7 @@ For experienced users, the wizard asks:
   - "Do you use a component library or design system?" -> installs `/ui-audit`
   - "Design system name?" -> populates `[DESIGN_SYSTEM_NAME]` placeholder
   - "Track a PRD per feature block?" -> determines if `docs/prd/prd.md` is referenced in context review
-  - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-sonnet-4-6` (override with any current model id)
+  - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-sonnet-5-5` (override with any current model id). The `init` wizard offers the same question as a list: `claude-sonnet-5-5` (default), `claude-opus-5-5`, `claude-fable-5-1`
 - Whether to include pre-commit config and `.github/` files
 - How changes reach `main`: through a staging branch, by a direct merge, or by a pull request (see [4d](#4d-how-changes-reach-main-promotion-modes)). Native stacks get the last two only.
 
@@ -455,7 +455,7 @@ npx tierward add skill commit
 
 This copies the SKILL.md file into `.claude/skills/<name>/` and appends it to the `## Active Skills` section in CLAUDE.md (if that section exists). No other files are modified.
 
-Available skills (26): `arch-audit`, `security-audit`, `perf-audit`, `skill-dev`, `skill-review`, `simplify`, `commit`, `skill-security`, `systematic-debugging`, `api-design`, `skill-db`, `migration-audit`, `visual-audit`, `ux-audit`, `responsive-audit`, `ui-audit`, `accessibility-audit`, `test-audit`, `dependency-audit`, `dependency-scan`, `pr-review`, `doc-audit`, `api-contract-audit`, `compliance-audit`, `infra-audit`, `context-review`.
+Available skills (27): `arch-audit`, `security-audit`, `perf-audit`, `skill-dev`, `skill-review`, `simplify`, `commit`, `skill-security`, `systematic-debugging`, `api-design`, `skill-db`, `migration-audit`, `visual-audit`, `ux-audit`, `responsive-audit`, `ui-audit`, `accessibility-audit`, `test-audit`, `dependency-audit`, `dependency-scan`, `pr-review`, `doc-audit`, `api-contract-audit`, `compliance-audit`, `infra-audit`, `context-review`, `repo-hygiene`.
 
 Options:
 
@@ -619,32 +619,38 @@ Shared lessons and active project state. Updated at the end of every block.
 
 ### .claude/settings.json
 
-Permissions and hooks. Five hooks are pre-configured in Tier M/L (three in Tier S):
+Permissions and hooks. Besides the governance hooks in `.claude/hooks/` (commit and promotion gate, approval capture, file scope guard, team-settings enforcement), these hooks are pre-configured:
 
-| Hook                      | Event                | Tier  | What it does                                                                            |
-| ------------------------- | -------------------- | ----- | --------------------------------------------------------------------------------------- |
-| Test gate                 | `Stop`               | S M L | Runs test command. If tests fail, Claude is blocked and must fix before declaring done. |
-| Audit log                 | `PostToolUse`        | M L   | Appends every Write/Edit/Bash call to `~/.claude/audit/[project].jsonl`.                |
-| Session log               | `SessionStart`       | S M L | Logs session start to `~/.claude/audit/sessions.log`.                                   |
-| Arch-audit reminder       | `SessionStart`       | S M L | If `/arch-audit` hasn't run in 7 days, prints a reminder at session open.               |
-| Instructions debug log    | `InstructionsLoaded` | M L   | Appends loaded context payload to `/tmp/claude-instructions-YYYYMMDD.log`.              |
-| CLAUDE.local.md reminder  | `PostCompact`        | M L   | Reminds Claude to re-read `.claude/CLAUDE.local.md` after `/compact`.                   |
-| Destructive command block | `PreToolUse`         | L     | Blocks `rm -rf /`, `DROP DATABASE`, and similar patterns.                               |
-| LLM security review       | `Stop`               | L     | Haiku checks for hardcoded secrets and missing auth at session close.                   |
+| Hook                      | Event                | Tier  | What it does                                                                                                                                               |
+| ------------------------- | -------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test gate                 | `Stop`               | S M L | Runs the test command when Claude tries to finish. If tests fail, the stop is blocked and Claude gets a turn to fix them (see [Stop hook](#stop-hook)). |
+| Audit log                 | `PostToolUse`        | S M L | Appends Write/Edit calls (tier S) or Write/Edit/Bash calls (tier M/L) to `~/.claude/audit/[project].jsonl`.                                              |
+| Session log               | `SessionStart`       | M L   | Logs session start to `~/.claude/audit/sessions.log`. Tier L adds the model when Claude Code provides it.                                                 |
+| Arch-audit reminder       | `SessionStart`       | S M L | If `/arch-audit` hasn't run in 7 days, prints a reminder at session open.                                                                                  |
+| Instructions debug log    | `InstructionsLoaded` | S M L | Appends one line per loaded instruction file to `.claude/logs/instructions-YYYYMMDD.log` in the project (gitignored).                                     |
+| CLAUDE.local.md reminder  | `PostCompact`        | S M L | Reminds Claude to re-read `.claude/CLAUDE.local.md` after `/compact`.                                                                                      |
+| Destructive command check | `PreToolUse`         | L     | Asks for your confirmation before `rm -rf /`, `DROP DATABASE` and similar patterns, also inside another command such as `psql -c "..."`.                  |
+| LLM security review       | `Stop`               | L     | Haiku checks for hardcoded secrets and missing auth at session close.                                                                                      |
 
-**Stack-aware permissions**: `permissions.allow` is set to stack-appropriate CLI tools at scaffold time. `permissions.deny` includes base protections (force push, `rm -rf /`, `DROP TABLE`, `TRUNCATE`) plus stack-specific release/publish commands:
+Hooks read session and tool data from the JSON Claude Code passes on stdin. The logs stay on your machine: `~/.claude/audit/` is in your home directory, and `.claude/logs/` is gitignored by the scaffold.
 
-| Stack             | Allow                               | Deny (additions)                              |
-| ----------------- | ----------------------------------- | --------------------------------------------- |
-| Node.js (default) | git, node, npm, npx, curl           | -                                             |
-| Swift             | git, swift, xcodebuild, xcrun, curl | xcodebuild archive, xcrun altool --upload-app |
-| Kotlin            | git, gradlew, gradle, curl          | gradlew publish                               |
-| Rust              | git, cargo, rustc, curl             | cargo publish                                 |
-| .NET              | git, dotnet, curl                   | dotnet nuget push                             |
-| Java              | git, mvn, gradlew, gradle, curl     | mvn deploy, gradlew publish                   |
-| Ruby              | git, bundle, rails, rake, curl      | gem push                                      |
-| Python            | git, python, pip, uv, curl          | twine upload                                  |
-| Go                | git, go, curl                       | -                                             |
+**Stack-aware permissions**: `permissions.allow` names the commands the pipeline runs, set at scaffold time: the git subcommands it uses (`status`, `diff`, `log`, `show`, `add`, `commit`, `checkout`, `switch`, `branch`, `fetch`, `pull`, `merge`, `push`, `worktree`, `stash` and a few read-only helpers), the stack's CLI tools, and `npx tierward`. On Node.js it adds one `npx` rule per tool your configured commands run, such as `Bash(npx tsc *)` for `npx tsc --noEmit`. On Tier M/L, `Edit(/.tierward/tmp/**)` lets the pr-review and dependency-audit skills write their temporary files without a prompt. No rule allows every git command, every npx package or `curl`, so anything else follows your permission mode: in the default mode Claude Code asks first.
+
+`permissions.ask` prompts in every permission mode, `bypassPermissions` included: the push to `main` and its refspec forms (`HEAD:main`, `+main`, `refs/heads/main`; on Tier L with a staging branch, the same for `staging`), `git -c` (which can make git run a program), `npm exec` and `npm x`, and the MCP tools that merge a pull request or write files to a branch (`merge_pull_request`, `push_files`, `create_or_update_file`, `delete_file`, on any server). `permissions.deny` includes base protections (force push, `git add -A`, `git add --all`, `git add .`, `rm -rf /`, `DROP TABLE`, `TRUNCATE`) plus stack-specific release/publish commands. In `pr` mode the pushes to `main` move from `ask` to `deny` ([4d](#4d-how-changes-reach-main-promotion-modes)).
+
+These rules match the command text Claude usually writes. They are not a security boundary: `npm install <package>` (install scripts), `node -e`, `uv run` or `docker` (Tier L) still run any code.
+
+| Stack             | Allow (besides the named git subcommands)               | Deny (additions)                              |
+| ----------------- | ------------------------------------------------------- | --------------------------------------------- |
+| Node.js (default) | node, npm, the npx tools of your commands, docker (L)   | -                                             |
+| Swift             | swift, xcodebuild, xcrun                                | xcodebuild archive, xcrun altool --upload-app |
+| Kotlin            | gradlew, gradle                                         | gradlew publish                               |
+| Rust              | cargo, rustc                                            | cargo publish                                 |
+| .NET              | dotnet                                                  | dotnet nuget push                             |
+| Java              | mvn, gradlew, gradle                                    | mvn deploy, gradlew publish                   |
+| Ruby              | bundle, rails, rake                                     | gem push                                      |
+| Python            | python, pip, uv, pytest, mypy, uvicorn, alembic         | twine upload, alembic downgrade base          |
+| Go                | go                                                      | -                                             |
 
 > **Git-deploy hosts (Cloudflare Pages, Vercel, Netlify, Render):** these platforms deploy by watching pushes to `main`. In `staging` and `direct` mode a push to `main` waits for your `Promote` and then a permission prompt (`Bash(git push origin main*)` is an `ask` rule), so it never happens by accident. If the host should only ever deploy reviewed code, use the `pr` promotion mode ([4d](#4d-how-changes-reach-main-promotion-modes)): `feature/*` → PR → merge to `main`, the host picks up the merge commit, and pushes to `main` are denied. Do **not** move the push to `main` into `permissions.allow`.
 
@@ -735,7 +741,7 @@ Defined in the `CLAUDE.md` template for Tier M/L. Governs how Claude handles non
 
 ## 10. Audit skills
 
-Twenty-six audit skills are scaffolded across the tiers (tier S installs 8, tier M installs 25, tier L installs all 26 with `context-review`). Run them as slash commands in Claude Code at any time - no pipeline phase required. Skills are **conditionally installed** based on wizard answers at init time.
+Twenty-seven audit skills are scaffolded across the tiers (tier S installs 8, tier M installs 26, tier L installs all 27 with `context-review`). Run them as slash commands in Claude Code at any time - no pipeline phase required. Skills are **conditionally installed** based on wizard answers at init time.
 
 All skill applicability rules are managed by a central skill registry (`packages/cli/src/scaffold/skill-registry.js`). Each skill declares which tiers and project conditions it requires.
 
@@ -768,13 +774,14 @@ All skill applicability rules are managed by a central skill registry (`packages
 | `/dependency-audit`     | - | x | x | always (no `requires`)                        | - (optional `package-registry-mcp`; WebFetch fallback)                       |
 | `/pr-review`            | - | x | x | always (no `requires`)                        | `gh` CLI                                                                     |
 | `/dependency-scan`      | - | x | x | always (no `requires`)                        | - (static analysis; forked context)                                          |
+| `/repo-hygiene`         | - | x | x | always (no `requires`)                        | `gh` CLI (checks for merged and open PRs)                                    |
 | `/context-review`       | - | - | x | always (no `requires`)                        | - (grep-only; forked context)                                                |
 
 ### General rules
 
 - Code-audit skills are **audit-only** - no code is modified (except `/simplify`, which applies changes directly). Findings go to `docs/refactoring-backlog.md` with severity-ranked IDs (`PERF-`, `API-`, `DB-`, `MIG-`, `DEV-`, `SEC-`, `UX-`, `A11Y-`, `TEST-`).
 - Live-browser skills (`/responsive-audit`, `/ux-audit`, `/visual-audit`, `/accessibility-audit`) require the Playwright MCP server configured in `.claude/settings.json` and the dev server running. `/ui-audit` is static and does not require Playwright.
-- Each skill runs in an isolated context fork (`context: fork`) - it does not pollute the main session window.
+- Each skill runs in an isolated context fork (`context: fork`) - it does not pollute the main session window. It also sets `background: false`, so the turn that runs it waits for the result.
 - Each skill delegates grep-heavy scanning to a Haiku Explore subagent to protect the main context window.
 - Before first run: fill in the `## Configuration` placeholders at the top of each `SKILL.md`.
 - Skills not installed at init can be added later: `npx tierward add skill <name>`.
@@ -1020,11 +1027,31 @@ When the [`package-registry-mcp`](https://github.com/Artmann/package-registry-mc
 
 Autonomous local pull-request review via the `gh` CLI. Spawns a review subagent on the PR diff, classifies findings as Critical / Major / Minor using universal plus stack-specific severity criteria, and posts the review as a PR comment for audit trail. Configurable through `.claude/team-settings.json` `prReviewSeverity`. Read-only — no merges, no code changes. The `--deep` flag escalates the subagent to opus for sensitive changes. The skill is also exposed as the `tierward_pr_review` MCP tool, which reads existing review comments rather than generating fresh ones.
 
+#### /skill-security
+
+**File**: `.claude/skills/skill-security/SKILL.md` | **Tier**: S, M, L
+
+Security scan for Claude Code skills using SkillSpector: prompt injection, data exfiltration, MCP tool poisoning, supply chain, taint tracking. 64-pattern vulnerability scanner.
+
+#### /systematic-debugging
+
+**File**: `.claude/skills/systematic-debugging/SKILL.md` | **Tier**: S, M, L
+
+Root-cause investigation before any fix: reproduce consistently, write the hypothesis, verify against evidence, then fix the root cause, not the symptom. STOP gate between hypothesis and fix.
+
+#### /repo-hygiene
+
+**File**: `.claude/skills/repo-hygiene/SKILL.md` | **Tier**: M, L
+
+Periodic cleanup sweep: orphaned or merged branches, stray worktrees, stale `.claude/session/*.md` files, and (`target:full`) orphaned docs. Reports every finding with evidence and executes only what you confirm. Never deletes `docs/*.md`: those stay report-only. Distinct from the Phase 8 closure cleanup gate.
+
+`/dependency-scan` and `/context-review` are described in section 11.
+
 ---
 
 ## 11. Pipeline-integrated skills (Tier M / L)
 
-Two pipeline-integrated skills are scaffolded in `.claude/skills/`. They are invoked during specific pipeline phases as forked-context sub-processes, returning structured results to the main session.
+Two pipeline-integrated skills are scaffolded in `.claude/skills/`. They are invoked during specific pipeline phases as forked-context sub-processes, returning structured results to the main session. Both set `background: false`: since Claude Code v2.1.218 a forked skill runs in the background unless told to wait, and the phase needs the result before its STOP gate.
 
 ### Design principle
 
@@ -1075,9 +1102,9 @@ Place custom skills in `.claude/skills/custom-<name>/SKILL.md`. The `custom-` pr
 
 Every skill file has YAML frontmatter and a markdown body with step-by-step instructions.
 
-**Required frontmatter fields**: `name`, `description` (max 250 chars), `user-invocable` (true/false), `model` (haiku/sonnet/opus), `context` (always `fork`).
+**Required frontmatter fields**: `name`, `description` (max 250 chars, a Tierward convention; Claude Code truncates `description` plus `when_to_use` at 1,536 characters), `user-invocable` (true/false), `model` (haiku/sonnet/opus), `context` (always `fork`), `background` (always `false`, so the invoking turn waits for the result).
 
-**Optional fields**: `effort` (low/medium/high), `argument-hint` (parameter syntax), `allowed-tools` (MCP tools the skill needs).
+**Optional fields**: `effort` (low/medium/high/xhigh/max, depending on the model), `argument-hint` (parameter syntax), `allowed-tools` (MCP tools the skill needs).
 
 **Model selection**:
 
@@ -1094,6 +1121,7 @@ description: Check for outdated dependencies and report major version bumps.
 user-invocable: true
 model: haiku
 context: fork
+background: false
 ---
 
 ## Step 1 - Check outdated packages
@@ -1120,24 +1148,29 @@ After creating a custom skill, add it to the `## Active Skills` section in CLAUD
 
 ### Stop hook
 
-The Stop hook runs your test command every time Claude tries to declare a task complete. If tests fail, the hook returns a block decision and Claude must fix the failure before proceeding.
+The Stop hook runs your test command every time Claude tries to declare a task complete. If tests fail, it blocks that stop and shows the failure to Claude, which keeps working to fix it. When Claude stops again in the same turn, Claude Code marks the stop as a retry (`stop_hook_active` in the hook's stdin JSON) and the hook lets it through. A failure Claude cannot fix therefore does not turn into a loop, and its output is already in the conversation for you to review.
+
+This is the tier M command for a Node.js project with `npx vitest run` as test command:
 
 ```json
 "Stop": [{
   "hooks": [{
     "type": "command",
-    "command": "npm test || echo '{\"decision\": \"block\", \"reason\": \"Tests must pass before declaring complete.\"}'"
+    "command": "cat 2>/dev/null | grep -q '\"stop_hook_active\": *true' && exit 0; cd \"$CLAUDE_PROJECT_DIR\" || exit 0; [ ! -f package.json ] && exit 0; OUT=$(npx vitest run 2>&1); CODE=$?; [ \"$CODE\" -ne 0 ] && { echo \"$OUT\" | tail -5 >&2; echo '{\"decision\": \"block\", \"reason\": \"Tests must pass before completing the task. Fix failing tests first.\"}'; }; exit 0",
+    "timeout": 300
   }]
 }]
 ```
 
-Replace `npm test` with your actual test command. The command must exit 0 on success. Present in every tier, including Discovery.
+`init` fills in your test command. The `[ ! -f package.json ]` check skips the gate in a new repository that has no test setup yet. The hook always exits 0 and reports a failure as JSON on stdout, which is how Claude Code reads a block. Present in every tier, including Discovery.
+
+Tierward does not set `onFailure: "block"` (Claude Code 2.1.295 and later) on its hooks. They are fail-open by design: a hook that cannot start or times out lets the action through. With `onFailure: "block"`, a test suite slower than the 300-second timeout would block every stop, and a missing `node` would block every command the governance gate checks.
 
 ---
 
 ### Audit log
 
-Every tool use (file read, file write, bash command) is logged to `~/.claude/audit/<project>.jsonl`. Append-only. Each entry includes timestamp, tool name, input parameters, and session ID. Local to your machine - not committed to the repository.
+Tier S logs file writes and edits; tier M and L also log shell commands. Each call appends one JSON line to `~/.claude/audit/<project>.jsonl` with the timestamp, the session ID, the tool name and a summary of the input: the command for Bash, the file path for Write and Edit, cut to 300 characters. File contents are never logged. The hook (`.claude/hooks/tierward-audit-log.mjs`) creates the directory and files readable by you only. The log stays on your machine and is never committed. Tier M and L also record session starts in `~/.claude/audit/sessions.log`.
 
 ---
 
@@ -1199,7 +1232,7 @@ Imperative mood, under 72 characters. Scope is optional but encouraged.
 
 **STOP gates are hard stops** - not suggestions. Never say "yes continue" to a requirements summary you haven't read. The gate exists for a human decision checkpoint.
 
-**Tests before declare-done** - Claude cannot mark a task complete with failing tests. To temporarily disable (dry-run, docs-only task): set `"Stop": []` in `settings.json`, then restore immediately after.
+**Tests before declare-done** - when tests fail at declare-done, Claude is sent back to fix them (see [Stop hook](#stop-hook)). To temporarily disable (dry-run, docs-only task): set `"Stop": []` in `settings.json`, then restore immediately after.
 
 **No unrequested changes** - Claude implements only what was approved in Phase 1. Adjacent problems go to the session file and refactoring backlog.
 
@@ -1234,7 +1267,7 @@ npx tierward doctor --report  # JSON compliance output for CI pipelines
 npx tierward doctor --ci      # silent mode: exit 1 if any check fails
 ```
 
-Runs 28 checks:
+Runs 27 checks:
 
 1. Claude Code CLI is installed and reachable
 2. `CLAUDE.md` is present
@@ -1252,18 +1285,17 @@ Runs 28 checks:
 14. `docs/pipeline-standards.md` present (Tier M/L - warn if missing)
 15. `.claude/skills/commit/` present (Tier M/L - warn if missing)
 16. Skills invoking Playwright `browser_*` tools declare `allowed-tools` frontmatter (warn if missing)
-17. Skills use space-separated `allowed-tools` per Anthropic spec (warn on commas)
-18. Skill bodies respect Anthropic ≤ 500 lines guideline (warn if oversized)
-19. `.claude/settings.json` has no unfilled `[UPPERCASE]` placeholders (warn)
-20. CLAUDE.md Key Commands include the Stop hook test command (warn on drift)
-21. CLAUDE.md `## Active Skills` matches `.claude/skills/` directories (warn on mismatch)
-22. `pipeline.md` H1 matches its phase structure — Tier S/M/L self-consistency (warn)
-23. `.claude/rules/context-review.md` includes C12 (warn if not present - upgrade needed)
-24. Stop hook has `timeout` configured and ≤ 600s (warn if missing - prevents hanging test commands)
-25. Anthropic-influenced files match the installed Tierward template — `arch-audit/advanced-checks.md` in v1.15.0 (warn on drift, suggest `upgrade --anthropic`)
-26. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
-27. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
-28. No duplicate entries in `permissions.deny` list (warn if duplicates found)
+17. Skill bodies respect Anthropic ≤ 500 lines guideline (warn if oversized)
+18. `.claude/settings.json` has no unfilled `[UPPERCASE]` placeholders (warn)
+19. CLAUDE.md Key Commands include the Stop hook test command (warn on drift)
+20. CLAUDE.md `## Active Skills` matches `.claude/skills/` directories (warn on mismatch)
+21. `pipeline.md` H1 matches its phase structure — Tier S/M/L self-consistency (warn)
+22. `.claude/rules/context-review.md` includes C12 (warn if not present - upgrade needed)
+23. Stop hook has `timeout` configured and ≤ 600s (warn if missing - prevents hanging test commands)
+24. Anthropic-influenced files match the installed Tierward template — `arch-audit/advanced-checks.md` in v1.15.0 (warn on drift, suggest `upgrade --anthropic`)
+25. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
+26. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
+27. No duplicate entries in `permissions.deny` list (warn if duplicates found)
 
 Checks 13-28 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier.
 
@@ -1301,7 +1333,7 @@ Enforcement points: `init` (refuse + explain), `upgrade` (refuse + suggest), `ad
 
 `init-from-context` does not enforce `team-settings.json` because the target directory is greenfield; a parent `team-settings.json` doesn't propagate by design.
 
-v1.16.0 introduced CLI-side enforcement only; native `Skill()` permission rules in `.claude/settings.json` were not generated at the time because Claude Code's permission grammar for skills was not part of the documented public schema. v1.21.0 closed that gap with a `PreToolUse` hook on the `Skill` matcher (`.claude/hooks/team-settings-enforcement.mjs`) that refuses skill invocations violating `blockedSkills` or `allowedSkills` at runtime — covered by doctor check #28 (`team-settings-runtime-hook`).
+v1.16.0 introduced CLI-side enforcement only; native `Skill()` permission rules in `.claude/settings.json` were not generated at the time because Claude Code's permission grammar for skills was not part of the documented public schema. v1.21.0 closed that gap with a `PreToolUse` hook on the `Skill` matcher (`.claude/hooks/team-settings-enforcement.mjs`) that refuses skill invocations violating `blockedSkills` or `allowedSkills` at runtime — covered by doctor check #26 (`team-settings-runtime-hook`).
 
 ### MCP server
 
@@ -1318,7 +1350,7 @@ The MCP server exposes Tierward governance state to any MCP-aware client (Claude
 
 *Note: The legacy `cdk_*` tool names remain available as deprecated aliases for backwards compatibility.*
 
-Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user-scoped):
+In Claude Code, wire it for the whole team with a `.mcp.json` file at the project root (`init` does not create it):
 
 ```json
 {
@@ -1328,7 +1360,15 @@ Wire up by adding to `.mcp.json` (project-scoped) or `~/.claude/.mcp.json` (user
 }
 ```
 
-The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v1.34.1. A read-write surface remains a future-minor decision contingent on adoption signal.
+Or wire it for yourself across all projects; Claude Code stores user-scoped servers in `~/.claude.json`:
+
+```bash
+claude mcp add --transport stdio --scope user tierward -- tierward-mcp
+```
+
+Other MCP clients use their own configuration file.
+
+The server resolves the project root from `$TIERWARD_PROJECT_ROOT` (or the legacy `$CDK_PROJECT_ROOT`) if set, otherwise from the calling process's `cwd`. v1.17.0 launched read-only by design; that posture is unchanged through v2.1.0. A read-write surface remains a future-minor decision contingent on adoption signal.
 
 ### Adding team-specific rules
 
@@ -1404,7 +1444,7 @@ The locked jury is `claude-opus-4-8` + `claude-sonnet-4-6` + `gemini-2.5-pro`. P
 
 This is a maintainer gate: run it before any release that touches `packages/cli/src/context-builder/**`, the schema, or prompt templates. End users do not run it; they get the deterministic MUST PASS via `npx tierward validate-context`.
 
-Full reference: `packages/cli/test/cross-llm-rubric/README.md`. Locked design in `memory/project_context_builder_rubric_v1.md`.
+Full reference: `packages/cli/test/cross-llm-rubric/README.md`.
 
 ---
 
@@ -1501,4 +1541,4 @@ There are 10 example fixtures in `packages/cli/test/fixtures/wizard-answers/`. C
 
 ---
 
-_Last updated: 2026-10-09 - v2.1.0_
+_Last updated: 2026-10-11 - v2.2.0_

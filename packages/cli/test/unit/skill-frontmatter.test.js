@@ -1,11 +1,18 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import {
   parseSkillFile,
   extractFields,
   countBodyLines,
-  allowedToolsHasCommas,
 } from '../../src/utils/skill-frontmatter.js';
+
+const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const CLI = path.join(PACKAGE_ROOT, 'src', 'index.js');
 
 describe('parseSkillFile', () => {
   it('returns null frontmatter when no delimiters present', () => {
@@ -65,23 +72,65 @@ describe('countBodyLines', () => {
   });
 });
 
-describe('allowedToolsHasCommas', () => {
-  it('returns false for null / undefined / empty', () => {
-    assert.equal(allowedToolsHasCommas(null), false);
-    assert.equal(allowedToolsHasCommas(''), false);
+// Claude Code accepts `allowed-tools` as a space- or comma-separated string, or
+// a YAML list (code.claude.com/docs/en/skills, frontmatter reference).
+describe('doctor and allowed-tools', () => {
+  it('does not flag a comma-separated allowed-tools value', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tierward-allowed-tools-'));
+    try {
+      const skillDir = path.join(dir, '.claude', 'skills', 'custom-commas');
+      fs.mkdirSync(skillDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(skillDir, 'SKILL.md'),
+        '---\nname: custom-commas\ndescription: Test skill.\nallowed-tools: Read, Glob, Grep\n---\n\nBody.\n',
+      );
+      let out;
+      try {
+        out = execFileSync('node', [CLI, 'doctor', '--report'], { cwd: dir, encoding: 'utf8' });
+      } catch (err) {
+        out = err.stdout; // doctor exits 1 on a project with failing checks
+      }
+      const flagged = JSON.parse(out).checks.filter(
+        (r) => r.status !== 'pass' && r.status !== 'skip' && /allowed-tools/i.test(r.label),
+      );
+      assert.deepEqual(flagged, []);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// A forked skill runs in the background by default since Claude Code v2.1.218;
+// the pipeline reads each skill's result in the turn that invoked it.
+describe('shipped forked skills', () => {
+  const roots = [
+    path.join(PACKAGE_ROOT, 'templates'),
+    path.join(PACKAGE_ROOT, '..', '..', 'plugin'),
+  ];
+  const skillFiles = roots.flatMap((root) =>
+    fs.existsSync(root)
+      ? fs
+          .readdirSync(root, { recursive: true })
+          .filter((rel) => path.basename(rel) === 'SKILL.md')
+          .map((rel) => path.join(root, rel))
+      : [],
+  );
+
+  it('finds the shipped skills', () => {
+    assert.ok(skillFiles.length > 50, `found ${skillFiles.length}`);
   });
 
-  it('detects comma-separated scalar form (the deviation we guard against)', () => {
-    assert.equal(allowedToolsHasCommas('Read, Glob, Grep'), true);
-    assert.equal(allowedToolsHasCommas('Read,Glob'), true);
-  });
-
-  it('accepts space-separated scalar form', () => {
-    assert.equal(allowedToolsHasCommas('Read Glob Grep'), false);
-    assert.equal(allowedToolsHasCommas('Bash(git add *) Bash(git commit *)'), false);
-  });
-
-  it('accepts YAML flow list form (commas inside brackets are list separators, not scalar commas)', () => {
-    assert.equal(allowedToolsHasCommas('[Read, Glob, Grep]'), false);
+  it('every skill with context: fork sets background: false', () => {
+    const forked = skillFiles.filter(
+      (file) => parseSkillFile(fs.readFileSync(file, 'utf8')).fields.context === 'fork',
+    );
+    const missing = forked.filter(
+      (file) => parseSkillFile(fs.readFileSync(file, 'utf8')).fields.background !== 'false',
+    );
+    assert.ok(forked.length > 50, `found ${forked.length} forked skills`);
+    assert.deepEqual(
+      missing.map((file) => path.relative(PACKAGE_ROOT, file)),
+      [],
+    );
   });
 });

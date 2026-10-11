@@ -4,6 +4,7 @@ description: Unified accessibility audit - axe-core WCAG 2.2 scan, APCA contrast
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [static|full|wcag] [target:route:<path>|target:file:<glob>|target:role:<role>]
 allowed-tools: Read Glob Grep Bash(curl:*) mcp__playwright__browser_navigate mcp__playwright__browser_evaluate mcp__playwright__browser_wait_for Agent Edit Write
 ---

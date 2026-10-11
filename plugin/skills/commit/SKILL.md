@@ -4,6 +4,7 @@ description: Classify staged changes, generate conventional commit message (type
 user-invocable: true
 model: haiku
 context: fork
+background: false
 allowed-tools: Read Glob Grep Bash(git:*)
 ---
 
