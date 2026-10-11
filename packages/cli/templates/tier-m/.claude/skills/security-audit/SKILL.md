@@ -4,6 +4,7 @@ description: Security audit: auth/authz on API routes, input validation, row-lev
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [target:page:<route>|target:role:<role>|target:section:<section>]
 allowed-tools: Bash Read Glob Grep WebFetch Agent mcp__mcp-nvd__get_cve mcp__mcp-nvd__search_cve
 ---

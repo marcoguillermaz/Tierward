@@ -8,6 +8,7 @@ description: >
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 allowed-tools: Read Glob Grep Edit
 ---
 

@@ -4,6 +4,7 @@ description: Orchestrate the skill-review framework v1.2 pipeline on a target sk
 user-invocable: true
 model: opus
 context: fork
+background: false
 argument-hint: [skill-name] [tier:S|M|L|all] [mode:full|preflight-only|fixtures-only]
 allowed-tools: Read Glob Grep Bash(wc:*) Bash(node:*) Edit
 ---

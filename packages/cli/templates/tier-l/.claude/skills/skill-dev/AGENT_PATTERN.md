@@ -12,12 +12,15 @@ Every skill that ships with Tierward declares `context: fork` in its frontmatter
 ---
 name: my-skill
 context: fork
+background: false
 ---
 ```
 
 This tells the Claude Code harness to run the skill in an isolated context window, separate from the main project session. The skill's token budget starts clean; nothing from the main session bleeds in, and the skill's intermediate steps do not fill the session window.
 
 `context: fork` is mandatory — arch-audit check C13 fails any skill missing it.
+
+Since Claude Code v2.1.218 a forked skill runs in the background by default: the turn that invoked it moves on and the result arrives later. `background: false` makes the turn wait for the result, which every Tierward skill needs because the pipeline reads it in the same turn.
 
 ---
 

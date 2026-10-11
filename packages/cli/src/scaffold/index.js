@@ -240,22 +240,23 @@ async function pruneCheatsheet(targetDir, config) {
 
 /**
  * Patch settings.json permissions.allow to use stack-appropriate CLI tools.
- * Default templates use node/npm/npx - this replaces them for non-JS stacks.
+ * Default templates use node/npm, named npx tools and (Tier L) docker - this
+ * replaces them for non-JS stacks and keeps the named git, gh and
+ * `npx tierward` rules.
  */
 async function patchSettingsPermissions(targetDir, config) {
   const settingsPath = path.join(targetDir, '.claude', 'settings.json');
   if (!(await fs.pathExists(settingsPath))) return;
 
   const permissionsAllowByStack = {
-    swift: ['Bash(git:*)', 'Bash(swift:*)', 'Bash(xcodebuild:*)', 'Bash(xcrun:*)', 'Bash(curl:*)'],
-    kotlin: ['Bash(git:*)', 'Bash(./gradlew:*)', 'Bash(gradle:*)', 'Bash(curl:*)'],
-    rust: ['Bash(git:*)', 'Bash(cargo:*)', 'Bash(rustc:*)', 'Bash(curl:*)'],
-    dotnet: ['Bash(git:*)', 'Bash(dotnet:*)', 'Bash(curl:*)'],
-    java: ['Bash(git:*)', 'Bash(mvn:*)', 'Bash(./gradlew:*)', 'Bash(gradle:*)', 'Bash(curl:*)'],
-    ruby: ['Bash(git:*)', 'Bash(bundle:*)', 'Bash(rails:*)', 'Bash(rake:*)', 'Bash(curl:*)'],
-    go: ['Bash(git:*)', 'Bash(go:*)', 'Bash(curl:*)'],
+    swift: ['Bash(swift:*)', 'Bash(xcodebuild:*)', 'Bash(xcrun:*)'],
+    kotlin: ['Bash(./gradlew:*)', 'Bash(gradle:*)'],
+    rust: ['Bash(cargo:*)', 'Bash(rustc:*)'],
+    dotnet: ['Bash(dotnet:*)'],
+    java: ['Bash(mvn:*)', 'Bash(./gradlew:*)', 'Bash(gradle:*)'],
+    ruby: ['Bash(bundle:*)', 'Bash(rails:*)', 'Bash(rake:*)'],
+    go: ['Bash(go:*)'],
     python: [
-      'Bash(git:*)',
       'Bash(python:*)',
       'Bash(pip:*)',
       'Bash(uv:*)',
@@ -263,7 +264,6 @@ async function patchSettingsPermissions(targetDir, config) {
       'Bash(mypy:*)',
       'Bash(uvicorn:*)',
       'Bash(alembic:*)',
-      'Bash(curl:*)',
     ],
   };
 
@@ -285,9 +285,12 @@ async function patchSettingsPermissions(targetDir, config) {
     const raw = await fs.readFile(settingsPath, 'utf8');
     const settings = JSON.parse(raw);
     if (stackPerms && settings.permissions && Array.isArray(settings.permissions.allow)) {
-      // Keep the `gh` rules (`pr` promotion mode): they are not stack tools
-      const ghRules = settings.permissions.allow.filter((rule) => rule.startsWith('Bash(gh '));
-      settings.permissions.allow = [...stackPerms, ...ghRules];
+      // Swap only the template's stack tools: the named git rules, the `gh`
+      // rules (`pr` promotion mode) and Tierward's own CLI are not stack tools
+      const templateStackTool = (rule) =>
+        /^Bash\((node|npm|npx|docker)[ :]/.test(rule) && rule !== TIERWARD_NPX_RULE;
+      const kept = settings.permissions.allow.filter((rule) => !templateStackTool(rule));
+      settings.permissions.allow = [...stackPerms, ...kept];
     }
     if (stackDeny && settings.permissions && Array.isArray(settings.permissions.deny)) {
       settings.permissions.deny = [...settings.permissions.deny, ...stackDeny];
@@ -642,6 +645,51 @@ function resolveDevCommand(userCommand, nativeDefault) {
 }
 
 /**
+ * The project commands the templates show, with the same fallbacks as the
+ * placeholders they fill.
+ */
+function resolvedCommands(config) {
+  const ncd = STACK_COMMANDS[config.techStack] || {};
+  // Swift xcodebuild commands need -scheme to target the correct scheme
+  const swiftScheme =
+    config.techStack === 'swift' && config.projectName ? ` -scheme ${config.projectName}` : '';
+  return {
+    typeCheck: config.typeCheckCommand || ncd.typeCheckPlaceholder || 'npx tsc --noEmit',
+    test: config.testCommand || (ncd.test ? ncd.test + swiftScheme : '') || 'npm test',
+    build: config.buildCommand || (ncd.build ? ncd.build + swiftScheme : '') || 'npm run build',
+    dev: resolveDevCommand(config.devCommand, ncd.dev),
+    install: config.installCommand || ncd.install || 'npm install',
+    e2e: config.e2eCommand || '# not configured',
+    lint:
+      lintCommandByStack[config.techStack] ||
+      config.lintCommand ||
+      '# configure lint command for your stack',
+    migration: config.migrationCommand || '# not configured',
+  };
+}
+
+// Tierward's own CLI (`npx tierward doctor`), shown by the cheatsheet on every stack
+const TIERWARD_NPX_RULE = 'Bash(npx tierward *)';
+
+/**
+ * Allow rules for the tools the project's own commands run through npx, so the
+ * pipeline's checks run without a prompt while any other package still asks.
+ * A broad `npx` rule would approve any package from the registry.
+ */
+function projectNpxRules(config) {
+  const rules = [];
+  for (const command of Object.values(resolvedCommands(config))) {
+    for (const part of command.split(/\s*(?:&&|\|\||;|\|)\s*/)) {
+      const words = part.trim().split(/\s+/);
+      if (words[0] !== 'npx') continue;
+      const tool = words.findIndex((word, i) => i > 0 && !word.startsWith('-'));
+      if (tool !== -1) rules.push(`Bash(${words.slice(0, tool + 1).join(' ')} *)`);
+    }
+  }
+  return [...new Set([...rules, TIERWARD_NPX_RULE])];
+}
+
+/**
  * Build the [TEST_GUARD] clause for the Stop hook command.
  *
  * Returns a shell snippet that exits 0 (skips the test gate) when NONE of the
@@ -692,10 +740,7 @@ function interpolate(content, config) {
     other: 'Mixed',
   };
 
-  const ncd = STACK_COMMANDS[config.techStack] || {};
-  // Swift xcodebuild commands need -scheme to target the correct scheme
-  const swiftScheme =
-    config.techStack === 'swift' && config.projectName ? ` -scheme ${config.projectName}` : '';
+  const commands = resolvedCommands(config);
 
   let result = content
     .replace(/\[PROJECT_NAME\]/g, config.projectName || 'My Project')
@@ -703,25 +748,16 @@ function interpolate(content, config) {
       /\[TECH_STACK_SUMMARY\]/g,
       techStackLabels[config.techStack] || config.techStack || 'Mixed',
     )
-    .replace(
-      /\[TYPE_CHECK_COMMAND\]/g,
-      config.typeCheckCommand || ncd.typeCheckPlaceholder || 'npx tsc --noEmit',
-    )
+    .replace(/\[TYPE_CHECK_COMMAND\]/g, commands.typeCheck)
     .replace(/\[TEST_GUARD\]/g, buildTestGuard(config.techStack))
-    .replace(
-      /\[TEST_COMMAND\]/g,
-      config.testCommand || (ncd.test ? ncd.test + swiftScheme : '') || 'npm test',
-    )
-    .replace(
-      /\[BUILD_COMMAND\]/g,
-      config.buildCommand || (ncd.build ? ncd.build + swiftScheme : '') || 'npm run build',
-    )
-    .replace(/\[DEV_COMMAND\]/g, resolveDevCommand(config.devCommand, ncd.dev))
-    .replace(/\[INSTALL_COMMAND\]/g, config.installCommand || ncd.install || 'npm install')
+    .replace(/\[TEST_COMMAND\]/g, commands.test)
+    .replace(/\[BUILD_COMMAND\]/g, commands.build)
+    .replace(/\[DEV_COMMAND\]/g, commands.dev)
+    .replace(/\[INSTALL_COMMAND\]/g, commands.install)
     .replace(/\[TECH_LEAD\]/g, config.techLead || 'tech-lead')
     .replace(/\[BACKEND_LEAD\]/g, config.backendLead || 'backend-lead')
     .replace(/\[SECURITY_REVIEWER\]/g, config.securityReviewer || 'security-reviewer')
-    .replace(/\[E2E_COMMAND\]/g, config.e2eCommand || '# not configured')
+    .replace(/\[E2E_COMMAND\]/g, commands.e2e)
     .replace(/\[E2E_TOOL_NAME\]/g, resolveE2eToolName(config))
     .replace(
       /\[FRAMEWORK\]/g,
@@ -757,18 +793,13 @@ function interpolate(content, config) {
     .replace(/\[FRAMEWORK_VALUE\]/g, frameworkValue(config))
     .replace(/\[LANGUAGE_VALUE\]/g, languageFromStack(config.techStack))
     .replace(/\[ENUM_CASE_CONVENTION\]/g, enumCaseConvention(config.techStack))
-    .replace(/\[MIGRATION_COMMAND\]/g, config.migrationCommand || '# not configured')
+    .replace(/\[MIGRATION_COMMAND\]/g, commands.migration)
     .replace(/\[PERF_TOOL\]/g, perfToolByStack[config.techStack] || 'your platform profiler')
     .replace(
       /\[PROFILER_COMMAND\]/g,
       profilerCommandByStack[config.techStack] || '# configure profiling command for your stack',
     )
-    .replace(
-      /\[LINT_COMMAND\]/g,
-      lintCommandByStack[config.techStack] ||
-        config.lintCommand ||
-        '# configure lint command for your stack',
-    )
+    .replace(/\[LINT_COMMAND\]/g, commands.lint)
     .replace(
       /\[SECURITY_CHECKLIST_ITEMS\]/g,
       securityChecklistByStack[config.techStack] || '- Configure security checklist for your stack',
@@ -1020,8 +1051,8 @@ function interpolate(content, config) {
       /\| 5c - Staging deploy \| Merge to staging \+ smoke test/g,
       '| 5c - Local build | Local build + smoke test',
     );
-    // Tier L settings.json push permission (ask list)
-    result = result.replace(', "Bash(git push origin staging*)"', '');
+    // Tier L settings.json push permissions (ask list, one rule per line)
+    result = result.replace(/^ *"Bash\(git push [^"\n]*staging[^"\n]*\)",\n/gm, '');
     // repo-hygiene scan script: protected-branch list
     result = result.replace('PROTECTED_BRANCHES="main staging"', 'PROTECTED_BRANCHES="main"');
     // Tier L CLAUDE.md worktree example comment
@@ -1079,6 +1110,18 @@ function interpolate(content, config) {
       'After writing a migration, before applying to the database',
     );
   }
+
+  // ── Post-interpolation: settings.json allows the project's own npx tools ───
+  // The template allows no npx package; add one rule per tool the configured
+  // commands run, after the npm rule (native stacks swap both out later).
+  result = result.replace(
+    /^( *)"Bash\(npm:\*\)",\n/m,
+    (line, indent) =>
+      line +
+      projectNpxRules(config)
+        .map((rule) => `${indent}"${rule}",\n`)
+        .join(''),
+  );
 
   // ── Post-interpolation: `pr` promotion mode ───
   // Runs after the staging strip above, which already turned every promotion
@@ -1315,11 +1358,13 @@ function toPullRequestPromotion(content) {
 
   // settings.json: `main` changes only through a PR, so the push asks become
   // denies, refspec forms included (`HEAD:main`, `+main`, `refs/heads/main`);
-  // the PR merge asks for permission on top of `Promote`
-  result = result.replace(
-    /^ {4}"ask": \["Bash\(git push origin main\*\)"\],\n {4}"deny": \[\n/m,
-    `    "ask": ["${PR_MODE_GH_ASK.join('", "')}"],\n    "deny": [\n${PR_MODE_PUSH_DENY.map((rule) => `      "${rule}",\n`).join('')}`,
-  );
+  // the PR merge asks for permission on top of `Promote`. The template lists
+  // one rule per line, push asks first, so each removed line ends in a comma.
+  const listRules = (indent, rules) => rules.map((rule) => `${indent}  "${rule}",\n`).join('');
+  result = result
+    .replace(/^ *"Bash\(git push [^"\n]*main[^"\n]*\)",\n/gm, '')
+    .replace(/^( *)"ask": \[\n/m, (line, indent) => line + listRules(indent, PR_MODE_GH_ASK))
+    .replace(/^( *)"deny": \[\n/m, (line, indent) => line + listRules(indent, PR_MODE_PUSH_DENY));
   // ...and opening, reading and checking a PR runs without a prompt
   result = result.replace(/("allow": \[)([^\]]*?)(\s*\])/, (_, open, rules, close) => {
     const sep = rules.includes('\n') ? ',\n      ' : ', ';
@@ -1360,4 +1405,5 @@ export const _testHelpers = {
   interpolate,
   pruneSkills,
   patchSettingsPermissions,
+  projectNpxRules,
 };

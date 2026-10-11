@@ -1,7 +1,11 @@
+// Current models, cheapest first (platform.claude.com/docs/en/models/overview)
 export const AUDIT_MODELS = [
-  { name: 'claude-sonnet-4-6 - faster, lower cost (recommended)', value: 'claude-sonnet-4-6' },
-  { name: 'claude-opus-4-7 - more thorough, higher cost', value: 'claude-opus-4-7' },
+  { name: 'claude-sonnet-5-5 - faster, lower cost (recommended)', value: 'claude-sonnet-5-5' },
+  { name: 'claude-opus-5-5 - more thorough, higher cost', value: 'claude-opus-5-5' },
+  { name: 'claude-fable-5-1 - deepest reasoning, highest cost', value: 'claude-fable-5-1' },
 ];
+
+export const DEFAULT_AUDIT_MODEL = AUDIT_MODELS[0].value;
 
 /**
  * Maximum length of a SKILL.md `description:` frontmatter value.

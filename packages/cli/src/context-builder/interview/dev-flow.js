@@ -21,6 +21,7 @@ import { runAlgoInference } from '../inference/algo.js';
 import { extractWithLlm } from '../inference/llm.js';
 import { mergeLlmIntoDraft, composeBodyMarkdown } from '../inference/review.js';
 import { DEFAULT_BODY } from '../writer.js';
+import { DEFAULT_AUDIT_MODEL } from '../../utils/constants.js';
 import { STACK_DEFAULTS, TECH_STACK_CHOICES, HARD_STOP_TIERS } from './shared/stack-defaults.js';
 import { deriveDevRationale } from './shared/derive-rationale.js';
 
@@ -179,7 +180,7 @@ export function assembleDevQuestions({ mode, projectNameDefault, algoDefaults } 
       name: 'auditModel',
       message: 'Preferred Claude model for deep-analysis skills?',
       when: (a) => (a.tier === 'm' || a.tier === 'l') && a.hasFrontend === true,
-      default: 'claude-sonnet-4-6',
+      default: DEFAULT_AUDIT_MODEL,
     },
     // ──────────────────────────────────────────────────────────────
     {

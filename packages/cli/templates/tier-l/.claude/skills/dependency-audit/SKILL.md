@@ -4,6 +4,7 @@ description: Dependency update audit. Inventories outdated packages, classifies 
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [tier:A|tier:B|tier:C|pkg:<name>]
 allowed-tools: Bash WebFetch Read Glob Grep mcp__package-registry-mcp__lookup_package mcp__package-registry-mcp__search_package
 ---

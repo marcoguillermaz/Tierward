@@ -4,6 +4,7 @@ description: Code quality audit: detect cross-module coupling, N+1 queries, dead
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 allowed-tools: Read Glob Grep Bash Edit Write
 ---
 

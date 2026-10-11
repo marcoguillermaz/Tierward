@@ -4,6 +4,7 @@ description: Phase 8.5 grep checks C1-C3. Runs the three mechanical grep checks 
 user-invocable: true
 model: haiku
 context: fork
+background: false
 allowed-tools: Read Glob Grep
 ---
 

@@ -7,11 +7,7 @@ import {
   SKILL_MD_MAX_LINES,
   STOP_HOOK_MAX_TIMEOUT_SEC,
 } from '../utils/constants.js';
-import {
-  parseSkillFile,
-  countBodyLines,
-  allowedToolsHasCommas,
-} from '../utils/skill-frontmatter.js';
+import { parseSkillFile, countBodyLines } from '../utils/skill-frontmatter.js';
 import {
   parseActiveSkills,
   parseStopHookTestCmd,
@@ -293,31 +289,6 @@ const checks = [
         warn: true,
         info: missingTools.length > 0 ? missingTools.join(', ') : undefined,
         fix: `Add 'allowed-tools: Playwright' frontmatter to: ${missingTools.join(', ')}`,
-      };
-    },
-  },
-  {
-    id: 'skill-allowed-tools-syntax',
-    label: `Skills use space-separated allowed-tools (Anthropic spec)`,
-    check: (cwd) => {
-      const skillsDir = path.join(cwd, '.claude', 'skills');
-      if (!fs.existsSync(skillsDir)) return { pass: true, skip: true };
-      const offenders = [];
-      try {
-        for (const skill of fs.readdirSync(skillsDir)) {
-          const skillFile = path.join(skillsDir, skill, 'SKILL.md');
-          if (!fs.existsSync(skillFile)) continue;
-          const { fields } = parseSkillFile(fs.readFileSync(skillFile, 'utf8'));
-          if (allowedToolsHasCommas(fields.allowedTools)) offenders.push(skill);
-        }
-      } catch {
-        return { pass: true, skip: true };
-      }
-      return {
-        pass: offenders.length === 0,
-        warn: true,
-        info: offenders.length > 0 ? offenders.join(', ') : undefined,
-        fix: `Replace commas with spaces in allowed-tools frontmatter (Anthropic spec: space-separated string or YAML list). Affected: ${offenders.join(', ')}`,
       };
     },
   },

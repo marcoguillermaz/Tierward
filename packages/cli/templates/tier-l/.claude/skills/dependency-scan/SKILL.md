@@ -4,6 +4,7 @@ description: Phase 1 mandatory dependency scan. Runs all 6 checks in a single in
 user-invocable: true
 model: haiku
 context: fork
+background: false
 allowed-tools: Read Glob Grep
 ---
 

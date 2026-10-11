@@ -4,6 +4,7 @@ description: Audit Claude Code architecture files against Anthropic docs and rel
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 allowed-tools: Read Glob Grep WebFetch Bash(grep:*) Bash(date:*) Edit
 ---
 

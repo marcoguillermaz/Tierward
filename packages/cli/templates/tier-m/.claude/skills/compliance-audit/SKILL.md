@@ -4,6 +4,7 @@ description: Static compliance audit with regulatory profiles. v1.14 ships GDPR 
 user-invocable: true
 model: sonnet
 context: fork
+background: false
 argument-hint: [target:path:<dir>|profile:gdpr|mode:all]
 allowed-tools: Read Glob Grep
 ---

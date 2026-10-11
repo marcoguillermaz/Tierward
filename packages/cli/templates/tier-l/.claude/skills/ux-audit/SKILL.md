@@ -4,6 +4,7 @@ description: UX audit: evaluate user flows against ISO 9241-11 and Nielsen heuri
 user-invocable: true
 model: opus
 context: fork
+background: false
 argument-hint: [flow:<flow-id>|role:<role>|full] [target:page:<route>|target:role:<role>|target:section:<section>]
 allowed-tools: Read Glob Grep Bash(rm:*) mcp__playwright__browser_navigate mcp__playwright__browser_take_screenshot mcp__playwright__browser_snapshot mcp__playwright__browser_type mcp__playwright__browser_click mcp__playwright__browser_wait_for mcp__playwright__browser_evaluate mcp__playwright__browser_fill_form mcp__playwright__browser_press_key
 ---

@@ -25,6 +25,7 @@ export function extractFields(frontmatter) {
   fields.name = scalar('name');
   fields.description = scalar('description');
   fields.context = scalar('context');
+  fields.background = scalar('background');
   fields.model = scalar('model');
   fields.userInvocable = scalar('user-invocable');
   fields.argumentHint = scalar('argument-hint');
@@ -37,12 +38,4 @@ export function countBodyLines(body) {
   const trimmed = body.replace(/\n+$/, '');
   if (trimmed === '') return 0;
   return trimmed.split('\n').length;
-}
-
-export function allowedToolsHasCommas(allowedToolsValue) {
-  if (!allowedToolsValue) return false;
-  if (allowedToolsValue.startsWith('[') && allowedToolsValue.endsWith(']')) {
-    return false;
-  }
-  return /,/.test(allowedToolsValue);
 }

@@ -166,9 +166,11 @@ variables, model selection, sandbox mode, and more.
 
 **Precedence** (highest to lowest): managed (org-wide) → command-line → local → project → user.
 
-**This project's `.claude/settings.json`** (committed): all Bash commands + MCP tools pre-authorised,
-so Claude does not ask for permission at every pipeline command (build tools, test runners, git, scripts).
-No `settings.local.json` is currently active - personal overrides are in `~/.claude/settings.json` (Bash(*) global).
+**This project's `.claude/settings.json`** (committed): `permissions.allow` names the commands the pipeline runs
+(the git subcommands it uses, the stack's tools, the npx tools of the configured commands), so they run without a prompt.
+`permissions.ask` always prompts for promotion pushes, `git -c`, `npm exec`/`npm x` and MCP merge or file-write tools;
+`permissions.deny` refuses force pushes, `git add -A`/`--all`/`.` and destructive commands. Anything else follows your
+permission mode. Put personal overrides in `.claude/settings.local.json` or `~/.claude/settings.json`.
 
 Key settings configured:
 - `attribution.commit/pr: ""` - suppresses automatic Co-Authored-By (pipeline adds it manually in commit heredoc)
