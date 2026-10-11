@@ -5178,12 +5178,12 @@ async function scenarioHookLogs() {
 // ── Scenario: skills keep their temp files inside the project ────────────────
 // pr-review writes the full PR diff and the review, dependency-audit the test
 // output; a fixed name under the shared /tmp is readable by other users of the
-// machine and shared across projects. They write to the gitignored .claude/tmp/.
+// machine and shared across projects. They write to the gitignored .tierward/tmp/.
 
 const SHARED_TMP = /(?<![\w.])\/tmp\//;
 
 async function scenarioSkillTempFiles() {
-  section('Skill temp files - .claude/tmp/ inside the project, not /tmp');
+  section('Skill temp files - .tierward/tmp/ inside the project, not /tmp');
 
   for (const tier of ['m', 'l']) {
     const dir = await scaffold(`skill-tmp-${tier}`, tier, { ...BASE, tier, isDiscovery: false });
@@ -5194,15 +5194,26 @@ async function scenarioSkillTempFiles() {
     ]) {
       const text = fs.readFileSync(path.join(dir, '.claude/skills', rel), 'utf8');
       const hit = text.split('\n').find((l) => SHARED_TMP.test(l));
-      if (!hit && text.includes('.claude/tmp/')) {
-        pass(`skill-tmp[${tier}]: ${rel} writes under .claude/tmp/`);
+      if (!hit && text.includes('.tierward/tmp/')) {
+        pass(`skill-tmp[${tier}]: ${rel} writes under .tierward/tmp/`);
       } else {
-        fail(`skill-tmp[${tier}]: ${rel} still uses /tmp`, (hit || '(no .claude/tmp/)').trim());
+        fail(`skill-tmp[${tier}]: ${rel} still uses /tmp`, (hit || '(no .tierward/tmp/)').trim());
       }
     }
+    // pr-review has a narrow allowed-tools list: the new mkdir must be on it, or
+    // every run stops on a permission prompt.
+    const prReview = fs.readFileSync(path.join(dir, '.claude/skills/pr-review/SKILL.md'), 'utf8');
+    const allowed = (prReview.match(/^allowed-tools:.*$/m) || [''])[0];
+    if (allowed.includes('Bash(mkdir -p .tierward/tmp)')) {
+      pass(`skill-tmp[${tier}]: pr-review pre-approves mkdir -p .tierward/tmp`);
+    } else {
+      fail(`skill-tmp[${tier}]: pr-review allowed-tools lacks mkdir -p .tierward/tmp`);
+    }
+
     const gitignore = fs.readFileSync(path.join(dir, '.gitignore'), 'utf8');
-    if (/^\.claude\/tmp\/$/m.test(gitignore)) pass(`skill-tmp[${tier}]: .claude/tmp/ gitignored`);
-    else fail(`skill-tmp[${tier}]: .claude/tmp/ missing from .gitignore`);
+    if (/^\.tierward\/tmp\/$/m.test(gitignore))
+      pass(`skill-tmp[${tier}]: .tierward/tmp/ gitignored`);
+    else fail(`skill-tmp[${tier}]: .tierward/tmp/ missing from .gitignore`);
   }
 }
 

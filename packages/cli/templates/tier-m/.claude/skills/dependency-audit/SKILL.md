@@ -61,12 +61,12 @@ PATTERNS.md (when present) maps known package names of the detected stack to one
 
 ## Step 1 — Inventory
 
-Run the stack-appropriate inventory command from Step 0. Cache the JSON to a temp file to avoid duplicate runs. Temp files go in `.claude/tmp/` at the project root (gitignored), never in the shared `/tmp`, where a fixed name is readable by other users and shared across projects:
+Run the stack-appropriate inventory command from Step 0. Cache the JSON to a temp file to avoid duplicate runs. Temp files go in `.tierward/tmp/` at the project root (gitignored), never in the shared `/tmp`, where a fixed name is readable by other users and shared across projects, and not under `.claude/`, a protected path where Claude Code asks before every write:
 
 ```bash
 # Example for node-ts:
-mkdir -p .claude/tmp
-npm outdated --json > .claude/tmp/dependency-audit-outdated.json 2>/dev/null
+mkdir -p .tierward/tmp
+npm outdated --json > .tierward/tmp/dependency-audit-outdated.json 2>/dev/null
 ```
 
 Parse to a normalized list. Each entry: `name`, `current`, `wanted`, `latest`, `type` (prod/dev), `severity` (patch / minor / major — compute from current vs latest using semver).
@@ -92,7 +92,7 @@ For each package:
    - GitHub releases first if the source is known (`gh api repos/<owner>/<repo>/releases/latest --jq '.body' 2>/dev/null`).
    - Fallback: `WebFetch` against the package homepage / npm-registry / PyPI / crates.io page.
 
-   Cache changelog text in `.claude/tmp/dependency-audit-changelog-<pkg>.txt` regardless of path.
+   Cache changelog text in `.tierward/tmp/dependency-audit-changelog-<pkg>.txt` regardless of path.
 4. From each Tier B/C changelog, extract: top 3 breaking changes, deprecated APIs, minimum runtime requirements.
 
 ## Step 3 — Decision matrix
@@ -213,7 +213,7 @@ List of items to add to the project's refactoring or upgrade backlog:
 - Never run `npm install`, `pip install`, `swift package update`, `go get -u`, or any other resolver that mutates dependency state. The skill is audit-only in v1.
 - Never modify `package.json`, `pyproject.toml`, `Package.swift`, `Cargo.toml`, `go.mod`, or any lockfile.
 - Never re-classify a package across tiers silently. If the PATTERNS.md classification feels wrong for the project, flag it in the report; do not silently change tiers.
-- Always cache changelogs under `.claude/tmp/dependency-audit-changelog-*` to avoid hammering upstream registries mid-run.
+- Always cache changelogs under `.tierward/tmp/dependency-audit-changelog-*` to avoid hammering upstream registries mid-run.
 - Run the test baseline against the main branch state, not a worktree with WIP, since WIP may mask the baseline.
 
 ## Out of scope (v1)
