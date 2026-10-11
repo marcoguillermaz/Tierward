@@ -9,6 +9,22 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The audit log records what Claude did, and no hook writes to `/tmp`.** The template hooks read `CLAUDE_TOOL_NAME`, `CLAUDE_TOOL_INPUT`, `CLAUDE_TOOL_INPUT_FILE_PATH`, `CLAUDE_SESSION_ID` and `CLAUDE_MODEL`. Claude Code sets none of them: it passes hook data as JSON on stdin. The Tier M/L audit log held timestamps only, Tier S wrote lines without a file path to `/tmp/claude-audit.log`, and every tier appended each loaded instruction file to a shared `/tmp/claude-instructions-YYYYMMDD.log`. A new hook, `.claude/hooks/tierward-audit-log.mjs`, reads stdin. Every tier now logs to `~/.claude/audit/<project>.jsonl` with the session, the tool and the file path or command, never file contents: file writes and edits on Tier S, shell commands too on Tier M and L. Tier L records the model at session start when Claude Code provides it. The instructions log moves to `.claude/logs/` in the project, which the scaffold gitignores.
+- **The Tier L destructive-command check fires.** It read the same missing variable and never matched. It now reads the command from stdin and asks for your confirmation on `rm -rf /`, `DROP DATABASE` and similar patterns, also inside another command such as `psql -c "DROP DATABASE prod"`.
+- **The Stop hook's loop guard works.** On every tier the test gate looked for a `stop_hook_active` environment variable that does not exist, so after a failing run it blocked every further stop until the tests passed. It now reads `stop_hook_active` from stdin: the first stop with failing tests is blocked and Claude goes back to fix them, and a second stop in the same turn goes through, so a failure Claude cannot fix does not turn into a loop.
+- **`/pr-review` and `/dependency-audit` keep their temp files in the project.** They wrote the PR diff, the review, test output and changelog caches to fixed names under `/tmp`, readable by other users of the machine and shared between projects. They now write to `.claude/tmp/`, which the scaffold gitignores.
+- **Docs.** MCP setup points to a `.mcp.json` file at the project root or to `claude mcp add --scope user`, which stores the server in `~/.claude.json`. Claude Code does not read `~/.claude/.mcp.json`, and `init` creates no MCP file. The operational guide counts 27 skills, `/repo-hygiene` included, lists `xhigh` and `max` among the `effort` values and describes each hook per tier. The README keeps short versions of the skills table, the MCP reference and the Stop hook, and links to the guide for the details.
+
+Existing projects: `tierward upgrade` does not add hook files or rewrite `.claude/settings.json`, so apply these by hand, in this order.
+
+1. Add `.claude/logs/` and `.claude/tmp/` to `.gitignore` first, so the new logs never show up as files to commit.
+2. Copy `templates/common/.claude/hooks/tierward-audit-log.mjs` from the tierward package to `.claude/hooks/`.
+3. In `.claude/settings.json`, set the command of the `PostToolUse` audit entry, of the `InstructionsLoaded` entry and, on Tier L, of the `SessionStart` hook that writes `sessions.log` to `node "$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-audit-log.mjs"`. On Tier L, copy the destructive-command `PreToolUse` command from the Tier L template. In the `Stop` test gate, replace `[ "$stop_hook_active" = "1" ] && exit 0;` with `cat 2>/dev/null | grep -q '"stop_hook_active": *true' && exit 0;`.
+4. On Tier M and L, copy `.claude/skills/pr-review/SKILL.md` and `.claude/skills/dependency-audit/` from the template of your tier, or replace `/tmp/` with `.claude/tmp/` in them and add `mkdir -p .claude/tmp` before the first write.
+5. Delete `/tmp/claude-audit.log` and `/tmp/claude-instructions-*.log` once you no longer need them.
+
 ---
 
 ## [2.1.0] — 2026-10-09

@@ -15,7 +15,7 @@ Every tier includes the Stop hook. Process adds on top, not instead.
 
 ## Tier 0 — Discovery
 
-The lightest possible setup. You get a Stop hook that mechanically blocks Claude from completing a task until your tests pass. No pipeline, no audit skills, no governance files beyond what's strictly necessary.
+The lightest possible setup. You get a Stop hook that runs your tests when Claude says a task is done and sends it back to fix them when they fail. No pipeline, no audit skills, no governance files beyond what's strictly necessary.
 
 Use Tier 0 when you're exploring Tierward for the first time, running a solo spike, or working on a codebase where the cost of process outweighs the benefit.
 
