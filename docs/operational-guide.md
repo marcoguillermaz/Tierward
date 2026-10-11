@@ -634,19 +634,23 @@ Permissions and hooks. Besides the governance hooks in `.claude/hooks/` (commit 
 
 Hooks read session and tool data from the JSON Claude Code passes on stdin. The logs stay on your machine: `~/.claude/audit/` is in your home directory, and `.claude/logs/` is gitignored by the scaffold.
 
-**Stack-aware permissions**: `permissions.allow` is set to stack-appropriate CLI tools at scaffold time. `permissions.deny` includes base protections (force push, `rm -rf /`, `DROP TABLE`, `TRUNCATE`) plus stack-specific release/publish commands:
+**Stack-aware permissions**: `permissions.allow` names the commands the pipeline runs, set at scaffold time: the git subcommands it uses (`status`, `diff`, `log`, `show`, `add`, `commit`, `checkout`, `switch`, `branch`, `fetch`, `pull`, `merge`, `push`, `worktree`, `stash` and a few read-only helpers), the stack's CLI tools, and `npx tierward`. On Node.js it adds one `npx` rule per tool your configured commands run, such as `Bash(npx tsc *)` for `npx tsc --noEmit`. No rule allows every git command, every npx package or `curl`, so anything else follows your permission mode: in the default mode Claude Code asks first.
 
-| Stack             | Allow                               | Deny (additions)                              |
-| ----------------- | ----------------------------------- | --------------------------------------------- |
-| Node.js (default) | git, node, npm, npx, curl           | -                                             |
-| Swift             | git, swift, xcodebuild, xcrun, curl | xcodebuild archive, xcrun altool --upload-app |
-| Kotlin            | git, gradlew, gradle, curl          | gradlew publish                               |
-| Rust              | git, cargo, rustc, curl             | cargo publish                                 |
-| .NET              | git, dotnet, curl                   | dotnet nuget push                             |
-| Java              | git, mvn, gradlew, gradle, curl     | mvn deploy, gradlew publish                   |
-| Ruby              | git, bundle, rails, rake, curl      | gem push                                      |
-| Python            | git, python, pip, uv, curl          | twine upload                                  |
-| Go                | git, go, curl                       | -                                             |
+`permissions.ask` prompts in every permission mode, `bypassPermissions` included: the push to `main` and its refspec forms (`HEAD:main`, `+main`, `refs/heads/main`; on Tier L with a staging branch, the same for `staging`), `git -c` (which can make git run a program), `npm exec` and `npm x`, and the MCP tools that merge a pull request or write files to a branch (`merge_pull_request`, `push_files`, `create_or_update_file`, `delete_file`, on any server). `permissions.deny` includes base protections (force push, `git add -A`, `git add --all`, `git add .`, `rm -rf /`, `DROP TABLE`, `TRUNCATE`) plus stack-specific release/publish commands. In `pr` mode the pushes to `main` move from `ask` to `deny` ([4d](#4d-how-changes-reach-main-promotion-modes)).
+
+These rules match the command text Claude usually writes. They are not a security boundary: `node -e`, `uv run` or `docker` (Tier L) still run any code.
+
+| Stack             | Allow (besides the named git subcommands)               | Deny (additions)                              |
+| ----------------- | ------------------------------------------------------- | --------------------------------------------- |
+| Node.js (default) | node, npm, the npx tools of your commands, docker (L)   | -                                             |
+| Swift             | swift, xcodebuild, xcrun                                | xcodebuild archive, xcrun altool --upload-app |
+| Kotlin            | gradlew, gradle                                         | gradlew publish                               |
+| Rust              | cargo, rustc                                            | cargo publish                                 |
+| .NET              | dotnet                                                  | dotnet nuget push                             |
+| Java              | mvn, gradlew, gradle                                    | mvn deploy, gradlew publish                   |
+| Ruby              | bundle, rails, rake                                     | gem push                                      |
+| Python            | python, pip, uv, pytest, mypy, uvicorn, alembic         | twine upload, alembic downgrade base          |
+| Go                | go                                                      | -                                             |
 
 > **Git-deploy hosts (Cloudflare Pages, Vercel, Netlify, Render):** these platforms deploy by watching pushes to `main`. In `staging` and `direct` mode a push to `main` waits for your `Promote` and then a permission prompt (`Bash(git push origin main*)` is an `ask` rule), so it never happens by accident. If the host should only ever deploy reviewed code, use the `pr` promotion mode ([4d](#4d-how-changes-reach-main-promotion-modes)): `feature/*` → PR → merge to `main`, the host picks up the merge commit, and pushes to `main` are denied. Do **not** move the push to `main` into `permissions.allow`.
 

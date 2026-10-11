@@ -9,6 +9,20 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **New projects allow named commands, not all of git, npx and curl.** `.claude/settings.json` allowed `Bash(git:*)` and `Bash(npx:*)`, plus `Bash(curl:*)` on Tier M/L and on every native stack. Claude could run any package from the npm registry, download or upload anything with `curl`, and run any git command without asking, including `git -c <key>=<program>`, which makes git run a program you name. The allow list now names the git subcommands the pipeline uses (status, diff, log, show, add, commit, checkout, switch, branch, fetch, pull, merge, push, worktree, stash and a few read-only helpers), one `npx` rule per tool your configured commands run (for example `npx tsc` and `npx vitest`), and `npx tierward`. Anything else follows your permission mode: in the default mode Claude Code asks first.
+
+  Some commands now ask in every mode, `bypassPermissions` included: a push to `main` written as a refspec (`HEAD:main`, `+main`, `refs/heads/main`, and on Tier L with a staging branch the same forms for `staging`), `git -c`, `npm exec`, `npm x`, and every call to an MCP tool named `merge_pull_request`, `push_files`, `create_or_update_file` or `delete_file`, on any server. `git add -A`, `git add --all` and `git add .` are denied, so name the files you stage, as the pipeline already does. In `pr` mode the pushes to `main` stay denied.
+
+  In the default mode, these now ask first: `curl` (smoke tests, the API contract and accessibility audits), npx packages your commands don't use, `git clone` and the less common git commands (rebase, reset, cherry-pick, tag, clean). "Yes, and don't ask again" saves a rule for that command. These rules match the command text Claude usually writes and are not a security boundary: `node -e`, your stack's own tools (`uv run`, `cargo run`) and `docker` on Tier L still run any code.
+
+Existing projects: `tierward upgrade` does not rewrite `.claude/settings.json`, so adopt the new defaults by hand. The simplest way is to scaffold a scratch project with the same tier, stack and promotion mode (`npx tierward init --answers '{...}'` in an empty directory) and copy its `permissions` block over yours, keeping the rules you added yourself. To edit instead, take the lists from `templates/tier-<your tier>/.claude/settings.json` in the tierward package:
+
+- In `permissions.allow`, replace `Bash(git:*)` with the `Bash(git <subcommand> *)` rules, replace `Bash(npx:*)` with one `Bash(npx <tool> *)` rule per tool your test, type-check, lint, build and dev commands run, plus `Bash(npx tierward *)`, and remove `Bash(curl:*)`.
+- In `permissions.ask`, add the refspec forms of the push to `main` (not in `pr` mode, where they belong in `deny`), `Bash(git -c *)`, `Bash(npm exec *)`, `Bash(npm x *)` and the four `mcp__*__...` rules.
+- In `permissions.deny`, add the seven `Bash(git add ...)` rules.
+
 ### Fixed
 
 - **The audit log records what Claude did, and no hook writes to `/tmp`.** The template hooks read `CLAUDE_TOOL_NAME`, `CLAUDE_TOOL_INPUT`, `CLAUDE_TOOL_INPUT_FILE_PATH`, `CLAUDE_SESSION_ID` and `CLAUDE_MODEL`. Claude Code sets none of them: it passes hook data as JSON on stdin. The Tier M/L audit log held timestamps only, Tier S wrote lines without a file path to `/tmp/claude-audit.log`, and every tier appended each loaded instruction file to a shared `/tmp/claude-instructions-YYYYMMDD.log`. A new hook, `.claude/hooks/tierward-audit-log.mjs`, reads stdin. Every tier now logs to `~/.claude/audit/<project>.jsonl` with the session, the tool and the file path or command, never file contents: file writes and edits on Tier S, shell commands too on Tier M and L. Tier L records the model at session start when Claude Code provides it. The instructions log moves to `.claude/logs/` in the project, which the scaffold gitignores.
