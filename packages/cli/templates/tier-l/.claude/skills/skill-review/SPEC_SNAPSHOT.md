@@ -31,6 +31,7 @@ Every field below is **documented by Anthropic**. Fields outside this list are f
 | `allowed-tools` | string OR list | Subset of tools the skill can invoke. Space- or comma-separated string, or YAML list (re-checked 2026-10-11). Tierward convention: space-separated string. |
 | `model` | string | Model identifier: `sonnet`, `haiku`, `opus`. |
 | `context` | string | Only documented value: `fork`. |
+| `effort` | string | `low`, `medium`, `high`, `xhigh`, `max` (available levels depend on the model). Overrides the session's effort level while the skill runs (added 2026-10-11). |
 | `background` | boolean | Only with `context: fork`. `false` makes the invoking turn wait for the result; default `true` runs the fork in the background (Claude Code v2.1.218+, added 2026-10-11). Tierward skills set `false`. |
 | `agent` | string | Subagent type: `Explore`, `Plan`, `general-purpose`. |
 | `when_to_use` | string | Additional discovery hint. Combined with `description` must be ≤ 1536 chars. |
@@ -51,7 +52,7 @@ Every field below is **documented by Anthropic**. Fields outside this list are f
 Any frontmatter key outside the required + optional set above is a spec violation.
 
 **Known non-documented fields present in Tierward at snapshot date**:
-- `effort` - on 6 files: `arch-audit` (S, M, L) and `security-audit` (S, M, L). To be removed during the review cycle.
+- None (updated 2026-10-11). `effort`, listed here before, is now a documented field (see section 2).
 
 ---
 

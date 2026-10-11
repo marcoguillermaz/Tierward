@@ -1,9 +1,0 @@
-{
-  "name": "deploy",
-  "description": "Deploy the application to staging and run smoke tests.",
-  "model": "haiku",
-  "userInvocable": true,
-  "effort": "medium",
-  "usesPlaywright": false,
-  "stepCount": 3
-}

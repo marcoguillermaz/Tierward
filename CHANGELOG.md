@@ -23,6 +23,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 
 - **`tierward doctor` no longer warns on commas in `allowed-tools`.** Claude Code accepts a space- or comma-separated string or a YAML list there, so the warning was wrong. Doctor now runs 27 checks.
+- **The plugin's skill reminder.** The Claude Code plugin registered a `UserPromptSubmit` hook meant to list the `/tierward:*` skills on every prompt. It never worked: its `hooks.json` was malformed, so Claude Code never loaded it (`claude plugin validate` rejects the file), and the hook wrote to a field Claude Code does not read. The hook is gone, since Claude Code already lists installed skills on its own.
 
 Existing projects: `tierward upgrade` rewrites neither `.claude/settings.json` nor the skills, so apply these changes by hand.
 
@@ -41,6 +42,9 @@ For the new permission defaults, the simplest way is to scaffold a scratch proje
 - **The Stop hook's loop guard works.** On every tier the test gate looked for a `stop_hook_active` environment variable that does not exist, so after a failing run it blocked every further stop until the tests passed. It now reads `stop_hook_active` from stdin: the first stop with failing tests is blocked and Claude goes back to fix them, and a second stop in the same turn goes through, so a failure Claude cannot fix does not turn into a loop.
 - **`/pr-review` and `/dependency-audit` keep their temp files in the project.** They wrote the PR diff, the review, test output and changelog caches to fixed names under `/tmp`, readable by other users of the machine and shared between projects. They now write to `.tierward/tmp/` at the project root, which the scaffold gitignores. The folder is outside `.claude/` on purpose: Claude Code treats `.claude/` as a protected path and asks before every write there, whatever the permission rules say. `init` on an existing project now also appends `.claude/logs/` and `.tierward/tmp/` to its `.gitignore`.
 - **Docs.** MCP setup points to a `.mcp.json` file at the project root or to `claude mcp add --scope user`, which stores the server in `~/.claude.json`. Claude Code does not read `~/.claude/.mcp.json`, and `init` creates no MCP file. The operational guide counts 27 skills, `/repo-hygiene` included, lists `xhigh` and `max` among the `effort` values and describes each hook per tier. The README keeps short versions of the skills table, the MCP reference and the Stop hook, and links to the guide for the details.
+- **`/skill-review` accepts the `effort` field.** Its spec snapshot still listed `effort` as an undocumented field, and its calibration kit graded it High. Claude Code documents the field, and `/skill-security` and `/skill-db` both use it.
+- **The npm package ships its license.** `LICENSE` sat only at the repository root, outside the files npm packs.
+- **Smaller corrections.** The `/skill-security` report no longer names a fixed model for LLM analysis, since the scanner's provider decides that. The README no longer claims the plugin wires up the MCP server, and the npm README no longer says the VS Code extension sets up the MCP server and the plugin.
 
 Existing projects: `tierward upgrade` does not add hook files or rewrite `.claude/settings.json`, so apply these by hand, in this order.
 
