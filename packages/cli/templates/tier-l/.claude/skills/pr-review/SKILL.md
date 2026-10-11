@@ -69,24 +69,26 @@ If the branch IS the base branch, or `git diff "$BASE"...HEAD` is empty: respond
 **PR mode:**
 
 ```bash
+mkdir -p .claude/tmp
 gh pr view "$PR_NUMBER" --repo "$REPO" \
   --json title,state,headRefName,baseRefName,additions,deletions,changedFiles \
-  > /tmp/pr-review-${PR_NUMBER}-meta.json
+  > .claude/tmp/pr-review-${PR_NUMBER}-meta.json
 
-gh pr diff "$PR_NUMBER" --repo "$REPO" > /tmp/pr-review-${PR_NUMBER}.diff
+gh pr diff "$PR_NUMBER" --repo "$REPO" > .claude/tmp/pr-review-${PR_NUMBER}.diff
 ```
 
 **Local mode** (no PR number — key the temp files off the branch name):
 
 ```bash
+mkdir -p .claude/tmp
 SLUG=$(echo "$BRANCH" | tr '/' '-')
-git diff "$BASE"...HEAD > /tmp/pr-review-local-${SLUG}.diff
+git diff "$BASE"...HEAD > .claude/tmp/pr-review-local-${SLUG}.diff
 git diff "$BASE"...HEAD --stat | tail -1        # summary line for the stats field
 ```
 
 Build the metadata fields from git rather than `gh pr view`: `title` = latest commit subject (`git log -1 --format=%s`), `state` = `LOCAL (no PR yet)`, `headRefName` = `$BRANCH`, `baseRefName` = `$BASE`, additions/deletions/changedFiles from `git diff "$BASE"...HEAD --shortstat`.
 
-In both modes, `<DIFF_PATH>` is the file written above.
+In both modes, `<DIFF_PATH>` is the file written above. Temp files live in `.claude/tmp/` at the project root (gitignored), never in the shared `/tmp`: the diff and the review carry the project's code, and a fixed name there is readable by other users of the machine and shared across projects.
 
 If the diff is over 50 000 lines: warn the user and ask whether to proceed. A very large diff produces shallow review; default proceed but flag in the report.
 
@@ -120,7 +122,7 @@ Also read `CLAUDE.md` (project conventions). Pass it to the subagent so project-
 read -r PR_HEAD_SHA HEAD_REF PR_BASE < <(gh pr view "$PR_NUMBER" --repo "$REPO" \
   --json headRefOid,headRefName,baseRefName -q '"\(.headRefOid) \(.headRefName) \(.baseRefName)"')
 SLUG=$(echo "$HEAD_REF" | tr '/' '-')
-LOCAL_REPORT=/tmp/pr-review-local-${SLUG}-output.md
+LOCAL_REPORT=.claude/tmp/pr-review-local-${SLUG}-output.md
 
 # Read provenance from the HEADER BLOCK ONLY (the first lines, up to the blank line that
 # closes it) — never a body/diff line that happens to quote "Reviewed-SHA:". `sed` quits at
@@ -142,7 +144,7 @@ When all hold, write the reused body to the PR output path with a reuse banner p
 
 ```bash
 { printf '> Reused from same-commit pre-PR local review — second review run skipped (head and base unchanged since the local pass).\n\n'; cat "$LOCAL_REPORT"; } \
-  > /tmp/pr-review-${PR_NUMBER}-output.md
+  > .claude/tmp/pr-review-${PR_NUMBER}-output.md
 ```
 
 Otherwise **re-review** (spawn below). This is the conservative default: no local report, a `Reviewed-SHA`/`Reviewed-Base` mismatch, a Critical/Major in the local report, a `--deep` request against a shallow report, or a maintainer choosing a fresh pass after seeing CI at Step 7 — all lead here. The skill does not query CI status itself; that judgment is the maintainer's at Step 7.
@@ -158,21 +160,21 @@ The subagent returns a structured markdown review.
 **PR mode:**
 
 ```bash
-gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file /tmp/pr-review-${PR_NUMBER}-output.md
+gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file .claude/tmp/pr-review-${PR_NUMBER}-output.md
 ```
 
-Always post — even on LGTM clean reviews, and even on the Step 4 reuse path — to maintain a permanent audit trail. Reuse skips the *second review run*, never this comment: it posts the reused report written to the same `/tmp/pr-review-${PR_NUMBER}-output.md` path. The comment is the canonical record; the in-conversation summary in Step 6 is for the maintainer's terminal.
+Always post — even on LGTM clean reviews, and even on the Step 4 reuse path — to maintain a permanent audit trail. Reuse skips the *second review run*, never this comment: it posts the reused report written to the same `.claude/tmp/pr-review-${PR_NUMBER}-output.md` path. The comment is the canonical record; the in-conversation summary in Step 6 is for the maintainer's terminal.
 
-**Local mode:** there is no PR to comment on, so skip `gh pr comment`. Write the report to `/tmp/pr-review-local-${SLUG}-output.md`, then prepend a provenance header so a later PR-mode run can safely detect a same-commit pre-PR review:
+**Local mode:** there is no PR to comment on, so skip `gh pr comment`. Write the report to `.claude/tmp/pr-review-local-${SLUG}-output.md`, then prepend a provenance header so a later PR-mode run can safely detect a same-commit pre-PR review:
 
 ```bash
 {
   printf 'Reviewed-SHA: %s\n'  "$(git rev-parse HEAD)"
   printf 'Reviewed-Base: %s\n' "${BASE#origin/}"      # normalized: strip origin/ so it matches a PR's baseRefName
   printf 'Reviewed-Model: <sonnet|opus>\n\n'          # the model chosen in Step 4 (opus when --deep)
-  cat /tmp/pr-review-local-${SLUG}-output.md
-} > /tmp/pr-review-local-${SLUG}-output.md.tmp \
-  && mv /tmp/pr-review-local-${SLUG}-output.md.tmp /tmp/pr-review-local-${SLUG}-output.md
+  cat .claude/tmp/pr-review-local-${SLUG}-output.md
+} > .claude/tmp/pr-review-local-${SLUG}-output.md.tmp \
+  && mv .claude/tmp/pr-review-local-${SLUG}-output.md.tmp .claude/tmp/pr-review-local-${SLUG}-output.md
 ```
 
 Tell the user the audit-trail comment is **deferred** — re-run `/pr-review <N>` once the PR is open to post the canonical record. The local pass is a pre-push gate, not the audit trail; the provenance header lets the PR-mode run reuse this review only if the PR's head commit **and** base branch both match (see Step 4).
