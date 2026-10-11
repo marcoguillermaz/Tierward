@@ -30,14 +30,19 @@ function stopHookCommand(tier) {
 }
 
 // Run the resolved hook the way Claude Code does: under a shell, in the project
-// directory, with the `stop_hook_active` / `CLAUDE_PROJECT_DIR` env it provides,
-// capturing only the hook's stdout (stderr carries diagnostics, discarded).
+// directory, with `CLAUDE_PROJECT_DIR` in the env and the hook input as JSON on
+// stdin (`stop_hook_active` is a stdin field, never an env var), capturing only
+// the hook's stdout (stderr carries diagnostics, discarded).
 //
 // [TEST_GUARD] is resolved with the given stack the same way scaffold/index.js
 // does at init time. `seedMarker: true` writes the stack's project marker into
 // the temp dir so the guard does NOT skip — that isolates the test gate's
 // success/failure behavior from the greenfield guard-skip path.
-function runHook(command, testCmd, { seedMarker = false, techStack = 'node-ts' } = {}) {
+function runHook(
+  command,
+  testCmd,
+  { seedMarker = false, techStack = 'node-ts', stdin = null, env = {} } = {},
+) {
   const resolved = command
     .replace(/\[TEST_GUARD\]/g, buildTestGuard(techStack))
     .replace(/\[TEST_COMMAND\]/g, testCmd);
@@ -46,9 +51,11 @@ function runHook(command, testCmd, { seedMarker = false, techStack = 'node-ts' }
   try {
     const stdout = execFileSync('bash', ['-c', resolved], {
       cwd: dir,
-      env: { ...process.env, stop_hook_active: '', CLAUDE_PROJECT_DIR: dir },
+      env: { ...process.env, CLAUDE_PROJECT_DIR: dir, ...env },
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
+      ...(stdin === null
+        ? { stdio: ['ignore', 'pipe', 'ignore'] }
+        : { input: JSON.stringify(stdin), stdio: ['pipe', 'pipe', 'ignore'] }),
     });
     return { exit: 0, stdout };
   } catch (err) {
@@ -94,6 +101,37 @@ for (const tier of ['tier-0', 'tier-s', 'tier-m', 'tier-l']) {
         '',
         'guard must skip silently — no block JSON on a greenfield repo',
       );
+    });
+
+    // Anti-loop guard: Claude Code sends `stop_hook_active: true` on stdin when
+    // the stop follows a block from this hook. The hook must then let Claude stop
+    // instead of blocking again. Shape observed from Claude Code: compact JSON.
+    const failing = 'echo "ERROR: still broken"; false';
+    it('blocks on the first stop (stdin stop_hook_active false)', () => {
+      const { exit, stdout } = runHook(command, failing, {
+        seedMarker: true,
+        stdin: { hook_event_name: 'Stop', stop_hook_active: false },
+      });
+      assert.equal(exit, 0);
+      assert.equal(JSON.parse(stdout.trim()).decision, 'block');
+    });
+
+    it('lets Claude stop on the stop after a block (stdin stop_hook_active true)', () => {
+      const { exit, stdout } = runHook(command, failing, {
+        seedMarker: true,
+        stdin: { hook_event_name: 'Stop', stop_hook_active: true },
+      });
+      assert.equal(exit, 0);
+      assert.equal(stdout.trim(), '', 'no second block once stop_hook_active is true');
+    });
+
+    it('ignores a stop_hook_active environment variable (Claude Code sets none)', () => {
+      const { stdout } = runHook(command, failing, {
+        seedMarker: true,
+        stdin: { hook_event_name: 'Stop', stop_hook_active: false },
+        env: { stop_hook_active: '1' },
+      });
+      assert.equal(JSON.parse(stdout.trim()).decision, 'block');
     });
   });
 }

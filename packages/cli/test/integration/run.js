@@ -5028,7 +5028,7 @@ async function scenarioPrPromotion() {
 // only and the tier L destructive-command check never fired.
 
 const UNDOCUMENTED_HOOK_VARS =
-  /\bCLAUDE_(TOOL_INPUT_FILE_PATH|TOOL_INPUT|TOOL_NAME|SESSION_ID|MODEL)\b/;
+  /\bCLAUDE_(TOOL_INPUT_FILE_PATH|TOOL_INPUT|TOOL_NAME|SESSION_ID|MODEL)\b|\$\{?stop_hook_active\b/;
 const AUDIT_HOOK = 'tierward-audit-log.mjs';
 
 function hookEntries(settings, event) {

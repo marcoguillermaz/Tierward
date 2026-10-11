@@ -58,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$stop_hook_active\" = \"1\" ] && exit 0; [TEST_GUARD]OUT=$([TEST_COMMAND] 2>&1); CODE=$?; [ \"$CODE\" -ne 0 ] && { echo \"$OUT\" >&2; echo '{\"decision\": \"block\", \"reason\": \"Tests must pass before declaring complete.\"}'; }; exit 0",
+            "command": "cat 2>/dev/null | grep -q '\"stop_hook_active\": *true' && exit 0; [TEST_GUARD]OUT=$([TEST_COMMAND] 2>&1); CODE=$?; [ \"$CODE\" -ne 0 ] && { echo \"$OUT\" >&2; echo '{\"decision\": \"block\", \"reason\": \"Tests must pass before declaring complete.\"}'; }; exit 0",
             "timeout": 300
           }
         ]
