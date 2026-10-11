@@ -80,7 +80,7 @@ Stack detection is automatic at init. Security rules, permissions, audit skill c
 
 ## VS Code extension
 
-Install **Tierward** from the VS Code Marketplace. Auto-wires the MCP server and Claude Code plugin.
+Install **Tierward** from the VS Code Marketplace. It adds a Governance view that lists your project's skills and rules, puts doctor health in the status bar, shows doctor findings in the Problems panel, and opens a skill in Claude Code with its slash command already filled in. Everything it shows comes from the `tierward` CLI, which must be on your `PATH`. It doesn't set up the MCP server or the Claude Code plugin.
 
 ## Requirements
 

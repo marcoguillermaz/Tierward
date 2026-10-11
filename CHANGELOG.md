@@ -44,7 +44,7 @@ For the new permission defaults, the simplest way is to scaffold a scratch proje
 - **Docs.** MCP setup points to a `.mcp.json` file at the project root or to `claude mcp add --scope user`, which stores the server in `~/.claude.json`. Claude Code does not read `~/.claude/.mcp.json`, and `init` creates no MCP file. The operational guide counts 27 skills, `/repo-hygiene` included, lists `xhigh` and `max` among the `effort` values and describes each hook per tier. The README keeps short versions of the skills table, the MCP reference and the Stop hook, and links to the guide for the details.
 - **`/skill-review` accepts the `effort` field.** Its spec snapshot still listed `effort` as an undocumented field, and its calibration kit graded it High. Claude Code documents the field, and `/skill-security` and `/skill-db` both use it.
 - **The npm package ships its license.** `LICENSE` sat only at the repository root, outside the files npm packs.
-- **Smaller corrections.** The `/skill-security` report no longer names a fixed model for LLM analysis, because the scanner's provider decides that. The README also no longer claims the plugin wires up the MCP server.
+- **Smaller corrections.** The `/skill-security` report no longer names a fixed model for LLM analysis, since the scanner's provider decides that. The README no longer claims the plugin wires up the MCP server, and the npm README no longer says the VS Code extension sets up the MCP server and the plugin.
 
 Existing projects: `tierward upgrade` does not add hook files or rewrite `.claude/settings.json`, so apply these by hand, in this order.
 
