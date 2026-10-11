@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [2.2.0] — 2026-10-11
+
 ### Changed
 
 - **New projects allow named commands, not all of git, npx and curl.** `.claude/settings.json` allowed `Bash(git:*)` and `Bash(npx:*)`, plus `Bash(curl:*)` on Tier M/L and, on every tier, for the stacks other than Node.js. Claude could run any package from the npm registry through `npx`, download or upload anything with `curl`, and run any git command without asking, including `git -c <key>=<program>`, which makes git run a program you name. The allow list now names the git subcommands the pipeline uses (status, diff, log, show, add, commit, checkout, switch, branch, fetch, pull, merge, push, worktree, stash and a few read-only helpers), one `npx` rule per tool your configured commands run (for example `npx tsc` and `npx vitest`), and `npx tierward`, which is new on the stacks other than Node.js. On Tier M/L, `Edit(/.tierward/tmp/**)` lets the pr-review and dependency-audit skills write their temporary files without a prompt. Anything else follows your permission mode: in the default mode Claude Code asks first.
