@@ -357,6 +357,46 @@ describe('governance-gate hook — promotion push gate', () => {
   });
 });
 
+// A push of every branch, or a mirror push, updates `main` and `staging`
+// without naming them (DEC-56 A): it is a promotion like a named push.
+describe('governance-gate hook — all-branches and mirror pushes (DEC-56 A)', () => {
+  const decision = (out) => (out.match(/"permissionDecision":"(\w+)"/) || [])[1] || 'allow';
+  const FM = 'block: test\nrequirements_approved: true\npromotion_approved: false';
+  const bash = (command, opts) =>
+    runHook(GATE, { tool_name: 'Bash', tool_input: { command } }, opts);
+  const ALL_BRANCHES = [
+    'git push --all',
+    'git push --all origin',
+    'git push origin --all',
+    'git push --mirror origin',
+    'git push --all --force origin',
+    'git fetch && git push --all origin',
+  ];
+
+  it('denies a push of every branch or a mirror push inside a block without `Promote`', () => {
+    for (const cmd of ALL_BRANCHES) {
+      const { stdout } = bash(cmd, { sessionFrontMatter: FM });
+      assert.equal(decision(stdout), 'deny', cmd);
+    }
+  });
+
+  it('allows it once with `Promote`, and asks outside a block', () => {
+    const fm = 'block: test\nrequirements_approved: true\npromotion_approved: true';
+    assert.equal(bash('git push --all origin', { sessionFrontMatter: fm }).stdout, '');
+    assert.equal(decision(bash('git push --mirror origin').stdout), 'ask');
+  });
+
+  it('leaves pushes of tags or of one work branch alone', () => {
+    for (const cmd of [
+      'git push --tags',
+      'git push origin --tags',
+      'git push -u origin feature/all',
+    ]) {
+      assert.equal(bash(cmd, { sessionFrontMatter: FM }).stdout, '', cmd);
+    }
+  });
+});
+
 // The scaffold no longer writes allow or ask rules (DEC-55), so the gate is
 // the only Tierward guard on a promotion: inside a block it needs `Promote`,
 // outside a block it asks the human. MCP tools that commit a file straight to

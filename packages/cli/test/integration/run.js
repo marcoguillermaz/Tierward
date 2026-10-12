@@ -4868,6 +4868,27 @@ const ALWAYS_DENIED = [
   'npm x some-package',
 ];
 
+// Every usual way to write a force push (DEC-56 A): the flag first or last,
+// its short form, the lease variant, and a `+` refspec.
+const FORCE_PUSHES = [
+  'git push --force origin feature/x',
+  'git push -f origin feature/x',
+  'git push origin feature/x --force',
+  'git push origin feature/x -f',
+  'git push --force-with-lease origin feature/x',
+  'git push origin feature/x --force-with-lease',
+  'git push origin +feature/x',
+  'git push origin +HEAD:feature/x',
+];
+
+// Pushes that look close to a force push but are not one.
+const NOT_FORCE_PUSHES = [
+  'git push -u origin feature/x',
+  'git push origin feature/x',
+  'git push origin feature/x --follow-tags',
+  'git push --set-upstream origin fix/force-flag',
+];
+
 // Staging everything can sweep untracked secrets into a commit.
 const STAGE_ALL = [
   'git add -A',
@@ -4946,6 +4967,8 @@ async function scenarioNoPreapprovedCommands() {
       const problems = [
         ...ALWAYS_DENIED.filter((cmd) => !denied(cmd)),
         ...STAGE_ALL.filter((cmd) => !denied(cmd)),
+        ...FORCE_PUSHES.filter((cmd) => !denied(cmd)),
+        ...NOT_FORCE_PUSHES.filter(denied).map((cmd) => `denied by mistake: ${cmd}`),
         ...['Bash(rm -rf /*)', 'Bash(DROP DATABASE*)', 'Bash(git push --force*)'].filter(
           (r) => !deny.includes(r),
         ),

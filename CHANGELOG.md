@@ -15,9 +15,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The governance gate guards every promotion.** It now also sees the GitHub MCP tools that write a file to a branch (`push_files`, `create_or_update_file`, `delete_file`): a write to `main` or `staging` needs `Promote`, like a push. With no block open, a push, merge or file write to a protected branch now asks you to confirm instead of running unchecked.
 - **`init` keeps an existing `.claude/settings.json`.** "New project" used to overwrite it, and "Existing project" changed its allow and deny rules on native stacks without adding Tierward's hooks. Both modes now write a timestamped backup next to it (`settings.json.bak.<timestamp>`) and add only Tierward's hooks, so the governance gate runs there too. Your permissions and other settings stay as they are. Running `init` again, or switching tier, replaces Tierward's hooks instead of adding them twice.
 
+### Fixed
+
+- **Every usual form of a force push is denied.** The deny list matched only `git push --force…` written with the flag first. It now also refuses `-f`, the flag at the end of the command, and a `+` refspec such as `git push origin +feature/x`.
+- **The governance gate sees pushes of every branch.** `git push --all` and `git push --mirror` update `main` and `staging` without naming them, so the gate now treats them as promotions.
+
 Existing projects: `tierward upgrade` shows the new governance gate as a diff and does not rewrite `.claude/settings.json`. By hand:
 
 - Copy the new `.claude/hooks/tierward-governance-gate.mjs`.
+- In `permissions.deny`, add `Bash(git push -f*)`, `Bash(git push * --force*)`, `Bash(git push * -f)`, `Bash(git push * -f *)` and `Bash(git push * +*)`.
 - In `.claude/settings.json`, change the matcher `^mcp__.+__merge_pull_request$` to `^mcp__.+__(merge_pull_request|push_files|create_or_update_file|delete_file)$`. Without it the gate never sees the MCP writes.
 - Optional, for the new defaults: remove `permissions.allow` and `permissions.ask`, and add `Bash(git -c *)`, `Bash(npm exec *)` and `Bash(npm x *)` to `permissions.deny`.
 

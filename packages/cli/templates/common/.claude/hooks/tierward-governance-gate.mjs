@@ -54,7 +54,8 @@ const PROTECTED = '(staging|main)';
 // The gate reads the commands a Bash call runs, not its text. A `git push` is a
 // promotion when an argument names a protected branch (`staging` or `main`) as a standalone token,
 // a `refs/heads/` ref, or a refspec destination (`HEAD:main`, `+main`), so
-// `feature/main-nav` and `main:feature/x` never match. The pipeline's promotion
+// `feature/main-nav` and `main:feature/x` never match; `--all` and `--mirror`
+// count, since they push every branch. The pipeline's promotion
 // commands are compound (`git checkout staging && git merge … && git push origin staging`),
 // so every simple command is checked, not just the first. Quoted strings,
 // heredoc bodies and comments are data: a commit message that mentions a push
@@ -248,6 +249,10 @@ function namesProtectedBranch(arg) {
   return PROTECTED_BRANCH_RE.test(ref.slice(ref.lastIndexOf(':') + 1));
 }
 
+// `--all` and `--mirror` push every branch, protected ones included, without
+// naming them.
+const ALL_BRANCHES_OPTIONS = new Set(['--all', '--mirror']);
+
 // `gh pr merge`, except `--disable-auto`. Only `-R`/`--repo` take a value
 // that could sit before the subcommand.
 function isPrMerge(args) {
@@ -272,7 +277,8 @@ function analyze(command, depth) {
           n += GIT_OPTIONS_WITH_VALUE.has(words[n]) ? 2 : 1;
         }
         if (words[n] === 'commit') found.commit = true;
-        if (words[n] === 'push' && words.slice(n + 1).some(namesProtectedBranch)) {
+        const pushArgs = words[n] === 'push' ? words.slice(n + 1) : [];
+        if (pushArgs.some((a) => namesProtectedBranch(a) || ALL_BRANCHES_OPTIONS.has(a))) {
           found.push = true;
         }
       } else if (name === 'gh') {
@@ -299,7 +305,9 @@ function inspect(command) {
     return analyze(command, 0);
   } catch {
     return {
-      push: FALLBACK_PUSH_RE.test(command) && FALLBACK_PROTECTED_RE.test(command),
+      push:
+        FALLBACK_PUSH_RE.test(command) &&
+        (FALLBACK_PROTECTED_RE.test(command) || /\s--(all|mirror)(\s|$)/.test(command)),
       merge: FALLBACK_MERGE_RE.test(command) && !command.includes('--disable-auto'),
       commit: FALLBACK_COMMIT_RE.test(command),
     };
