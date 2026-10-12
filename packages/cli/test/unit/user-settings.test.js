@@ -124,6 +124,51 @@ describe('keepUserSettings', () => {
     assert.deepEqual(await fs.readJson(settingsPath), mergeTierwardHooks(user, tierM, ctx));
   });
 
+  // DEC-60 f: an inline hook an earlier Tierward version wrote is not recognised
+  // and stays next to the new one, so init lists the user hooks it kept on the
+  // events Tierward also hooks.
+  it("lists the user's hooks it kept on the events Tierward hooks, with the backup", async () => {
+    const oldInline = {
+      hooks: [{ type: 'command', command: 'mkdir -p ~/.claude/audit && echo start' }],
+    };
+    const withOld = { ...user, hooks: { Stop: [userStop], SessionStart: [oldInline] } };
+    const tierWithStart = {
+      hooks: { ...tierM.hooks, SessionStart: [gate(undefined)] },
+    };
+    const logs = [];
+    const origLog = console.log;
+    console.log = (msg) => logs.push(String(msg));
+    let result;
+    try {
+      result = await keepUserSettings(settingsPath, JSON.stringify(withOld), tierWithStart, ctx);
+    } finally {
+      console.log = origLog;
+    }
+    assert.deepEqual(result.keptHooks, [
+      { event: 'Stop', commands: ['./scripts/notify-done.sh'] },
+      { event: 'SessionStart', commands: ['mkdir -p ~/.claude/audit && echo start'] },
+    ]);
+    const out = logs.join('\n');
+    assert.match(out, /Stop: \.\/scripts\/notify-done\.sh/);
+    assert.match(out, /SessionStart: mkdir -p ~\/\.claude\/audit && echo start/);
+    assert.ok(out.includes(result.backup), 'names the backup');
+  });
+
+  it('prints nothing when no user hook shares an event with Tierward', async () => {
+    const onlyOwnEvent = { ...user, hooks: { Notification: [userStop] } };
+    const logs = [];
+    const origLog = console.log;
+    console.log = (msg) => logs.push(String(msg));
+    let result;
+    try {
+      result = await keepUserSettings(settingsPath, JSON.stringify(onlyOwnEvent), tierM, ctx);
+    } finally {
+      console.log = origLog;
+    }
+    assert.deepEqual(result.keptHooks, []);
+    assert.deepEqual(logs, []);
+  });
+
   it('leaves a malformed file as it was, with a warning and no backup', async () => {
     const raw = '{ "permissions": ';
     const warnings = [];

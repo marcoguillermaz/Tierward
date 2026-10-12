@@ -64,10 +64,31 @@ export function mergeTierwardHooks(user, tierward, context) {
 }
 
 /**
+ * The user's own hook groups on the events Tierward also hooks, as
+ * `{ event, commands }`. An inline hook an earlier Tierward version wrote is not
+ * recognised (DEC-60 f), so a duplicate would show up here.
+ */
+export function keptUserHooks(user, tierward, context) {
+  const userHooks = user.hooks && typeof user.hooks === 'object' ? user.hooks : {};
+  const kept = [];
+  for (const event of Object.keys(tierward.hooks || {})) {
+    for (const group of Array.isArray(userHooks[event]) ? userHooks[event] : []) {
+      if (isTierwardHookGroup(group, context)) continue;
+      const commands = (Array.isArray(group?.hooks) ? group.hooks : [])
+        .map((hook) => hook?.command)
+        .filter((command) => typeof command === 'string');
+      kept.push({ event, commands });
+    }
+  }
+  return kept;
+}
+
+/**
  * Write the user's settings back with Tierward's hooks merged in, after a
  * timestamped backup of the user's original bytes. `userRaw` is the file as it
  * was before the scaffold ran. A file that is not valid JSON is restored as it
- * was and left without Tierward's hooks. Returns `{ backup }`, or `null` when
+ * was and left without Tierward's hooks. Lists the user's hooks kept on the
+ * events Tierward hooks. Returns `{ backup, keptHooks }`, or `null` when
  * nothing was merged.
  */
 export async function keepUserSettings(settingsPath, userRaw, tierward, context, now = new Date()) {
@@ -91,5 +112,17 @@ export async function keepUserSettings(settingsPath, userRaw, tierward, context,
   await fs.writeFile(backup, userRaw);
   const merged = mergeTierwardHooks(user, tierward, context);
   await fs.writeFile(settingsPath, JSON.stringify(merged, null, 2) + '\n');
-  return { backup };
+
+  const keptHooks = keptUserHooks(user, tierward, context);
+  if (keptHooks.length > 0) {
+    console.log(
+      [
+        `[tierward] ${settingsPath}: your hooks below stay next to Tierward's on the same events.`,
+        ...keptHooks.map(({ event, commands }) => `  ${event}: ${commands.join(' ; ')}`),
+        '  If one of them was written by an earlier Tierward version, remove it: Tierward',
+        `  does not recognise its old inline hooks. Your original file: ${backup}`,
+      ].join('\n'),
+    );
+  }
+  return { backup, keptHooks };
 }
