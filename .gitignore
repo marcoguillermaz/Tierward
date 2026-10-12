@@ -27,6 +27,7 @@ credentials/
 
 # Claude Code — project context (local, never commit)
 CLAUDE.md
+!packages/cli/templates/**/CLAUDE.md
 AGENTS.md
 
 # Claude Code — workspace config (used to develop Tierward, not part of the product)
@@ -85,6 +86,7 @@ scripts/*
 FIRST_SESSION.md
 !packages/cli/templates/**/FIRST_SESSION.md
 MEMORY.md
+!packages/cli/templates/**/MEMORY.md
 .env.example
 .sync-report.md
 tasks/
@@ -100,3 +102,4 @@ docs/adr/
 # tierward
 .claude/context/
 CONTEXT_IMPORT.md
+!packages/cli/templates/**/CONTEXT_IMPORT.md

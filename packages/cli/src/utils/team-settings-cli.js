@@ -23,18 +23,13 @@ export function loadTeamSettingsOrExit(cwd) {
   }
 }
 
-export function enforceTeamSettingsTier(cwd, tier, { suggestUpgrade = false } = {}) {
+export function enforceTeamSettingsTier(cwd, tier) {
   const settings = loadTeamSettingsOrExit(cwd);
   const required = violatesMinTier(settings, tier);
   if (!required) return;
   console.error(
     chalk.red(`✗ team-settings.json requires minTier=${required}, current tier is ${tier}.`),
   );
-  if (suggestUpgrade) {
-    for (const line of tierChangeHint(required)) console.error(line);
-    console.error('  Then retry.');
-  } else {
-    console.error(`  Choose tier ${required} or higher, or edit .claude/team-settings.json.`);
-  }
+  console.error(`  Choose tier ${required} or higher, or edit .claude/team-settings.json.`);
   process.exit(1);
 }

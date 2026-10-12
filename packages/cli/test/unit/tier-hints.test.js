@@ -53,16 +53,18 @@ describe('tier-change hints', () => {
     assert.match(res.stderr, /edit \.claude\/team-settings\.json/);
   });
 
-  it('enforceTeamSettingsTier with suggestUpgrade points to the documented tier switch', async () => {
+  // init calls it while the user is choosing a tier, so it asks for a higher one
+  it('enforceTeamSettingsTier asks for a tier that meets minTier', async () => {
     const dir = await tierSProjectRequiringM('enforce');
     const script = `import { enforceTeamSettingsTier } from ${JSON.stringify(TEAM_SETTINGS_CLI)};
-enforceTeamSettingsTier(process.cwd(), 's', { suggestUpgrade: true });`;
+enforceTeamSettingsTier(process.cwd(), 's');`;
     const res = spawnSync('node', ['--input-type=module', '-e', script], {
       cwd: dir,
       encoding: 'utf8',
     });
     assert.equal(res.status, 1);
-    assertDocumentedTierSwitch(res.stderr);
+    assert.match(res.stderr, /requires minTier=m, current tier is s/);
+    assert.match(res.stderr, /Choose tier m or higher, or edit \.claude\/team-settings\.json/);
   });
 
   // DEC-56 B: every other place that tells the user how to change tier
