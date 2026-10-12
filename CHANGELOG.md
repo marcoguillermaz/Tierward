@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [2.3.0] — 2026-10-12
+
 ### Added
 
 - **`tierward doctor` checks that `.pre-commit-config.yaml` parses.** Once `pre-commit install` has run, a config that does not parse makes every `git commit` fail, and `tierward upgrade` never touches the file, so a project scaffolded before 2.0.1 can still carry the broken hook entry. The new check gives the line and column of the error and skips when the file is absent. It is a warning, so `doctor --ci` still exits 0 on it. It checks the YAML only; `pre-commit validate-config` checks the rest.
