@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run before publishing or distributing any Claude Code skill, especially those that invoke MCP tools or accept user-provided arguments. The 64-pattern SkillSpector scanner catches prompt injection vectors and supply-chain risks that standard code review does not check.
 
-## Output atteso
+## Expected output
 
 A structured report listing each matched pattern with category (prompt injection / data exfiltration / MCP tool poisoning / supply chain), severity, file location, and remediation guidance. A typical finding: a skill that echoes unsanitized user input directly into a shell command.

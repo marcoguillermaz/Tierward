@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Auto-invoked at Phase 8.5 of the Tier L pipeline after a block closes, to recompact CLAUDE.md and detect context drift before the next block begins. Manual invocation is only needed when a Tier L session is interrupted and must be resumed mid-pipeline.
 
-## Output atteso
+## Expected output
 
 A recompacted CLAUDE.md written in place, plus a short drift report listing stale context blocks, outdated task references, or duplicate entries removed. A typical finding: a completed task block still marked active, removed to keep the active context accurate for subsequent phases.

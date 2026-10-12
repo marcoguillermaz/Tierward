@@ -7,9 +7,10 @@
  * site/skills/<skill>.md for each unique skill.
  *
  * The generated header (metadata, tiers, flags) must not be edited manually
- * — edit the source SKILL.md instead. The "## Dove e quando" and
- * "## Output atteso" sections below the divider are hand-authored and
- * preserved across re-runs (the script never overwrites an existing file).
+ * — edit the source SKILL.md instead. The "## When to use" and
+ * "## Expected output" sections below the divider are hand-authored. A plain
+ * run never touches an existing page; --force overwrites every page, the
+ * hand-authored sections included.
  *
  * Usage:
  *   node scripts/gen-skill-registry.mjs            # generate missing pages
@@ -97,11 +98,11 @@ for (const [name, entries] of Object.entries(bySkill).sort(([a], [b]) => a.local
 
 ---
 
-## Dove e quando
+## When to use
 
 <!-- TODO: describe the specific situation that justifies invoking this skill -->
 
-## Output atteso
+## Expected output
 
 <!-- TODO: describe what the skill produces, format, and a typical example -->
 `;

@@ -9,6 +9,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The copyable `tierward-verify.yml` workflow no longer fails on every pull request.** GitHub's runners do not have Claude Code installed, and `doctor` counted that as a failed check, so `doctor --report` and `doctor --ci` exited 1 in CI whatever the state of the project. When the `CI` variable is set, a missing Claude Code CLI is now a warning; outside CI it still fails. A copied workflow that runs `tierward@latest` needs no change.
+- **The skill pages on the docs site have English section headings.** 27 skill pages put two Italian headings, "Dove e quando" and "Output atteso", over English text. They now read "When to use" and "Expected output". Links saved to the old section addresses (`#dove-e-quando`, `#output-atteso`) now open at the top of the page instead.
+
 ---
 
 ## [2.3.0] — 2026-10-12

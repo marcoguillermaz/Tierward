@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run after pushing a branch and opening a PR, or on any PR awaiting review when human reviewer bandwidth is limited. The `--deep` flag escalates analysis to Opus for PRs with complex logic changes, migrations, or security-sensitive code.
 
-## Output atteso
+## Expected output
 
 Findings posted as a PR comment via the gh CLI, grouped by severity with file links and line references. A typical comment: a missing null check on an optional field that is accessed before validation, with the exact line flagged and a suggested guard clause.

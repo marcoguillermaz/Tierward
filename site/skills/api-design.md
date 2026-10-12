@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run when designing new API endpoints or reviewing an existing surface before it becomes a public contract. Teams building client integrations benefit most, since naming inconsistencies and missing pagination are far cheaper to fix before consumers exist.
 
-## Output atteso
+## Expected output
 
 A structured review covering URL naming, HTTP verb correctness, response envelope consistency, and pagination completeness. Each finding is rated by impact and includes a corrected example. A typical finding: a POST endpoint returning 200 instead of 201 with no Location header.
