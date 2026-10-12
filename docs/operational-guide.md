@@ -1271,7 +1271,7 @@ npx tierward doctor --report  # JSON compliance output for CI pipelines
 npx tierward doctor --ci      # silent mode: exit 1 if any check fails
 ```
 
-Runs 27 checks:
+Runs 28 checks:
 
 1. Claude Code CLI is installed and reachable
 2. `CLAUDE.md` is present
@@ -1300,8 +1300,9 @@ Runs 27 checks:
 25. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
 26. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
 27. No duplicate entries in `permissions.deny` list (warn if duplicates found)
+28. `.pre-commit-config.yaml` is valid YAML, with the line and column of the error (warn-level; skips when the file is absent)
 
-Checks 13-28 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier.
+Checks 13-28 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier. Check 28 runs on any tier where `.pre-commit-config.yaml` exists.
 
 **`--report` output**: machine-readable JSON with timestamp, cwd, summary (passed/warned/failed/skipped), and per-check details. Consumed by CI systems or external audit tools.
 

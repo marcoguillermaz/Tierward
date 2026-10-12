@@ -5525,6 +5525,71 @@ async function scenarioSkillTempFiles() {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+// ── Scenario: doctor checks that .pre-commit-config.yaml parses (DEC-11) ─────
+//
+// A config that does not parse aborts every `git commit` once `pre-commit install`
+// has run. tierward upgrade does not touch the file, so projects scaffolded with
+// 2.0.0 keep the broken one until doctor points at it.
+async function scenarioDoctorPreCommitYaml() {
+  section('doctor - .pre-commit-config.yaml parses');
+  const CLI = path.resolve(__dirname, '../../src/index.js');
+  const CHECK_ID = 'pre-commit-config-parses';
+
+  const doctorCheck = (dir) => {
+    let raw;
+    try {
+      raw = execFileSync('node', [CLI, 'doctor', '--report'], { cwd: dir, encoding: 'utf8' });
+    } catch (e) {
+      // doctor exits 1 when any check fails (e.g. claude-cli missing on CI runners)
+      raw = (e.stdout || '').toString();
+    }
+    try {
+      return JSON.parse(raw).checks.find((ch) => ch.id === CHECK_ID) || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const clean = doctorCheck(path.join(OUTPUT_DIR, 'tier-s-full'));
+  if (clean?.status === 'pass') {
+    pass('doctor pre-commit-config-parses: pass on a scaffolded config');
+  } else {
+    fail('doctor pre-commit-config-parses on a scaffolded config', JSON.stringify(clean));
+  }
+
+  const dir = path.join(OUTPUT_DIR, 'doctor-precommit-yaml');
+  await fs.ensureDir(dir);
+  const absent = doctorCheck(dir);
+  if (absent?.status === 'skip') {
+    pass('doctor pre-commit-config-parses: skip without the file');
+  } else {
+    fail('doctor pre-commit-config-parses without the file', JSON.stringify(absent));
+  }
+
+  // The 2.0.0 hook entry: an unquoted scalar containing `: `
+  fs.writeFileSync(
+    path.join(dir, '.pre-commit-config.yaml'),
+    [
+      'repos:',
+      '  - repo: local',
+      '    hooks:',
+      '      - id: ai-commit-review-reminder',
+      `        entry: bash -c 'grep -q "Co-authored-by: Claude" "$1"'`,
+      '        language: system',
+      '',
+    ].join('\n'),
+  );
+  const broken = doctorCheck(dir);
+  if (broken?.status === 'warn' && /line 5, column 48/.test(broken.info || '')) {
+    pass('doctor pre-commit-config-parses: warns with line and column on a broken config');
+  } else {
+    fail('doctor pre-commit-config-parses on a broken config', JSON.stringify(broken));
+  }
+
+  // Keep the broken file out of the scaffolded YAML walk on later runs
+  await fs.remove(dir);
+}
+
 async function main() {
   console.log();
   console.log(c.bold('tierward - Integration tests'));
@@ -5596,6 +5661,7 @@ async function main() {
   await scenarioPhase8CleanupOrder();
   await scenarioNoPreapprovedCommands();
   await scenarioExistingUserSettings();
+  await scenarioDoctorPreCommitYaml();
 
   // ── Summary ────────────────────────────────────────────────────────────────
 

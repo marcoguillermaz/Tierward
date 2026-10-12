@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`tierward doctor` checks that `.pre-commit-config.yaml` parses.** Once `pre-commit install` has run, a config that does not parse makes every `git commit` fail, and `tierward upgrade` never touches the file, so a project scaffolded before 2.0.1 can still carry the broken hook entry. The new check gives the line and column of the error and skips when the file is absent. It is a warning, so `doctor --ci` still exits 0 on it. It checks the YAML only; `pre-commit validate-config` checks the rest.
+
 ### Changed
 
 - **New projects pre-approve no command.** `.claude/settings.json` no longer has `permissions.allow` or `permissions.ask`. Every command goes through your own permission settings and mode, so in the default mode Claude Code asks before running a command you have not allowed. The deny list stays and now also refuses `git -c`, `npm exec` and `npm x`, which used to ask. In `pr` mode the pushes to `main` stay denied.
