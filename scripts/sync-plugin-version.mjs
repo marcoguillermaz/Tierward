@@ -1,8 +1,8 @@
 /**
  * sync-plugin-version.mjs
  *
- * Keeps .claude-plugin/plugin.json, marketplace.json, and server.json in
- * lockstep with packages/cli/package.json. Two modes:
+ * Keeps .claude-plugin/plugin.json, .claude-plugin/marketplace.json, and
+ * server.json in lockstep with packages/cli/package.json. Two modes:
  *
  *   node scripts/sync-plugin-version.mjs
  *     Version sync only: .claude-plugin/plugin.json → version,
@@ -11,8 +11,8 @@
  *     `npm version <bump>` in that directory runs it automatically.
  *
  *   node scripts/sync-plugin-version.mjs --sha
- *     Sha sync only: marketplace.json → plugins[0].source.sha, resolved
- *     from origin/main after a fetch. This MUST run after the release
+ *     Sha sync only: .claude-plugin/marketplace.json → plugins[0].source.sha,
+ *     resolved from origin/main after a fetch. This MUST run after the release
  *     promotion has merged into main — at `npm version` time main does not
  *     contain the release yet, so a sha resolved then always points one
  *     release behind (the 2.0.0 lag fixed by PR #404). The post-merge
@@ -30,7 +30,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const pkgPath = resolve(root, 'packages/cli/package.json');
 const pluginPath = resolve(root, '.claude-plugin/plugin.json');
-const marketplacePath = resolve(root, 'marketplace.json');
+const marketplacePath = resolve(root, '.claude-plugin/marketplace.json');
 const serverPath = resolve(root, 'server.json');
 
 const shaMode = process.argv.includes('--sha');
@@ -40,16 +40,16 @@ if (shaMode) {
   execSync('git fetch origin main', { stdio: 'inherit' });
   const sha = execSync('git rev-parse origin/main', { encoding: 'utf8' }).trim();
   if (!marketplace.plugins?.[0]?.source) {
-    console.error('marketplace.json has no plugins[0].source — aborting');
+    console.error('.claude-plugin/marketplace.json has no plugins[0].source — aborting');
     process.exit(1);
   }
   const prev = marketplace.plugins[0].source.sha;
   if (prev === sha) {
-    console.log(`  marketplace.json sha already at ${sha.slice(0, 12)}...`);
+    console.log(`  .claude-plugin/marketplace.json sha already at ${sha.slice(0, 12)}...`);
   } else {
     marketplace.plugins[0].source.sha = sha;
     writeFileSync(marketplacePath, JSON.stringify(marketplace, null, 2) + '\n');
-    console.log(`✓ marketplace.json sha → ${sha.slice(0, 12)}...`);
+    console.log(`✓ .claude-plugin/marketplace.json sha → ${sha.slice(0, 12)}...`);
   }
   process.exit(0);
 }
