@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run when a build starts slowing, a PR adds new async data fetching, or a Lighthouse score drops. The 8-stack pattern library covers common frameworks, so it catches serial awaits and unoptimized queries that code review typically misses.
 
-## Output atteso
+## Expected output
 
 A categorized report grouped by bundle size, async efficiency, and query patterns, each finding annotated with estimated impact. A typical finding: three sequential awaits inside a request handler flagged as parallelizable with Promise.all, with the refactored snippet shown.

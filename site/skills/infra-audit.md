@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run before merging infrastructure changes to GitHub Actions workflows, Dockerfiles, Kubernetes manifests, or Terraform modules. Stack-agnostic, it covers patterns that application-layer security reviews miss, such as overprivileged IAM roles and unpinned action versions.
 
-## Output atteso
+## Expected output
 
 A severity-tagged report grouped by infrastructure layer with specific file paths and line numbers. A typical finding: a GitHub Actions workflow using `actions/checkout@v3` without a pinned SHA, flagged as a supply-chain risk with the recommended pinned reference shown.

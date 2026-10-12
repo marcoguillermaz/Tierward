@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The skill pages on the docs site have English section headings.** 27 skill pages put two Italian headings, "Dove e quando" and "Output atteso", over English text. They now read "When to use" and "Expected output". Links saved to the old section addresses (`#dove-e-quando`, `#output-atteso`) now open at the top of the page instead.
+
 ---
 
 ## [2.3.0] — 2026-10-12

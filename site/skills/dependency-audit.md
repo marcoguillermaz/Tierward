@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run on a regular cadence (weekly or before a release) to identify outdated dependencies and understand the risk of upgrading. The Tier A/B/C classification lets teams batch safe upgrades automatically while reviewing breaking-change candidates manually.
 
-## Output atteso
+## Expected output
 
 A tiered dependency report: Tier A (patch and minor, safe to batch), Tier B (major, non-core), and Tier C (major, core or high breaking-change risk). Each entry includes current and latest version, and changelog highlights. A typical Tier C finding: a major ORM upgrade with breaking query API changes affecting fifteen files.

@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Auto-invoked at Phase 1 of the Tier M and Tier L pipelines. It rarely needs manual invocation; its purpose is to give downstream pipeline phases a verified file list before any edits begin. Run it manually only when restarting a pipeline from Phase 1 after an interruption.
 
-## Output atteso
+## Expected output
 
 A structured file manifest listing routes, components, shared types, and database tables relevant to the task scope. The output feeds the Phase 1 STOP gate directly. A typical output: 14 files across 3 layers with dependency edges annotated for the phases that follow.

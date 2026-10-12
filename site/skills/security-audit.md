@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run before any release, or after adding authentication, new API routes, or database access. The 3-path dispatch (WEB/NATIVE/HYBRID) means the audit only checks patterns relevant to the actual stack, so it stays focused without manual scoping. Security engineers and solo developers alike benefit before merging user-facing changes.
 
-## Output atteso
+## Expected output
 
 A severity-tiered report (Critical / High / Medium / Low) covering auth gaps, missing input validation, RLS misconfigurations, and known CVEs pulled live via the mcp-nvd server when available. A typical finding: an API route missing authentication middleware, with the exact file path and suggested fix.

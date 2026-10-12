@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run it every few blocks, or before a release, when merged branches, abandoned worktrees and old session files have piled up. The Phase 8 cleanup removes one block's branch when the block closes; this sweep finds what those closures missed. Use `[target:full]` when you also want a list of documentation files nothing links to any more.
 
-## Output atteso
+## Expected output
 
 A report that lists every candidate with its evidence and the exact command that would remove it. A branch qualifies when it is merged into every protected branch and has no open pull request; a session file when a merged pull request shows its block is closed. One confirmation question follows, and only what you confirm is removed, with commands that refuse unmerged or dirty work. Documentation files are never removed: they stay in the report for you to decide. It ends with one line per category: found, confirmed, executed, and left for you.
