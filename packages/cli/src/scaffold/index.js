@@ -9,6 +9,72 @@ import {
   getCheatsheetSkillsToRemove,
 } from './skill-registry.js';
 import { STACK_COMMANDS, TEST_INFRA_MARKERS } from '../utils/stack-commands.js';
+import { keepUserSettings } from './user-settings.js';
+import { DEFAULT_AUDIT_MODEL, auditModelAlias } from '../utils/constants.js';
+
+// Skills that take the wizard's audit-model answer (DEC-57)
+const AUDIT_MODEL_SKILLS = ['ux-audit', 'visual-audit'];
+const skillFile = (targetDir, skill) =>
+  path.join(targetDir, '.claude', 'skills', skill, 'SKILL.md');
+
+// The audit-model skills the project already has: they are the user's files.
+async function existingAuditModelSkills(targetDir) {
+  const files = AUDIT_MODEL_SKILLS.map((skill) => skillFile(targetDir, skill));
+  const found = await Promise.all(files.map((file) => fs.pathExists(file)));
+  return files.filter((_, i) => found[i]);
+}
+
+// Write the audit model's alias into the `model:` of ux-audit and visual-audit,
+// leaving out the files listed in `keep`.
+async function applyAuditModel(targetDir, config, keep = []) {
+  const alias = auditModelAlias(config.auditModel || DEFAULT_AUDIT_MODEL);
+  for (const skill of AUDIT_MODEL_SKILLS) {
+    const file = skillFile(targetDir, skill);
+    if (keep.includes(file) || !(await fs.pathExists(file))) continue;
+    const content = await fs.readFile(file, 'utf8');
+    await fs.writeFile(file, content.replace(/^model: .+$/m, `model: ${alias}`));
+  }
+}
+
+const SETTINGS_FILE = path.join('.claude', 'settings.json');
+
+// The settings.json the project had before the scaffold ran, or null.
+async function existingSettings(targetDir) {
+  const file = path.join(targetDir, SETTINGS_FILE);
+  return (await fs.pathExists(file)) ? fs.readFile(file, 'utf8') : null;
+}
+
+// Tierward's settings for this tier, rendered for this project, and what
+// recognises Tierward's hook groups in a user's file: the groups of every tier
+// template rendered for this project, and the names of Tierward's hook files.
+async function tierwardSettings(tier, config, templatesDir) {
+  const render = async (t) => {
+    const file = path.join(templatesDir, `tier-${t}`, SETTINGS_FILE);
+    if (!(await fs.pathExists(file))) return null;
+    return JSON.parse(interpolate(await fs.readFile(file, 'utf8'), { ...config, tier: t }));
+  };
+  const knownGroups = [];
+  for (const t of ['0', 's', 'm', 'l']) {
+    const rendered = await render(t);
+    for (const groups of Object.values(rendered?.hooks || {})) knownGroups.push(...groups);
+  }
+  const hooksDir = path.join(templatesDir, 'common', '.claude', 'hooks');
+  const hookFiles = (await fs.pathExists(hooksDir)) ? await fs.readdir(hooksDir) : [];
+  return { tierward: await render(tier.toLowerCase()), context: { knownGroups, hookFiles } };
+}
+
+// Last step of every scaffold. A settings.json the scaffold wrote gets the
+// stack's deny rules. One the project already had keeps the user's
+// permissions and every other key, and gains Tierward's hooks (DEC-55).
+async function finishSettings(tier, targetDir, config, templatesDir, userRaw) {
+  if (userRaw === null) {
+    await patchSettingsPermissions(targetDir, config);
+    return;
+  }
+  const { tierward, context } = await tierwardSettings(tier, config, templatesDir);
+  if (!tierward) return;
+  await keepUserSettings(path.join(targetDir, SETTINGS_FILE), userRaw, tierward, context);
+}
 
 /**
  * Scaffold Tier 0 (Discovery) - minimal: settings.json, GETTING_STARTED.md only.
@@ -17,6 +83,7 @@ import { STACK_COMMANDS, TEST_INFRA_MARKERS } from '../utils/stack-commands.js';
  */
 async function scaffoldTier0(targetDir, config, templatesDir) {
   const tierDir = path.join(templatesDir, 'tier-0');
+  const userSettings = await existingSettings(targetDir);
 
   // Copy Tier 0 files with interpolation (CLAUDE.md handled by generateClaudeMd)
   const files = [
@@ -46,6 +113,10 @@ async function scaffoldTier0(targetDir, config, templatesDir) {
 
   // Create session directory (used by Claude for session recovery)
   await fs.ensureDir(path.join(targetDir, '.claude', 'session'));
+
+  if (userSettings !== null) {
+    await finishSettings('0', targetDir, config, templatesDir, userSettings);
+  }
 }
 
 /**
@@ -60,6 +131,7 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
   assertPromotion(config);
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
+  const userSettings = await existingSettings(targetDir);
 
   // Copy common files - skip rules/ here, handled separately below
   const commonFileMap = {
@@ -153,12 +225,12 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
     await pruneConditionalDocs(targetDir, config);
     await pruneSkills(targetDir, config);
     await pruneCheatsheet(targetDir, config);
+    await applyAuditModel(targetDir, config);
   } else if (tier === 's') {
     await pruneSkills(targetDir, config);
   }
 
-  // Post-process settings.json: replace default permissions.allow with stack-aware permissions
-  await patchSettingsPermissions(targetDir, config);
+  await finishSettings(tier, targetDir, config, templatesDir, userSettings);
 }
 
 // Refuse an invalid promotion mode before any file is written.
@@ -239,33 +311,14 @@ async function pruneCheatsheet(targetDir, config) {
 }
 
 /**
- * Patch settings.json permissions.allow to use stack-appropriate CLI tools.
- * Default templates use node/npm, named npx tools and (Tier L) docker - this
- * replaces them for non-JS stacks and keeps the named git, gh and
- * `npx tierward` rules.
+ * Add the stack's publish and release commands to the deny list of a
+ * settings.json the scaffold wrote. Nothing is pre-approved (DEC-55): the
+ * templates carry no allow or ask rules, so the user's own permission
+ * settings decide everything else.
  */
 async function patchSettingsPermissions(targetDir, config) {
   const settingsPath = path.join(targetDir, '.claude', 'settings.json');
   if (!(await fs.pathExists(settingsPath))) return;
-
-  const permissionsAllowByStack = {
-    swift: ['Bash(swift:*)', 'Bash(xcodebuild:*)', 'Bash(xcrun:*)'],
-    kotlin: ['Bash(./gradlew:*)', 'Bash(gradle:*)'],
-    rust: ['Bash(cargo:*)', 'Bash(rustc:*)'],
-    dotnet: ['Bash(dotnet:*)'],
-    java: ['Bash(mvn:*)', 'Bash(./gradlew:*)', 'Bash(gradle:*)'],
-    ruby: ['Bash(bundle:*)', 'Bash(rails:*)', 'Bash(rake:*)'],
-    go: ['Bash(go:*)'],
-    python: [
-      'Bash(python:*)',
-      'Bash(pip:*)',
-      'Bash(uv:*)',
-      'Bash(pytest:*)',
-      'Bash(mypy:*)',
-      'Bash(uvicorn:*)',
-      'Bash(alembic:*)',
-    ],
-  };
 
   const denyByStack = {
     swift: ['Bash(xcodebuild archive*)', 'Bash(xcrun altool --upload-app*)'],
@@ -277,30 +330,19 @@ async function patchSettingsPermissions(targetDir, config) {
     python: ['Bash(twine upload*)', 'Bash(alembic downgrade base*)'],
   };
 
-  const stackPerms = permissionsAllowByStack[config.techStack];
   const stackDeny = denyByStack[config.techStack];
-  if (!stackPerms && !stackDeny) return; // default node/npm/npx already in template
+  if (!stackDeny) return; // JavaScript stacks and Go: the template list is complete
 
   try {
     const raw = await fs.readFile(settingsPath, 'utf8');
     const settings = JSON.parse(raw);
-    if (stackPerms && settings.permissions && Array.isArray(settings.permissions.allow)) {
-      // Swap only the template's stack tools: the named git rules, the `gh`
-      // rules (`pr` promotion mode) and Tierward's own CLI are not stack tools
-      const templateStackTool = (rule) =>
-        /^Bash\((node|npm|npx|docker)[ :]/.test(rule) && rule !== TIERWARD_NPX_RULE;
-      const kept = settings.permissions.allow.filter((rule) => !templateStackTool(rule));
-      settings.permissions.allow = [...stackPerms, ...kept];
-    }
-    if (stackDeny && settings.permissions && Array.isArray(settings.permissions.deny)) {
+    if (settings.permissions && Array.isArray(settings.permissions.deny)) {
       settings.permissions.deny = [...settings.permissions.deny, ...stackDeny];
     }
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n');
   } catch (err) {
-    // Previously silent — but a scaffold that ships default JS/Node
-    // permissions on a native stack because settings.json was malformed
-    // is a subtle correctness failure. Surface the problem so the user
-    // can fix the template or re-run with --force.
+    // Surface a malformed or read-only file instead of shipping a deny list
+    // without the stack's publish commands.
     console.warn(
       `[tierward] Warning: could not patch ${settingsPath} — ${err.message}. ` +
         `Stack-specific permissions for "${config.techStack}" were NOT applied; ` +
@@ -366,6 +408,8 @@ export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
   assertPromotion(config);
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
+  const userSettings = await existingSettings(targetDir);
+  const userAuditSkills = await existingAuditModelSkills(targetDir);
 
   await copyTemplateDirSafe(
     commonDir,
@@ -434,12 +478,12 @@ export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
     await pruneConditionalDocs(targetDir, config);
     await pruneSkills(targetDir, config);
     await pruneCheatsheet(targetDir, config);
+    await applyAuditModel(targetDir, config, userAuditSkills);
   } else if (tier === 's') {
     await pruneSkills(targetDir, config);
   }
 
-  // Post-process settings.json: replace default permissions.allow with stack-aware permissions
-  await patchSettingsPermissions(targetDir, config);
+  await finishSettings(tier, targetDir, config, templatesDir, userSettings);
 }
 
 async function copyTemplateDirSafe(
@@ -666,27 +710,6 @@ function resolvedCommands(config) {
       '# configure lint command for your stack',
     migration: config.migrationCommand || '# not configured',
   };
-}
-
-// Tierward's own CLI (`npx tierward doctor`), shown by the cheatsheet on every stack
-const TIERWARD_NPX_RULE = 'Bash(npx tierward *)';
-
-/**
- * Allow rules for the tools the project's own commands run through npx, so the
- * pipeline's checks run without a prompt while any other package still asks.
- * A broad `npx` rule would approve any package from the registry.
- */
-function projectNpxRules(config) {
-  const rules = [];
-  for (const command of Object.values(resolvedCommands(config))) {
-    for (const part of command.split(/\s*(?:&&|\|\||;|\|)\s*/)) {
-      const words = part.trim().split(/\s+/);
-      if (words[0] !== 'npx') continue;
-      const tool = words.findIndex((word, i) => i > 0 && !word.startsWith('-'));
-      if (tool !== -1) rules.push(`Bash(${words.slice(0, tool + 1).join(' ')} *)`);
-    }
-  }
-  return [...new Set([...rules, TIERWARD_NPX_RULE])];
 }
 
 /**
@@ -1051,8 +1074,6 @@ function interpolate(content, config) {
       /\| 5c - Staging deploy \| Merge to staging \+ smoke test/g,
       '| 5c - Local build | Local build + smoke test',
     );
-    // Tier L settings.json push permissions (ask list, one rule per line)
-    result = result.replace(/^ *"Bash\(git push [^"\n]*staging[^"\n]*\)",\n/gm, '');
     // repo-hygiene scan script: protected-branch list
     result = result.replace('PROTECTED_BRANCHES="main staging"', 'PROTECTED_BRANCHES="main"');
     // Tier L CLAUDE.md worktree example comment
@@ -1110,18 +1131,6 @@ function interpolate(content, config) {
       'After writing a migration, before applying to the database',
     );
   }
-
-  // ── Post-interpolation: settings.json allows the project's own npx tools ───
-  // The template allows no npx package; add one rule per tool the configured
-  // commands run, after the npm rule (native stacks swap both out later).
-  result = result.replace(
-    /^( *)"Bash\(npm:\*\)",\n/m,
-    (line, indent) =>
-      line +
-      projectNpxRules(config)
-        .map((rule) => `${indent}"${rule}",\n`)
-        .join(''),
-  );
 
   // ── Post-interpolation: `pr` promotion mode ───
   // Runs after the staging strip above, which already turned every promotion
@@ -1204,10 +1213,9 @@ bin/`,
  * as a local merge into `main`. The work branch is pushed and a pull request
  * opened (neither is a promotion), then `gh pr merge --merge` runs behind the
  * Promotion gate; a merge commit keeps the block's separate code, docs and
- * context commits. The work branch, and a tier L worktree, stay out of the
- * step-1 cleanup gate because the pull request needs them, and are removed at
- * a post-merge cleanup confirmation. Replacements are string-exact; the
- * integration suite asserts that each one fired.
+ * context commits. The work branch, and a tier L worktree, are removed at a
+ * post-merge cleanup confirmation, as in every mode. Replacements are
+ * string-exact; the integration suite asserts that each one fired.
  */
 function toPullRequestPromotion(content) {
   let result = content;
@@ -1250,33 +1258,15 @@ function toPullRequestPromotion(content) {
     `(session file, \`git branch -d fix/description\`, \`git push origin --delete fix/description\` ${remoteGone}, artifacts)`,
   );
 
-  // Tier M/L Phase 8 step 1: the branch (and a tier L worktree) leave the gate
+  // Tier M/L Phase 8 step 1: the branch (and a tier L worktree) wait for the
+  // pull request, then leave at the post-merge cleanup
   result = result.replace(
-    ', and the local `feature/block-name` branch. The spec archive move',
-    '. The `feature/block-name` branch is not a candidate here: it carries the closure commits and the pull request, and is removed at the post-merge cleanup (step 11). The spec archive move',
+    'carries the closure commits and the promotion, and is removed at the branch cleanup (step 11)',
+    'carries the closure commits and the pull request, and is removed at the post-merge cleanup (step 11)',
   );
   result = result.replace(
-    ', the block branch, and - if this block ran in a worktree - the worktree directory `.claude/worktrees/[block-name]` itself.',
-    '. The block branch and, if this block ran in a worktree, the worktree directory are not candidates here: they carry the closure commits and the pull request, and are removed at the post-merge cleanup (step 11).',
-  );
-  result = result.replace(', and BEFORE the worktree teardown in 1c):', '):');
-  const blockFilesWhy =
-    'block files are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.';
-  result = result.replace(
-    'WHY we stopped: files and branches are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.',
-    `WHY we stopped: ${blockFilesWhy}`,
-  );
-  result = result.replace(
-    'files, branches and (if applicable) the worktree are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here, before the worktree disappears with anything still inside it.',
-    blockFilesWhy,
-  );
-  result = result.replace(
-    'only the approved items are deleted, the worktree teardown in 1c runs, then closure continues with step 2.',
-    'only the approved items are deleted, then closure continues with step 2.',
-  );
-  result = result.replace(
-    /1c\. \*\*Worktree teardown\*\*[^\n]*\n(?: {4}- [^\n]*\n)+/,
-    '1c. **Worktree teardown**: runs at the post-merge cleanup (step 11), once the pull request is merged; the branch is needed until then.\n',
+    'carry the closure commits and the promotion, and are removed at the branch cleanup (step 11)',
+    'carry the closure commits and the pull request, and are removed at the post-merge cleanup (step 11)',
   );
 
   // Tier M/L step 8: closure commits reach `main` through the pull request
@@ -1356,32 +1346,16 @@ function toPullRequestPromotion(content) {
     'which the gate consumes on each pull request merge into `main` (and on any push to `main`)',
   );
 
-  // settings.json: `main` changes only through a PR, so the push asks become
-  // denies, refspec forms included (`HEAD:main`, `+main`, `refs/heads/main`);
-  // the PR merge asks for permission on top of `Promote`. The template lists
-  // one rule per line, push asks first, so each removed line ends in a comma.
+  // settings.json: `main` changes only through a PR, so a push to `main` is
+  // denied, refspec forms included (`HEAD:main`, `+main`, `refs/heads/main`).
+  // The PR merge is guarded by the governance gate, not by a permission rule.
   const listRules = (indent, rules) => rules.map((rule) => `${indent}  "${rule}",\n`).join('');
-  result = result
-    .replace(/^ *"Bash\(git push [^"\n]*main[^"\n]*\)",\n/gm, '')
-    .replace(/^( *)"ask": \[\n/m, (line, indent) => line + listRules(indent, PR_MODE_GH_ASK))
-    .replace(/^( *)"deny": \[\n/m, (line, indent) => line + listRules(indent, PR_MODE_PUSH_DENY));
-  // ...and opening, reading and checking a PR runs without a prompt
-  result = result.replace(/("allow": \[)([^\]]*?)(\s*\])/, (_, open, rules, close) => {
-    const sep = rules.includes('\n') ? ',\n      ' : ', ';
-    const added = PR_MODE_GH_ALLOW.map((rule) => `"${rule}"`).join(sep);
-    return `${open}${rules}${rules.trim() ? sep : ''}${added}${close}`;
-  });
+  result = result.replace(
+    /^( *)"deny": \[\n/m,
+    (line, indent) => line + listRules(indent, PR_MODE_PUSH_DENY),
+  );
   return result;
 }
-
-// `gh` rules for `pr` mode: the agent opens and checks the pull request on
-// its own; the merge needs `Promote` and the permission prompt.
-export const PR_MODE_GH_ALLOW = [
-  'Bash(gh pr create *)',
-  'Bash(gh pr view *)',
-  'Bash(gh pr checks *)',
-];
-export const PR_MODE_GH_ASK = ['Bash(gh pr merge *)'];
 
 // Deny rules for `pr` mode. Claude Code matches each subcommand of a compound
 // command, and `*` matches any text (code.claude.com/docs/en/permissions).
@@ -1405,5 +1379,4 @@ export const _testHelpers = {
   interpolate,
   pruneSkills,
   patchSettingsPermissions,
-  projectNpxRules,
 };

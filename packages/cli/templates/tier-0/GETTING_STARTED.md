@@ -83,7 +83,7 @@ Tier 0 (what you have now) gives you the minimum viable scaffold:
 - Tests must pass before Claude declares a task complete
 - Claude follows a small set of communication rules (`output-style.md`)
 
-When your team grows or your project complexity increases, promote to a higher tier by re-running `init` and choosing **"Existing project"** when prompted:
+When your team grows or your project complexity increases, move to a higher tier. Commit everything, switch to a new branch, re-run `init` with the new tier and choose **"New project"** when prompted:
 
 ```bash
 npx tierward init --tier=s   # Fast Lane: branch discipline + commit rules
@@ -91,7 +91,7 @@ npx tierward init --tier=m   # Standard: phased pipeline with review gates
 npx tierward init --tier=l   # Full: audit skills, security review, multi-agent
 ```
 
-Re-running `init` in-place is non-destructive - it adds the new tier's files without overwriting your existing ones (`CLAUDE.md`, `settings.json`, and any customizations are preserved).
+"New project" rewrites the files it generates, such as `CLAUDE.md`, so review the git diff and bring back your own edits. `.claude/settings.json` keeps your settings and only gains the new tier's hooks. Full steps: https://marcoguillermaz.github.io/Tierward/guide/tiers.html#changing-tier
 
 ---
 
@@ -103,7 +103,7 @@ Re-running `init` in-place is non-destructive - it adds the new tier's files wit
 | Give Claude context | Edit `CLAUDE.md` |
 | Run tests manually | `[TEST_COMMAND]` |
 | See what Claude can do | Ask: "What slash commands are available?" |
-| Add more structure | `npx tierward init --tier=s` (choose "Existing project") |
+| Add more structure | On a new branch: `npx tierward init --tier=s`, choose "New project", review the diff |
 
 ---
 

@@ -348,12 +348,244 @@ describe('governance-gate hook — promotion push gate', () => {
     assert.ok(blocked(stdout));
   });
 
-  it('promotion gate inactive without a session file (fail-open, like the commit gate)', () => {
+  it('asks for confirmation of a promotion push without a session file (no block, no Promote)', () => {
     const { stdout } = runHook(GATE, {
       tool_name: 'Bash',
       tool_input: { command: 'git push origin staging' },
     });
+    assert.ok(stdout.includes('"permissionDecision":"ask"'), stdout);
+  });
+});
+
+// A push of every branch, or a mirror push, updates `main` and `staging`
+// without naming them (DEC-56 A): it is a promotion like a named push.
+describe('governance-gate hook — all-branches and mirror pushes (DEC-56 A)', () => {
+  const decision = (out) => (out.match(/"permissionDecision":"(\w+)"/) || [])[1] || 'allow';
+  const FM = 'block: test\nrequirements_approved: true\npromotion_approved: false';
+  const bash = (command, opts) =>
+    runHook(GATE, { tool_name: 'Bash', tool_input: { command } }, opts);
+  const ALL_BRANCHES = [
+    'git push --all',
+    'git push --all origin',
+    'git push origin --all',
+    'git push --mirror origin',
+    'git push --all --force origin',
+    'git fetch && git push --all origin',
+  ];
+
+  it('denies a push of every branch or a mirror push inside a block without `Promote`', () => {
+    for (const cmd of ALL_BRANCHES) {
+      const { stdout } = bash(cmd, { sessionFrontMatter: FM });
+      assert.equal(decision(stdout), 'deny', cmd);
+    }
+  });
+
+  it('allows it once with `Promote`, and asks outside a block', () => {
+    const fm = 'block: test\nrequirements_approved: true\npromotion_approved: true';
+    assert.equal(bash('git push --all origin', { sessionFrontMatter: fm }).stdout, '');
+    assert.equal(decision(bash('git push --mirror origin').stdout), 'ask');
+  });
+
+  it('leaves pushes of tags or of one work branch alone', () => {
+    for (const cmd of [
+      'git push --tags',
+      'git push origin --tags',
+      'git push -u origin feature/all',
+    ]) {
+      assert.equal(bash(cmd, { sessionFrontMatter: FM }).stdout, '', cmd);
+    }
+  });
+});
+
+// A push that names no branch updates the current branch, or its upstream
+// (DEC-59 b): the gate asks git which branch that is. When git cannot tell
+// (no repository, detached HEAD), the push counts as a promotion.
+describe('governance-gate hook — pushes that name no branch (DEC-59 b)', () => {
+  const decision = (out) => (out.match(/"permissionDecision":"(\w+)"/) || [])[1] || 'allow';
+  const FM = 'block: test\nrequirements_approved: true\npromotion_approved: false';
+  const git = (cwd, ...args) => execFileSync('git', args, { cwd, stdio: 'ignore' });
+  // A repository checked out on `branch`, optionally tracking `upstream`.
+  function repoOn(branch, upstream) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-gate-repo-'));
+    git(dir, 'init', '-q');
+    git(dir, 'symbolic-ref', 'HEAD', `refs/heads/${branch}`);
+    if (upstream) {
+      git(dir, 'config', `branch.${branch}.remote`, 'origin');
+      git(dir, 'config', `branch.${branch}.merge`, `refs/heads/${upstream}`);
+    }
+    return dir;
+  }
+  const push = (command, cwd, opts) =>
+    decision(runHook(GATE, { tool_name: 'Bash', tool_input: { command }, cwd }, opts).stdout);
+  const NO_BRANCH = [
+    'git push',
+    'git push origin',
+    'git push -u origin HEAD',
+    'git push origin HEAD',
+    'git push origin @',
+    'git push --force-with-lease',
+    'git fetch && git push',
+  ];
+
+  it('treats them as a promotion when the current branch is main or staging', () => {
+    for (const branch of ['main', 'staging']) {
+      const dir = repoOn(branch);
+      try {
+        for (const cmd of NO_BRANCH) {
+          assert.equal(push(cmd, dir, { sessionFrontMatter: FM }), 'deny', `${branch}: ${cmd}`);
+        }
+        assert.equal(push('git push', dir), 'ask', `${branch}: outside a block`);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('reads the branch of the repository `git -C` names', () => {
+    const dir = repoOn('main');
+    const work = repoOn('feature/x');
+    try {
+      assert.equal(push(`git -C ${dir} push`, work, { sessionFrontMatter: FM }), 'deny');
+      // a relative -C resolves against the session's directory
+      const rel = path.relative(work, dir);
+      assert.equal(push(`git -C ${rel} push`, work, { sessionFrontMatter: FM }), 'deny');
+      assert.equal(push(`git -C ${work} push`, dir, { sessionFrontMatter: FM }), 'allow');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(work, { recursive: true, force: true });
+    }
+  });
+
+  it('treats them as a promotion when the upstream is main', () => {
+    const dir = repoOn('feature/x', 'main');
+    try {
+      assert.equal(push('git push', dir, { sessionFrontMatter: FM }), 'deny');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves them alone on a work branch', () => {
+    const dir = repoOn('feature/x', 'feature/x');
+    try {
+      for (const cmd of NO_BRANCH) {
+        assert.equal(push(cmd, dir, { sessionFrontMatter: FM }), 'allow', cmd);
+      }
+      assert.equal(push('git push --tags', dir, { sessionFrontMatter: FM }), 'allow');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('pushes of tags only never need the branch', () => {
+    const dir = repoOn('main');
+    try {
+      assert.equal(push('git push --tags', dir, { sessionFrontMatter: FM }), 'allow');
+      assert.equal(push('git push origin --tags', dir, { sessionFrontMatter: FM }), 'allow');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('counts them as a promotion when git cannot tell the branch', () => {
+    const notRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-gate-norepo-'));
+    const detached = repoOn('main');
+    try {
+      git(
+        detached,
+        '-c',
+        'user.name=t',
+        '-c',
+        'user.email=t@example.com',
+        'commit',
+        '--allow-empty',
+        '-q',
+        '-m',
+        'x',
+      );
+      git(detached, 'checkout', '-q', '--detach');
+      assert.equal(push('git push', notRepo, { sessionFrontMatter: FM }), 'deny', 'no repository');
+      assert.equal(push('git push origin HEAD', detached, { sessionFrontMatter: FM }), 'deny');
+    } finally {
+      fs.rmSync(notRepo, { recursive: true, force: true });
+      fs.rmSync(detached, { recursive: true, force: true });
+    }
+  });
+});
+
+// The scaffold no longer writes allow or ask rules (DEC-55), so the gate is
+// the only Tierward guard on a promotion: inside a block it needs `Promote`,
+// outside a block it asks the human. MCP tools that commit a file straight to
+// a branch count as a push to that branch.
+describe('governance-gate hook — MCP writes and promotions outside a block (DEC-55)', () => {
+  const decision = (out) => (out.match(/"permissionDecision":"(\w+)"/) || [])[1] || 'allow';
+  const FM = 'block: test\nrequirements_approved: true\npromotion_approved: false';
+  const MCP_WRITE_TOOLS = [
+    'mcp__github__push_files',
+    'mcp__github__create_or_update_file',
+    'mcp__github__delete_file',
+    'mcp__plugin_github_github__push_files',
+  ];
+  const write = (toolName, branch, opts) => {
+    const toolInput = { owner: 'o', repo: 'r', path: 'a.md', content: 'x', message: 'm' };
+    if (branch !== undefined) toolInput.branch = branch;
+    return runHook(GATE, { tool_name: toolName, tool_input: toolInput }, opts);
+  };
+
+  it('denies an MCP write to a protected branch inside a block without `Promote`', () => {
+    for (const tool of MCP_WRITE_TOOLS) {
+      for (const branch of ['main', 'staging', 'refs/heads/main']) {
+        const { stdout } = write(tool, branch, { sessionFrontMatter: FM });
+        assert.equal(decision(stdout), 'deny', `${tool} -> ${branch}`);
+        assert.ok(stdout.includes('Promote'), 'deny reason must name the Promote keyword');
+      }
+    }
+  });
+
+  it('treats an MCP write with no branch as a write to a protected branch', () => {
+    const { stdout } = write('mcp__github__push_files', undefined, { sessionFrontMatter: FM });
+    assert.equal(decision(stdout), 'deny');
+  });
+
+  it('allows an MCP write to a protected branch once with `Promote`, then consumes the flag', () => {
+    const fm = 'block: test\nrequirements_approved: true\npromotion_approved: true';
+    const { stdout, sessionContent } = write('mcp__github__create_or_update_file', 'main', {
+      sessionFrontMatter: fm,
+    });
     assert.equal(stdout.trim(), '');
+    assert.match(sessionContent, /promotion_approved:\s*false/);
+  });
+
+  it('allows an MCP write to a work branch, inside or outside a block', () => {
+    for (const branch of ['feature/main-nav', 'fix/staging-copy', 'main-backup']) {
+      assert.equal(write('mcp__github__push_files', branch, { sessionFrontMatter: FM }).stdout, '');
+      assert.equal(write('mcp__github__push_files', branch).stdout, '');
+    }
+  });
+
+  it('asks outside a block for every promotion form: push, PR merge, MCP merge, MCP write', () => {
+    const bash = (command) => runHook(GATE, { tool_name: 'Bash', tool_input: { command } });
+    const cases = {
+      'git push origin main': bash('git push origin main'),
+      'git push origin HEAD:main': bash('git push origin HEAD:main'),
+      'gh pr merge 12 --merge': bash('gh pr merge 12 --merge'),
+      mcp__github__merge_pull_request: runHook(GATE, {
+        tool_name: 'mcp__github__merge_pull_request',
+        tool_input: { owner: 'o', repo: 'r', pullNumber: 12 },
+      }),
+      'mcp__github__push_files -> main': write('mcp__github__push_files', 'main'),
+    };
+    for (const [label, { stdout }] of Object.entries(cases)) {
+      assert.equal(decision(stdout), 'ask', label);
+      assert.ok(stdout.includes('"hookEventName":"PreToolUse"'), label);
+    }
+  });
+
+  it('stays silent outside a block for commits and work-branch pushes', () => {
+    for (const command of ['git commit -m "x"', 'git push -u origin feature/x', 'git status']) {
+      const { stdout } = runHook(GATE, { tool_name: 'Bash', tool_input: { command } });
+      assert.equal(stdout.trim(), '', command);
+    }
   });
 });
 
@@ -574,13 +806,13 @@ describe('governance-gate hook — pull request merge (D3)', () => {
     assert.match(sessionContent, /promotion_approved:\s*false/);
   });
 
-  it('ignores other MCP tools, and is inactive without a session file', () => {
+  it('ignores other MCP tools, and asks for a merge without a session file (DEC-55)', () => {
     assert.equal(mcp('mcp__github__create_pull_request').stdout.trim(), '');
     const { stdout } = runHook(GATE, {
       tool_name: 'mcp__github__merge_pull_request',
       tool_input: { pullNumber: 12 },
     });
-    assert.equal(stdout.trim(), '');
+    assert.ok(stdout.includes('"permissionDecision":"ask"'), stdout);
   });
 });
 

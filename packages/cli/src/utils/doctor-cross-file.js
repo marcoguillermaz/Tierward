@@ -1,3 +1,5 @@
+import * as yaml from 'js-yaml';
+
 const PLACEHOLDER_TOKEN_RE = /\[[A-Z][A-Z0-9_]+\]/;
 
 export function parseActiveSkills(claudeMd) {
@@ -52,6 +54,20 @@ export function detectPipelineTier(pipelineMd) {
   if (/^#\s+Standard Development Pipeline - Tier M\b/.test(h1)) return 'm';
   if (/^#\s+Full Development Pipeline - Tier L\b/.test(h1)) return 'l';
   return 'unknown';
+}
+
+// null when the text parses; otherwise the parser's reason, with line and column
+// counted from 1 as editors show them (js-yaml marks count from 0)
+export function yamlParseError(text) {
+  try {
+    yaml.load(text);
+    return null;
+  } catch (err) {
+    const reason = err.reason || err.message;
+    return err.mark
+      ? `line ${err.mark.line + 1}, column ${err.mark.column + 1}: ${reason}`
+      : reason;
+  }
 }
 
 export function detectPhaseCountTier(pipelineMd) {

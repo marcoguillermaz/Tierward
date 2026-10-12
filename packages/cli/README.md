@@ -49,7 +49,7 @@ The wizard also asks how changes reach `main`: through a `staging` branch, by a 
 ## What gets scaffolded
 
 - **`CLAUDE.md`** — project context Claude reads at session start (stack, commands, conventions)
-- **`.claude/settings.json`** — Stop hook, permissions allow/deny list, audit log hooks
+- **`.claude/settings.json`** — Stop hook, governance and audit log hooks, a deny list (nothing pre-approved; an existing file keeps your permissions and only gains the hooks)
 - **`.claude/rules/pipeline.md`** — the development pipeline Claude follows, phase by phase
 - **`.claude/rules/security.md`** — stack-aware security rules (11 stacks supported)
 - **`.claude/skills/`** — audit slash-commands: `/arch-audit`, `/security-audit`, `/systematic-debugging`, and more

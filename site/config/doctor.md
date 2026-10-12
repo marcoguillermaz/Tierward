@@ -1,6 +1,6 @@
 # doctor
 
-`npx tierward doctor` validates your scaffold and reports on 27 checks across four categories: scaffold presence, Stop hook configuration, pipeline structure, and CODEOWNERS coverage.
+`npx tierward doctor` validates your scaffold and reports on 28 checks across four categories: scaffold presence, Stop hook configuration, pipeline structure, and CODEOWNERS coverage.
 
 ## Usage
 
@@ -19,6 +19,7 @@ Use `--ci` in pull request workflows to block merges when the scaffold is broken
 - `.claude/settings.json` exists
 - `.claude/rules/` contains the expected rule files for your tier
 - No unfilled `[PLACEHOLDER]` values remain in any governance file
+- `.pre-commit-config.yaml`, when present, is valid YAML (a warning that gives the line and column of the error)
 
 **Stop hook**
 - `settings.json` contains a `Stop` hook
@@ -36,15 +37,13 @@ Use `--ci` in pull request workflows to block merges when the scaffold is broken
 
 ## Integrating with CI
 
-The `tierward-verify.yml` workflow file is included in every scaffold. It runs `doctor` on every pull request targeting `main` and blocks the merge if any check fails.
+`init` does not add a workflow to your project. The Tierward repository has one you can copy into your `.github/workflows/`: [`tierward-verify.yml`](https://github.com/marcoguillermaz/Tierward/blob/main/.github/workflows/tierward-verify.yml) runs `doctor` on pull requests to `main`.
 
 ```yaml
-# .github/workflows/tierward-verify.yml (auto-scaffolded)
+# .github/workflows/tierward-verify.yml (copied from the Tierward repository)
 - name: Run tierward doctor
   run: npx tierward@latest doctor --report
 ```
-
-If you're adding Tierward to an existing repo without the auto-scaffolded workflow, copy `tierward-verify.yml` from the [repository](https://github.com/marcoguillermaz/Tierward/blob/main/.github/workflows/tierward-verify.yml).
 
 ## Fixing failures
 

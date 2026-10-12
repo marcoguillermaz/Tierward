@@ -7,6 +7,7 @@ import {
   hasPlaceholder,
   detectPipelineTier,
   detectPhaseCountTier,
+  yamlParseError,
 } from '../../src/utils/doctor-cross-file.js';
 
 describe('parseActiveSkills', () => {
@@ -172,5 +173,36 @@ describe('detectPhaseCountTier', () => {
 
   it('tier M detected via plain Phase N', () => {
     assert.equal(detectPhaseCountTier('## Phase 0\n## Phase 1\n## Phase 2'), 'm');
+  });
+});
+
+describe('yamlParseError', () => {
+  // The 2.0.0 pre-commit hook entry: an unquoted scalar containing `: `
+  it('reports line and column of the 2.0.0 hook entry error, counted from 1', () => {
+    const yaml = [
+      'repos:',
+      '  - repo: local',
+      '    hooks:',
+      '      - id: ai-commit-review-reminder',
+      `        entry: bash -c 'grep -q "Co-authored-by: Claude" "$1"'`,
+      '        language: system',
+      '',
+    ].join('\n');
+    assert.equal(yamlParseError(yaml), 'line 5, column 48: bad indentation of a mapping entry');
+  });
+
+  it('returns null for valid YAML', () => {
+    assert.equal(yamlParseError('repos:\n  - repo: local\n    hooks: []\n'), null);
+  });
+
+  it('reports tab indentation', () => {
+    assert.equal(
+      yamlParseError('repos:\n\t- repo: local\n'),
+      'line 2, column 1: tab characters must not be used in indentation',
+    );
+  });
+
+  it('reports an empty file without a position', () => {
+    assert.equal(yamlParseError(''), 'expected a document, but the input is empty');
   });
 });

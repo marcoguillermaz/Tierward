@@ -4,7 +4,7 @@ Exact commands for Step 3b consistency checks. Stored here to keep the SKILL.md 
 
 ## Grep-tier batch (run inline)
 
-Run every command in this table yourself during Step 3b and record one pass/fail result per row. Do not hand the table to a subagent: arch-audit runs as `context: fork`, where child-agent results never come back.
+Run every command in this table yourself during Step 3b and record one pass/fail result per row. In the table, `\|` is Markdown's escape for `|`, so drop the backslash before you run a command. Alternations use `grep -E`, which means the unescaped command is right in every row. Do not hand the table to a subagent: arch-audit runs as `context: fork`, where child-agent results never come back.
 
 | Check | Command | Pass condition |
 | ----- | ------- | -------------- |
@@ -13,11 +13,11 @@ Run every command in this table yourself during Step 3b and record one pass/fail
 | C9    | `grep -c "\*\*\* STOP" .claude/rules/pipeline.md` | ≥5 |
 | C10   | `grep -n "Worktree isolation" .claude/rules/pipeline.md` | ≥1 match |
 | C11   | `for skill_dir in .claude/skills/*/; do name=$(basename "$skill_dir"); grep -q "$name" .claude/cheatsheet.md && echo "OK: $name" \|\| echo "MISSING: $name"; done` | 0 MISSING lines |
-| C12   | `grep -o "SessionStart\|PostCompact\|InstructionsLoaded" .claude/settings.json \| sort -u` | 3 lines |
-| C13   | `grep -rL --include="SKILL.md" "context: fork" .claude/skills/` | 0 files returned |
+| C12   | `grep -o -E "SessionStart\|PostCompact\|InstructionsLoaded" .claude/settings.json \| sort -u` | 3 lines |
+| C13   | `grep -rL --include="SKILL.md" "context: fork" .claude/skills/ \| grep -v -e /pr-review/ -e /repo-hygiene/` | 0 files returned |
 | C14   | `git check-ignore -q CLAUDE.md && echo "PASS" \|\| echo "FAIL"` | PASS |
 | C15   | `wc -l CLAUDE.md \| awk '{print $1}'` | ≤200 |
-| C16   | `grep -rn --exclude-dir=arch-audit "claude-3-haiku\|claude-3-5-haiku\|claude-3-opus\|claude-3-sonnet\|claude-3-5-sonnet\|claude-3-7-sonnet\|claude-sonnet-4-20250514\|claude-opus-4-20250514\|claude-opus-4-1-20250805\|claude-sonnet-4-5-20250929" .claude/skills/ .claude/settings.json` | 0 matches |
+| C16   | `grep -rn -E --exclude-dir=arch-audit "claude-3-haiku\|claude-3-5-haiku\|claude-3-opus\|claude-3-sonnet\|claude-3-5-sonnet\|claude-3-7-sonnet\|claude-sonnet-4-20250514\|claude-opus-4-20250514\|claude-opus-4-1-20250805\|claude-sonnet-4-5-20250929" .claude/skills/ .claude/settings.json` | 0 matches |
 | C17   | `for f in .claude/skills/*/SKILL.md; do name=$(basename $(dirname "$f")); [ "$name" = "arch-audit" ] && continue; if grep -q "mcp__" "$f" && ! grep -q "^allowed-tools:" "$f"; then echo "MISSING allowed-tools: $f"; fi; done` | 0 MISSING lines |
 
 ## Judgment-tier standalone (C8)

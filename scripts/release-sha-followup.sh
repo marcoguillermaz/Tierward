@@ -4,8 +4,8 @@
 #
 # Post-promotion release step. Run AFTER the release promotion PR
 # (staging → main) has merged: at that point origin/main is the release
-# merge commit, which is what marketplace.json plugins[0].source.sha must
-# point at. Running earlier reproduces the sha lag this script exists to
+# merge commit, which is what .claude-plugin/marketplace.json
+# plugins[0].source.sha must point at. Running earlier reproduces the sha lag this script exists to
 # prevent (marketplace advertising the new version while the sha still
 # serves the previous release).
 #
@@ -43,19 +43,19 @@ fi
 git checkout -b "$BRANCH" origin/staging
 node scripts/sync-plugin-version.mjs --sha
 
-if [[ -z "$(git status --porcelain marketplace.json)" ]]; then
-  echo "marketplace.json sha already current — nothing to do."
+if [[ -z "$(git status --porcelain .claude-plugin/marketplace.json)" ]]; then
+  echo ".claude-plugin/marketplace.json sha already current — nothing to do."
   git checkout - && git branch -d "$BRANCH"
   exit 0
 fi
 
-git add marketplace.json
+git add .claude-plugin/marketplace.json
 git commit -m "fix(release): point marketplace sha at the ${VERSION} release commit"
 git push -u origin "$BRANCH"
 
 PR_URL=$(gh pr create --base staging \
   --title "fix(release): point marketplace sha at the ${VERSION} release commit" \
-  --body "Post-promotion sha sync (scripts/release-sha-followup.sh). Updates marketplace.json plugins[0].source.sha to the ${VERSION} release merge on main.")
+  --body "Post-promotion sha sync (scripts/release-sha-followup.sh). Updates .claude-plugin/marketplace.json plugins[0].source.sha to the ${VERSION} release merge on main.")
 
 echo "Opened ${PR_URL} — the auto-merge workflow will squash-merge it once checks pass."
 echo "After it lands on staging, run tw-pr to promote the sha fix to main."

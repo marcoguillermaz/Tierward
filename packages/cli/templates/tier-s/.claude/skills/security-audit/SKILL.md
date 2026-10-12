@@ -6,7 +6,7 @@ model: sonnet
 context: fork
 background: false
 argument-hint: [target:page:<route>|target:role:<role>|target:section:<section>]
-allowed-tools: Bash Read Glob Grep WebFetch Agent mcp__mcp-nvd__get_cve mcp__mcp-nvd__search_cve
+allowed-tools: Bash Read Glob Grep WebFetch mcp__mcp-nvd__get_cve mcp__mcp-nvd__search_cve
 ---
 
 ## Configuration (adapt before first run)
@@ -70,9 +70,9 @@ Apply target scope from Step 0 before proceeding.
 
 ---
 
-## Step 2 - Auth, authorization, and injection checks (Explore agent)
+## Step 2 - Auth, authorization, and injection checks
 
-Launch a **single Explore subagent** (model: haiku) with the full route file list. Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` for stack-specific grep patterns used across all checks.
+Run these checks yourself, in this context, over the full route file list (no subagent: this skill runs in a forked context, and a subagent launched from it hands its result to the main conversation, not to this skill). Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` for stack-specific grep patterns used across all checks.
 
 **CHECK A1 - Missing auth check at route entry**
 Pattern: route handler function body does NOT contain any auth verification call within the first 20 lines.

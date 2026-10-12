@@ -109,6 +109,15 @@ async function dispatchFromContext(data, options) {
     answersFromContext.designSystemName = data.features.design_system_name;
   if (data.features?.has_prd !== undefined) answersFromContext.hasPrd = data.features.has_prd;
   if (data.audit_model) answersFromContext.auditModel = data.audit_model;
+  // From existing docs: the repositories and documents to read (C2 requires
+  // the block). Primary first, duplicates dropped.
+  if (data.project.mode === 'from-context' && data.sources) {
+    answersFromContext.primaryRepo = data.sources.primary_repo;
+    answersFromContext.sourceRepos = [
+      ...new Set([data.sources.primary_repo, ...(data.sources.repos ?? [])]),
+    ];
+    answersFromContext.sourceDocs = data.sources.docs ?? [];
+  }
   const passthrough = { ...options, answers: JSON.stringify(answersFromContext) };
   switch (data.project.mode) {
     case 'greenfield':

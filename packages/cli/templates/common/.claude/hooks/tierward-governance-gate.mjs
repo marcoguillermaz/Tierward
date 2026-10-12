@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 // Governance enforcement gate (Tierward v1.34+).
-// Wired as a `PreToolUse` hook on the `Bash` matcher and on the MCP pull-request
-// merge tools. Blocks `git commit` when the active block's requirements have not
-// been approved by the human (see tierward-capture-approval.mjs, which records
-// approval from the human's prompt). Also blocks a promotion, meaning a `git push`
-// toward a protected branch (staging/main) or a pull request merge (`gh pr merge`,
-// an MCP `merge_pull_request` tool), unless the human authorized it with a bare
-// `Promote` — a one-shot flag consumed per promotion, so no promotion is ever
-// automatic and no prior execution keyword covers it.
+// Wired as a `PreToolUse` hook on the `Bash` matcher and on the MCP tools that
+// merge a pull request or write a file to a branch. Blocks `git commit` when the
+// active block's requirements have not been approved by the human (see
+// tierward-capture-approval.mjs, which records approval from the human's
+// prompt). Also blocks a promotion, meaning a `git push` toward a
+// protected branch (staging/main), a pull request merge (`gh pr merge`, an MCP
+// `merge_pull_request` tool) or an MCP file write (`push_files`,
+// `create_or_update_file`, `delete_file`) to a protected branch, unless the
+// human authorized it with a bare `Promote` — a one-shot flag consumed per
+// promotion, so no promotion is ever automatic and no prior execution keyword
+// covers it. Outside a block there is no `Promote` to give, so a promotion asks
+// the human to confirm it: the scaffold writes no allow or ask rules, and this
+// gate is Tierward's only guard on a promotion.
 //
 // WHY PreToolUse, not Stop: approval requires Claude to YIELD THE TURN so the human
 // can type "Proceed". The Stop hook blocks the turn-yield — gating approval there is
@@ -22,18 +27,22 @@
 // human-attested, hook-enforced gate; it is not an adversarial sandbox.
 //
 // Spec reference: https://code.claude.com/docs/en/hooks
-//   - matcher: "Bash", and a regex for MCP merge tools (`mcp__<server>__merge_pull_request`,
-//     `mcp__plugin_<plugin>_<server>__merge_pull_request`)
-//   - input: JSON on stdin with tool_name and tool_input (tool_input.command for Bash)
+//   - matcher: "Bash", and a regex for the MCP merge and write tools
+//     (`mcp__<server>__<tool>`, `mcp__plugin_<plugin>_<server>__<tool>`)
+//   - input: JSON on stdin with tool_name and tool_input (tool_input.command for
+//     Bash, tool_input.branch for the MCP write tools)
 //   - block: exit 0 with hookSpecificOutput.permissionDecision = "deny" + reason
+//   - confirm: exit 0 with hookSpecificOutput.permissionDecision = "ask" + reason
 //   - allow: exit 0 silently (no output)
 //
-// Fail-open: no input or no active session file → allow. A misconfigured project
-// never has commits blocked spuriously; worst case is the pre-v1.34 status quo
-// (no governance gate). A command the parser cannot read falls back to the
-// whole-text check below, not to allow.
+// Fail-open: no input, or a commit with no active session file → allow. A
+// misconfigured project never has commits blocked spuriously; worst case is the
+// pre-v1.34 status quo (no governance gate). A promotion with no active session
+// file asks instead of allowing. A command the parser cannot read falls back to
+// the whole-text check below, not to allow.
 
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 const PROJECT_DIR = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -46,7 +55,8 @@ const PROTECTED = '(staging|main)';
 // The gate reads the commands a Bash call runs, not its text. A `git push` is a
 // promotion when an argument names a protected branch (`staging` or `main`) as a standalone token,
 // a `refs/heads/` ref, or a refspec destination (`HEAD:main`, `+main`), so
-// `feature/main-nav` and `main:feature/x` never match. The pipeline's promotion
+// `feature/main-nav` and `main:feature/x` never match; `--all` and `--mirror`
+// count, since they push every branch. The pipeline's promotion
 // commands are compound (`git checkout staging && git merge … && git push origin staging`),
 // so every simple command is checked, not just the first. Quoted strings,
 // heredoc bodies and comments are data: a commit message that mentions a push
@@ -56,12 +66,20 @@ const PROTECTED = '(staging|main)';
 // A pull request merge is a promotion whatever its base: `gh pr merge` (also
 // `--auto`, which schedules the merge) and any MCP tool named
 // `merge_pull_request`. `gh pr merge --disable-auto` cancels a merge and is not.
-// Known limitations: a bare `git push` while checked out on a protected branch
-// is not detected (the pipeline's prose gate, "promotion is never automatic",
-// still covers it), and neither is a substitution inside an unquoted heredoc,
-// nor a merge through the REST API (`gh api .../pulls/<n>/merge`).
+// A push that names no branch (`git push`, `git push origin`, `HEAD` or `@` as
+// the refspec) updates the current branch or its upstream, so the gate asks git
+// for both, in the session's directory or the one `git -C` names; when git cannot
+// tell (no repository, detached HEAD), the push counts as a promotion. A push of
+// tags only (`--tags` and no refspec) updates no branch.
+// Known limitations: a substitution inside an unquoted heredoc is not checked,
+// nor is a merge through the REST API (`gh api .../pulls/<n>/merge`); for a push
+// that names no branch, a `cd` earlier in the same command and the remote's
+// `push` refspec mappings are not followed.
 const PROTECTED_BRANCH_RE = new RegExp(`^(?:refs/heads/)?${PROTECTED}$`);
 const MCP_MERGE_TOOL_RE = /^mcp__.+__merge_pull_request$/;
+// MCP tools that commit a file straight to the branch they are given. Their
+// schemas require `branch`; a call without one is treated as a protected write.
+const MCP_WRITE_TOOL_RE = /^mcp__.+__(push_files|create_or_update_file|delete_file)$/;
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh']);
 const GIT_OPTIONS_WITH_VALUE = new Set([
   '-C',
@@ -237,6 +255,51 @@ function namesProtectedBranch(arg) {
   return PROTECTED_BRANCH_RE.test(ref.slice(ref.lastIndexOf(':') + 1));
 }
 
+// `--all` and `--mirror` push every branch, protected ones included, without
+// naming them.
+const ALL_BRANCHES_OPTIONS = new Set(['--all', '--mirror']);
+const PUSH_OPTIONS_WITH_VALUE = new Set(['-o', '--push-option', '--repo', '--receive-pack', '--exec']);
+
+// Whether a `git push` names no destination branch: no refspec after the
+// remote (unless it pushes tags only), or `HEAD`/`@` as a refspec.
+function pushesCurrentBranch(args) {
+  const positional = [];
+  for (let n = 0; n < args.length; n += 1) {
+    if (!args[n].startsWith('-')) positional.push(args[n]);
+    else if (PUSH_OPTIONS_WITH_VALUE.has(args[n])) n += 1;
+  }
+  const refspecs = positional.slice(1);
+  if (refspecs.length === 0) return !args.includes('--tags');
+  return refspecs.some((r) => ['HEAD', '@'].includes(r.replace(/^\+/, '')));
+}
+
+// The branches a push that names none updates: the current branch and its
+// upstream. null when git cannot tell (no repository, detached HEAD, no git).
+function currentPushBranches(cwd) {
+  const git = (...args) =>
+    execFileSync('git', args, {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 3000,
+    }).trim();
+  let branch;
+  try {
+    branch = git('symbolic-ref', '--quiet', '--short', 'HEAD');
+  } catch {
+    return null;
+  }
+  if (!branch) return null;
+  const branches = [branch];
+  try {
+    const merge = git('config', '--get', `branch.${branch}.merge`);
+    if (merge) branches.push(merge.replace(/^refs\/heads\//, ''));
+  } catch {
+    // no upstream
+  }
+  return branches;
+}
+
 // `gh pr merge`, except `--disable-auto`. Only `-R`/`--repo` take a value
 // that could sit before the subcommand.
 function isPrMerge(args) {
@@ -248,21 +311,28 @@ function isPrMerge(args) {
   return positional[0] === 'pr' && positional[1] === 'merge' && !args.includes('--disable-auto');
 }
 
-// { push, merge, commit }: whether the command runs a promotion push, a pull
-// request merge, or a commit.
+// { push, merge, commit, currentPushDirs }: whether the command runs a
+// promotion push, a pull request merge, or a commit; currentPushDirs lists, for
+// each push that names no branch, its `git -C` paths (each one relative to the
+// previous, as git reads them).
 function analyze(command, depth) {
-  const found = { push: false, merge: false, commit: false };
+  const found = { push: false, merge: false, commit: false, currentPushDirs: [] };
   for (const words of parse(command, 0, null, depth).commands) {
     words.forEach((w, k) => {
       const name = path.basename(w);
       if (name === 'git') {
         let n = k + 1;
+        const dir = [];
         while (n < words.length && words[n].startsWith('-')) {
+          if (words[n] === '-C' && words[n + 1]) dir.push(words[n + 1]);
           n += GIT_OPTIONS_WITH_VALUE.has(words[n]) ? 2 : 1;
         }
         if (words[n] === 'commit') found.commit = true;
-        if (words[n] === 'push' && words.slice(n + 1).some(namesProtectedBranch)) {
+        const pushArgs = words[n] === 'push' ? words.slice(n + 1) : null;
+        if (pushArgs?.some((a) => namesProtectedBranch(a) || ALL_BRANCHES_OPTIONS.has(a))) {
           found.push = true;
+        } else if (pushArgs && pushesCurrentBranch(pushArgs)) {
+          found.currentPushDirs.push(dir);
         }
       } else if (name === 'gh') {
         if (isPrMerge(words.slice(k + 1))) found.merge = true;
@@ -276,6 +346,7 @@ function analyze(command, depth) {
           found.push ||= inner.push;
           found.merge ||= inner.merge;
           found.commit ||= inner.commit;
+          found.currentPushDirs.push(...inner.currentPushDirs);
         }
       }
     });
@@ -288,11 +359,23 @@ function inspect(command) {
     return analyze(command, 0);
   } catch {
     return {
-      push: FALLBACK_PUSH_RE.test(command) && FALLBACK_PROTECTED_RE.test(command),
+      push:
+        FALLBACK_PUSH_RE.test(command) &&
+        (FALLBACK_PROTECTED_RE.test(command) || /\s--(all|mirror)(\s|$)/.test(command)),
       merge: FALLBACK_MERGE_RE.test(command) && !command.includes('--disable-auto'),
       commit: FALLBACK_COMMIT_RE.test(command),
+      currentPushDirs: [],
     };
   }
+}
+
+// A push that names no branch promotes when the branch it updates is protected,
+// or when git cannot tell which branch that is.
+function pushesProtectedCurrentBranch(dirs, cwd) {
+  return dirs.some((dir) => {
+    const branches = currentPushBranches(path.resolve(cwd, ...dir));
+    return branches === null || branches.some((b) => PROTECTED_BRANCH_RE.test(b));
+  });
 }
 
 function readStdin() {
@@ -352,29 +435,53 @@ function consumePromotionApproval(file) {
   );
 }
 
-function deny(reason) {
+function decide(permissionDecision, reason) {
   process.stdout.write(
     JSON.stringify({
-      hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason },
+      hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision, permissionDecisionReason: reason },
     }),
   );
   process.exit(0);
+}
+
+const deny = (reason) => decide('deny', reason);
+const ask = (reason) => decide('ask', reason);
+
+// An MCP write lands on a protected branch when it names one, or names none.
+function writesProtectedBranch(branch) {
+  if (typeof branch !== 'string' || branch.trim() === '') return true;
+  return PROTECTED_BRANCH_RE.test(branch.trim());
+}
+
+// { push, merge, commit } for one tool call.
+function classify(payload) {
+  const tool = payload?.tool_name || '';
+  if (MCP_MERGE_TOOL_RE.test(tool)) return { push: false, merge: true, commit: false };
+  if (MCP_WRITE_TOOL_RE.test(tool)) {
+    return { push: writesProtectedBranch(payload?.tool_input?.branch), merge: false, commit: false };
+  }
+  const found = inspect(payload?.tool_input?.command || '');
+  const cwd = typeof payload?.cwd === 'string' && payload.cwd ? payload.cwd : PROJECT_DIR;
+  if (!found.push && pushesProtectedCurrentBranch(found.currentPushDirs, cwd)) found.push = true;
+  return found;
 }
 
 async function main() {
   try {
     const raw = await readStdin();
     if (!raw.trim()) process.exit(0);
-    const payload = JSON.parse(raw);
-    const { push, merge, commit } = MCP_MERGE_TOOL_RE.test(payload?.tool_name || '')
-      ? { push: false, merge: true, commit: false }
-      : inspect(payload?.tool_input?.command || '');
+    const { push, merge, commit } = classify(JSON.parse(raw));
 
-    // Promotion gate first (stricter): a push naming a protected branch, or a
-    // pull request merge.
+    // Promotion gate first (stricter): a push or an MCP write to a protected
+    // branch, or a pull request merge.
     if (push || merge) {
       const file = activeSessionFile();
-      if (!file) process.exit(0); // no active block → gate inactive, allow
+      if (!file) {
+        // No block, so no `Promote` to check: the human confirms instead
+        ask(
+          'Tierward: this promotes to a protected branch (staging/main) and no block is open, so the `Promote` gate does not apply. Approve only if you want this promotion now.',
+        );
+      }
       if (!promotionApproved(file)) {
         deny(
           'Promotion to a protected branch (staging/main) requires its own authorization. Present the Promotion authorization gate (why / what runs / next step) and ask the developer to reply with the bare keyword `Promote`. No prior approval or execution keyword covers a promotion push or pull request merge.',

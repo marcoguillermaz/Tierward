@@ -15,7 +15,7 @@ import {
   promotionChoices,
   promotionMode,
 } from '../scaffold/skill-registry.js';
-import { enforceTeamSettingsTier } from '../utils/team-settings-cli.js';
+import { enforceTeamSettingsTier, tierChangeHint } from '../utils/team-settings-cli.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
@@ -415,11 +415,8 @@ export async function initGreenfield(options) {
     console.log(`  2. Run ${chalk.cyan('claude')} from this directory to start your first session`);
     console.log(`  3. Read ${chalk.cyan('GETTING_STARTED.md')} - or share it with your team`);
     console.log();
-    console.log(
-      chalk.dim(
-        'When you\'re ready for more structure: npx tierward init --tier=s (choose "Existing project")',
-      ),
-    );
+    console.log(chalk.dim("When you're ready for more structure:"));
+    for (const line of tierChangeHint('s')) console.log(chalk.dim(line));
   } else {
     console.log(chalk.green.bold('✓ Greenfield scaffold complete'));
     console.log();

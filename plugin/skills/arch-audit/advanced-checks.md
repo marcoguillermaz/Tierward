@@ -101,8 +101,6 @@ Expected: 0 lines in a clean project. Any `NO-HAIKU` line = FAIL (rule 2). Any `
 
 Known-benign: a line that back-references an already-launched agent (e.g. "the Explore subagent from Step 1"), or prose documenting the no-delegation rule itself, rather than a fresh launch - treat as benign, not a finding.
 
-**Known exceptions to rule 1**: the scaffolded audit skills `accessibility-audit`, `api-design`, `perf-audit`, `security-audit`, `skill-db` and `ui-audit` still delegate to Explore subagents from a `context: fork` body. This is tracked upstream in Tierward, not a defect introduced by your project. Report them once as a single consolidated RECOMMEND line, never one finding per skill per run, and never rewrite them here. The exemption lifts when they ship converted.
-
 AUTO-FIX: rule 2 only - append `(model: haiku)` to the invocation description. Rule 1 findings stay RECOMMEND: name the file and the step, and leave the rewrite to the maintainer.
 
 **T3 - Phase 5d Playwright concurrency note**
@@ -131,10 +129,10 @@ Current expected state:
 | ux-audit | opus | Multi-flow simulation + live screenshot analysis - visual reasoning requires Opus |
 | visual-audit | opus | 7-dimension aesthetic scoring + screenshot analysis - visual reasoning requires Opus |
 | security-audit | sonnet | Exploit reasoning, authorization analysis |
-| api-design | sonnet | REST pattern judgment + internal haiku Explore agent |
-| perf-audit | sonnet | Bundle analysis, server/client boundary judgment + internal haiku Explore agent |
-| skill-dev | sonnet | Coupling/abstraction judgment + internal haiku Explore agent |
-| skill-db | opus | Deep schema normalization + RLS policy reasoning requires Opus - internal haiku Explore agent for dep scan |
+| api-design | sonnet | REST pattern judgment |
+| perf-audit | sonnet | Bundle analysis, server/client boundary judgment |
+| skill-dev | sonnet | Coupling/abstraction judgment |
+| skill-db | opus | Deep schema normalization + RLS policy reasoning requires Opus |
 | responsive-audit | opus | Multi-viewport screenshot judgment - visual reasoning requires Opus |
 
 Batch command: `grep -A1 "^name:" .claude/skills/*/SKILL.md | grep "model:"` - compare each result against the table above.

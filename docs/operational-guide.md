@@ -184,7 +184,7 @@ For experienced users, the wizard asks:
   - "Do you use a component library or design system?" -> installs `/ui-audit`
   - "Design system name?" -> populates `[DESIGN_SYSTEM_NAME]` placeholder
   - "Track a PRD per feature block?" -> determines if `docs/prd/prd.md` is referenced in context review
-  - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-sonnet-5-5` (override with any current model id). The `init` wizard offers the same question as a list: `claude-sonnet-5-5` (default), `claude-opus-5-5`, `claude-fable-5-1`
+  - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-opus-5-5` (override with any current model id). The `init` wizard offers the same question as a list: `claude-sonnet-5-5`, `claude-opus-5-5` (default), `claude-fable-5-1`. The answer goes into the `model:` of both skills as the family alias (`sonnet`, `opus` or `fable`), which works on every provider; any other value is written as you typed it.
 - Whether to include pre-commit config and `.github/` files
 - How changes reach `main`: through a staging branch, by a direct merge, or by a pull request (see [4d](#4d-how-changes-reach-main-promotion-modes)). Native stacks get the last two only.
 
@@ -210,6 +210,8 @@ The wizard asks for:
 - Which repo is the primary (if multiple)
 - Pipeline tier, pre-commit, `.github/`
 
+To skip the questions, pass the same values with `--answers`: `sourceRepos` (list), `sourceDocs` (list, optional), `projectName`, `primaryRepo`, `tier` (`s`, `m` or `l`), `includePreCommit`, `includeGithub`, and optionally `techStack` and `promotion`. A `CONTEXT.md` with `project.mode: from-context` supplies them from its `sources` block (`primary_repo`, `repos`, `docs`) and its other fields. With answers nothing is asked, so a run with no source repository, an unavailable promotion mode, or an existing project directory stops with an error before writing anything.
+
 What happens:
 
 1. Each source repo is cloned into `.claude/context/repos/<name>/` using `gh` CLI (private repos) or `git clone --depth=1` (public).
@@ -231,7 +233,7 @@ The CLI:
 1. Auto-detects your tech stack by inspecting `package.json`, `tsconfig.json`, `requirements.txt`, `go.mod`, `Cargo.toml`, `Package.swift`, `Gemfile`, `pom.xml`, `build.gradle`, `*.csproj`, and Xcode project directories. Supported stacks: Node.js/TS, Node.js/JS, Python, Go, Swift, Kotlin, Rust, .NET, Ruby, Java.
 2. Shows detected values pre-filled in every prompt - you confirm or override.
 3. Counts your source files to suggest an appropriate tier.
-4. Creates all governance files **without overwriting** `CLAUDE.md`, `MEMORY.md`, `.gitignore`, or `README.md` if they already exist.
+4. Creates all governance files **without overwriting** `CLAUDE.md`, `MEMORY.md`, `.gitignore`, or `README.md` if they already exist. An existing `.claude/settings.json` keeps your permissions and settings and only gains Tierward's hooks, after a backup ([.claude/settings.json](#claudesettingsjson)).
 5. Generates `CONTEXT_IMPORT.md` pointing to the current directory.
 6. Appends tierward entries to `.gitignore`.
 7. Optionally runs `doctor` inline to validate the scaffold.
@@ -253,10 +255,10 @@ The greenfield and in-place wizards ask **"How do changes reach `main`?"** The a
 
 Native stacks have no staging server, so the wizard offers them `direct` and `pr` only, and the `CONTEXT.md` schema refuses `staging` for them.
 
-Whatever the mode, while a block or fix session is open a promotion waits for your bare `Promote`, one promotion per keyword. The governance gate counts a push to a protected branch and a pull request merge (`gh pr merge`, or a GitHub MCP `merge_pull_request` tool) as promotions. It does not see a merge made through the REST API (`gh api .../pulls/<n>/merge`).
+Whatever the mode, a promotion goes through the governance gate: while a block or fix session is open it waits for your bare `Promote`, one promotion per keyword; with no session open it asks you to confirm. The gate counts as promotions a push to a protected branch, a pull request merge (`gh pr merge`, or a GitHub MCP `merge_pull_request` tool) and an MCP file write to a protected branch (`push_files`, `create_or_update_file`, `delete_file`). A push that names no branch (`git push`, `git push origin`, `git push origin HEAD`) counts when the branch it updates, the current one or its upstream, is protected. The gate asks git, and when git cannot tell, as on a detached HEAD, the push counts too. It does not see a merge made through the REST API (`gh api .../pulls/<n>/merge`) or a command inside an unquoted heredoc substitution. For a push without a branch it also does not follow a `cd` earlier in the same command. No permission rule pre-approves or asks for a promotion ([.claude/settings.json](#claudesettingsjson)).
 
-- **`staging` and `direct`**: the push to `main` (on Tier L, also the push to `staging`) is an `ask` rule in `.claude/settings.json`. After your `Promote`, Claude Code still asks for permission before the push runs; no permission mode approves it on its own.
-- **`pr`**: the agent pushes the work branch and opens the pull request with `gh pr create` (or you open it in the GitHub web UI); neither is a promotion. The merge, `gh pr merge --merge`, needs your `Promote` and then the permission prompt, since `gh pr merge` is an `ask` rule. Opening, reading and checking pull requests runs without a prompt. The usual forms of a push to `main` are denied, refspec forms such as `HEAD:main` included. A deny rule matches the command as Claude usually writes it, so a wrapped form such as `git -C . push origin main` is left to the governance gate. The work branch stays out of the step-1 cleanup gate, because the pull request needs it, and is removed at a short cleanup confirmation after the merge.
+- **`staging` and `direct`**: after your `Promote`, the push to `main` (on Tier L, also the push to `staging`) runs, unless your own permission settings ask first.
+- **`pr`**: the agent pushes the work branch and opens the pull request with `gh pr create` (or you open it in the GitHub web UI); neither is a promotion. The merge, `gh pr merge --merge`, needs your `Promote`. The usual forms of a push to `main` are denied, refspec forms such as `HEAD:main` included. A deny rule matches the command as Claude usually writes it, so a wrapped form such as `git -C . push origin main` is left to the governance gate. As in every mode, the work branch stays out of the step-1 cleanup gate, because the closure commits and the pull request still need it. It is removed at a short cleanup confirmation after the merge.
 
 Pick `pr` when changes should reach `main` only through a pull request and nothing else stops a push: for example, a private repository on a personal GitHub Free account, where branch protection is not available. The GitHub CLI (`gh`) is optional; without it, open and merge the pull request in the GitHub web UI.
 
@@ -432,11 +434,11 @@ You can start at Tier 0 or S and escalate. Claude notifies you when scope expand
 
 ### Changing tier
 
-There is no in-place tier switch yet. `upgrade` keeps the tier you have, and running `init` again in "Existing project" mode skips the Tierward files that already exist, so the old pipeline and settings stay. To move to another tier, scaffold again on a branch and let git show what changed:
+There is no in-place tier switch yet. `upgrade` keeps the tier you have, and running `init` again in "Existing project" mode skips the Tierward files that already exist, so the old pipeline stays. To move to another tier, scaffold again on a branch and let git show what changed:
 
 1. Commit everything, then create a branch, for example `git switch -c tierward-tier-m`. Git is your only backup for the next step.
-2. Run `npx tierward init`, choose "New project", and answer the wizard with the new tier. It overwrites every file it generates, not only the Tierward ones: `CLAUDE.md`, `README.md`, `.gitignore`, `.pre-commit-config.yaml`, `.claude/settings.json`, `.claude/rules/`, the pipeline, the skills and the files under `docs/`. Then it adds what the new tier needs.
-3. Review the whole `git diff` and bring back everything of yours: the project README, ignore entries, extra pre-commit hooks, filled-in docs, notes in `CLAUDE.md`, permission changes. `git checkout HEAD -- <file>` restores a whole file, `git checkout -p HEAD -- <file>` one hunk at a time.
+2. Run `npx tierward init`, choose "New project", and answer the wizard with the new tier. It overwrites every file it generates, not only the Tierward ones: `CLAUDE.md`, `README.md`, `.gitignore`, `.pre-commit-config.yaml`, `.claude/rules/`, the pipeline, the skills and the files under `docs/`. Then it adds what the new tier needs. `.claude/settings.json` is the exception: your permissions and settings stay, the old tier's hooks are replaced by the new tier's, and a timestamped backup is written next to it.
+3. Review the whole `git diff` and bring back everything of yours: the project README, ignore entries, extra pre-commit hooks, filled-in docs, notes in `CLAUDE.md`. `git checkout HEAD -- <file>` restores a whole file, `git checkout -p HEAD -- <file>` one hunk at a time.
 4. Coming from Tier 0, delete `GETTING_STARTED.md` if you no longer need it. Commit, then merge the branch.
 
 ---
@@ -625,7 +627,7 @@ Permissions and hooks. Besides the governance hooks in `.claude/hooks/` (commit 
 | ------------------------- | -------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Test gate                 | `Stop`               | S M L | Runs the test command when Claude tries to finish. If tests fail, the stop is blocked and Claude gets a turn to fix them (see [Stop hook](#stop-hook)). |
 | Audit log                 | `PostToolUse`        | S M L | Appends Write/Edit calls (tier S) or Write/Edit/Bash calls (tier M/L) to `~/.claude/audit/[project].jsonl`.                                              |
-| Session log               | `SessionStart`       | M L   | Logs session start to `~/.claude/audit/sessions.log`. Tier L adds the model when Claude Code provides it.                                                 |
+| Session log               | `SessionStart`       | M L   | Logs session start to `~/.claude/audit/sessions.log`, with the model when Claude Code provides it.                                                         |
 | Arch-audit reminder       | `SessionStart`       | S M L | If `/arch-audit` hasn't run in 7 days, prints a reminder at session open.                                                                                  |
 | Instructions debug log    | `InstructionsLoaded` | S M L | Appends one line per loaded instruction file to `.claude/logs/instructions-YYYYMMDD.log` in the project (gitignored).                                     |
 | CLAUDE.local.md reminder  | `PostCompact`        | S M L | Reminds Claude to re-read `.claude/CLAUDE.local.md` after `/compact`.                                                                                      |
@@ -634,25 +636,29 @@ Permissions and hooks. Besides the governance hooks in `.claude/hooks/` (commit 
 
 Hooks read session and tool data from the JSON Claude Code passes on stdin. The logs stay on your machine: `~/.claude/audit/` is in your home directory, and `.claude/logs/` is gitignored by the scaffold.
 
-**Stack-aware permissions**: `permissions.allow` names the commands the pipeline runs, set at scaffold time: the git subcommands it uses (`status`, `diff`, `log`, `show`, `add`, `commit`, `checkout`, `switch`, `branch`, `fetch`, `pull`, `merge`, `push`, `worktree`, `stash` and a few read-only helpers), the stack's CLI tools, and `npx tierward`. On Node.js it adds one `npx` rule per tool your configured commands run, such as `Bash(npx tsc *)` for `npx tsc --noEmit`. On Tier M/L, `Edit(/.tierward/tmp/**)` lets the pr-review and dependency-audit skills write their temporary files without a prompt. No rule allows every git command, every npx package or `curl`, so anything else follows your permission mode: in the default mode Claude Code asks first.
+**Permissions**: Tierward pre-approves no command. The generated `.claude/settings.json` has no `permissions.allow` and no `permissions.ask`, so every command goes through your own permission settings and your permission mode: in the default mode Claude Code asks before a command you have not allowed. Skills are the one exception Claude Code itself provides: a skill's `allowed-tools` lets it use the tools it lists, without asking, for the turn that runs it.
 
-`permissions.ask` prompts in every permission mode, `bypassPermissions` included: the push to `main` and its refspec forms (`HEAD:main`, `+main`, `refs/heads/main`; on Tier L with a staging branch, the same for `staging`), `git -c` (which can make git run a program), `npm exec` and `npm x`, and the MCP tools that merge a pull request or write files to a branch (`merge_pull_request`, `push_files`, `create_or_update_file`, `delete_file`, on any server). `permissions.deny` includes base protections (force push, `git add -A`, `git add --all`, `git add .`, `rm -rf /`, `DROP TABLE`, `TRUNCATE`) plus stack-specific release/publish commands. In `pr` mode the pushes to `main` move from `ask` to `deny` ([4d](#4d-how-changes-reach-main-promotion-modes)).
+`permissions.deny` refuses a short list in every mode: force pushes, `git add -A`, `git add --all`, `git add .`, `git -c` (which can make git run a program), `npm exec` and `npm x` (which run any package), `rm -rf /`, `DROP DATABASE`, `npm publish`, on Tier M/L `DROP TABLE` and `TRUNCATE`, on Tier L `chmod 777`, plus the stack's release and publish commands from the table below. In `pr` mode it also refuses the pushes to `main` ([4d](#4d-how-changes-reach-main-promotion-modes)).
 
-These rules match the command text Claude usually writes. They are not a security boundary: `npm install <package>` (install scripts), `node -e`, `uv run` or `docker` (Tier L) still run any code.
+Promotions are guarded by the governance gate, not by permission rules. It sees a `git push` to a protected branch, `gh pr merge`, and the MCP tools that merge a pull request or write a file to a branch (`merge_pull_request`, `push_files`, `create_or_update_file`, `delete_file`, on any server). Inside a block it waits for your `Promote`; with no block open it asks you to confirm. What it does not see is listed in [4d](#4d-how-changes-reach-main-promotion-modes).
 
-| Stack             | Allow (besides the named git subcommands)               | Deny (additions)                              |
-| ----------------- | ------------------------------------------------------- | --------------------------------------------- |
-| Node.js (default) | node, npm, the npx tools of your commands, docker (L)   | -                                             |
-| Swift             | swift, xcodebuild, xcrun                                | xcodebuild archive, xcrun altool --upload-app |
-| Kotlin            | gradlew, gradle                                         | gradlew publish                               |
-| Rust              | cargo, rustc                                            | cargo publish                                 |
-| .NET              | dotnet                                                  | dotnet nuget push                             |
-| Java              | mvn, gradlew, gradle                                    | mvn deploy, gradlew publish                   |
-| Ruby              | bundle, rails, rake                                     | gem push                                      |
-| Python            | python, pip, uv, pytest, mypy, uvicorn, alembic         | twine upload, alembic downgrade base          |
-| Go                | go                                                      | -                                             |
+Deny rules match the command text Claude usually writes. They are not a security boundary: `npm install <package>` (install scripts), `node -e`, `uv run` or `docker` still run any code. The force-push rules match `--force`, `-f` and a `+` refspec, but not a combined short flag such as `-uf` or an option written before `push` (`git -C <path> push --force`). When such a push targets `main` or `staging`, the governance gate still holds it for your `Promote` or your confirmation; a force push to any other branch goes through your own permission settings.
 
-> **Git-deploy hosts (Cloudflare Pages, Vercel, Netlify, Render):** these platforms deploy by watching pushes to `main`. In `staging` and `direct` mode a push to `main` waits for your `Promote` and then a permission prompt (`Bash(git push origin main*)` is an `ask` rule), so it never happens by accident. If the host should only ever deploy reviewed code, use the `pr` promotion mode ([4d](#4d-how-changes-reach-main-promotion-modes)): `feature/*` → PR → merge to `main`, the host picks up the merge commit, and pushes to `main` are denied. Do **not** move the push to `main` into `permissions.allow`.
+| Stack             | Deny (additions)                              |
+| ----------------- | --------------------------------------------- |
+| Node.js (default) | -                                             |
+| Swift             | xcodebuild archive, xcrun altool --upload-app |
+| Kotlin            | gradlew publish                               |
+| Rust              | cargo publish                                 |
+| .NET              | dotnet nuget push                             |
+| Java              | mvn deploy, gradlew publish                   |
+| Ruby              | gem push                                      |
+| Python            | twine upload, alembic downgrade base          |
+| Go                | -                                             |
+
+**A project that already has `.claude/settings.json`** keeps it. `init`, in either mode, writes a backup next to it (`settings.json.bak.<timestamp>`) and adds Tierward's hooks. Your allow, ask and deny rules and every other setting stay as they are, so Tierward's deny list is not added to that file. Running `init` again, or switching tier, replaces Tierward's hooks instead of adding them twice. Tierward recognises a hook as its own when it matches one of its templates or only runs one of its hook files; a hook you edited counts as yours and stays. It does not recognise the inline hooks earlier Tierward versions wrote, so `init` lists the hooks of yours it kept on the events Tierward hooks, with the path of the backup. Remove any that duplicate Tierward's.
+
+> **Git-deploy hosts (Cloudflare Pages, Vercel, Netlify, Render):** these platforms deploy by watching pushes to `main`. In `staging` and `direct` mode a push to `main` waits for your `Promote` inside a block, or for your confirmation outside one, so it never happens by accident. If the host should only ever deploy reviewed code, use the `pr` promotion mode ([4d](#4d-how-changes-reach-main-promotion-modes)): `feature/*` → PR → merge to `main`, the host picks up the merge commit, and pushes to `main` are denied. Do **not** add the push to `main` to `permissions.allow`.
 
 ---
 
@@ -781,8 +787,8 @@ All skill applicability rules are managed by a central skill registry (`packages
 
 - Code-audit skills are **audit-only** - no code is modified (except `/simplify`, which applies changes directly). Findings go to `docs/refactoring-backlog.md` with severity-ranked IDs (`PERF-`, `API-`, `DB-`, `MIG-`, `DEV-`, `SEC-`, `UX-`, `A11Y-`, `TEST-`).
 - Live-browser skills (`/responsive-audit`, `/ux-audit`, `/visual-audit`, `/accessibility-audit`) require the Playwright MCP server configured in `.claude/settings.json` and the dev server running. `/ui-audit` is static and does not require Playwright.
-- Each skill runs in an isolated context fork (`context: fork`) - it does not pollute the main session window. It also sets `background: false`, so the turn that runs it waits for the result.
-- Each skill delegates grep-heavy scanning to a Haiku Explore subagent to protect the main context window.
+- Each audit skill runs in an isolated context fork (`context: fork`), so it does not pollute the main session window. It also sets `background: false`, so the turn that runs it waits for the result.
+- Each forked skill runs its scans itself. A subagent launched from a forked skill hands its result to the main conversation, and the skill ends without it (observed on Claude Code 2.1.296, interactive and `-p`). `/pr-review` is the one skill that delegates: it does not fork, so the review subagent's result comes back to it.
 - Before first run: fill in the `## Configuration` placeholders at the top of each `SKILL.md`.
 - Skills not installed at init can be added later: `npx tierward add skill <name>`.
 
@@ -1267,7 +1273,7 @@ npx tierward doctor --report  # JSON compliance output for CI pipelines
 npx tierward doctor --ci      # silent mode: exit 1 if any check fails
 ```
 
-Runs 27 checks:
+Runs 28 checks:
 
 1. Claude Code CLI is installed and reachable
 2. `CLAUDE.md` is present
@@ -1296,12 +1302,13 @@ Runs 27 checks:
 25. Repo state matches `.claude/team-settings.json` — minTier ≥ scaffold tier, no blocked skills installed, all required skills present (warn-level; skips when the file is absent)
 26. `team-settings.json` runtime enforcement hook is scaffolded and registered on the `Skill` matcher in `.claude/settings.json` (warn-level; skips when `team-settings.json` is absent — added in v1.21.0)
 27. No duplicate entries in `permissions.deny` list (warn if duplicates found)
+28. `.pre-commit-config.yaml` is valid YAML, with the line and column of the error (warn-level; skips when the file is absent)
 
-Checks 13-28 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier.
+Checks 13-27 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier. Check 28 runs on any tier where `.pre-commit-config.yaml` exists.
 
 **`--report` output**: machine-readable JSON with timestamp, cwd, summary (passed/warned/failed/skipped), and per-check details. Consumed by CI systems or external audit tools.
 
-**CI integration**: `.github/workflows/tierward-verify.yml` (scaffolded by `init`) runs doctor on every PR. Prevents merging when the scaffold is broken or bypassed.
+**CI integration**: `init` does not add a workflow to your project. The Tierward repository has one you can copy into your `.github/workflows/`: [`tierward-verify.yml`](https://github.com/marcoguillermaz/Tierward/blob/main/.github/workflows/tierward-verify.yml) runs doctor on pull requests to `main`.
 
 ---
 
@@ -1470,7 +1477,7 @@ Yes. The CLI supports 11 tech stacks: Node.js/TS, Node.js/JS, Python, Go, Swift,
 
 **Q: My project already has a CLAUDE.md. Will in-place init overwrite it?**
 
-No. In-place mode uses safe scaffold: files that already exist are never overwritten. Your existing `CLAUDE.md`, `MEMORY.md`, `.gitignore`, and `README.md` are preserved.
+No. In-place mode uses safe scaffold: files that already exist are never overwritten. Your existing `CLAUDE.md`, `MEMORY.md`, `.gitignore`, and `README.md` are preserved. An existing `.claude/settings.json` keeps everything you wrote in it and only gains Tierward's hooks, after a timestamped backup.
 
 ---
 

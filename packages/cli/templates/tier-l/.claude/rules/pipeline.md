@@ -373,18 +373,13 @@ If the project is CLI-only, backend-only, or native-standalone without a UI laye
 Only after explicit confirmation (it covers the closure steps below, never the step-10 promotion):
 0. **Flush the backlog scratch** (per `.claude/rules/backlog-protocol.md`): if `.claude/session/refactoring-findings.md` exists, consolidate its entries into `docs/refactoring-backlog.md` in a **single** write - dedupe against existing entries, assign contiguous IDs per prefix. This is the block's one consolidated backlog write; the Phase 5d audits appended here instead of writing mid-block. If the scratch is absent or empty, skip. Do NOT delete the scratch here - its removal goes through the step-1 cleanup gate.
 0b. **Collect phase metrics**: consolidate the session file's **Phase log** rows into `docs/metrics/phase-log.md` (create it with the same header if absent) in a single append — one block's rows per closure. Drop or fix any row whose value falls outside its column vocabulary (`model`/`effort` enums; numeric `elapsed`/`findings`) so the persistent log stays aggregable; never invent values for missing cells. Do this before deleting the session file (the Phase log lives in it). Cost is elapsed + model/effort, never tokens; keep this file as raw data — no automatic threshold-fitting. **Unvalidated:** if `docs/metrics/phase-log.md` is still empty after ~2 closed blocks, per-phase logging is not holding — simplify it rather than carry dead ceremony.
-1. **Cleanup gate** (mandatory - no removal happens outside it; runs after steps 0/0b so consolidation and metrics are already banked, and BEFORE the worktree teardown in 1c):
+1. **Cleanup gate** (mandatory - no removal happens outside it; runs after steps 0/0b so consolidation and metrics are already banked):
 
    ***** STOP — Cleanup confirmation *****
-   - WHY we stopped: files, branches and (if applicable) the worktree are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here, before the worktree disappears with anything still inside it.
-   - WHAT to do: review the full candidate list presented via `AskUserQuestion`: `.claude/session/block-[name].md` (session file - consolidated in steps 0/0b), `.claude/session/refactoring-findings.md` (scratch, now flushed), `.claude/FIRST_SESSION.md` (one-time onboarding guide, obsolete after the first block), audit-generated screenshots/artifacts (enumerate from `git status --porcelain` untracked leftovers and known output dirs; an empty scan must be stated, not assumed), the block branch, and - if this block ran in a worktree - the worktree directory `.claude/worktrees/[block-name]` itself. Also confirm serial staging is clear: no other developer active in a sibling worktree. The spec archive move (step 5) is a move, not a removal - it is not part of this gate.
-   - NEXT after action: only the approved items are deleted, the worktree teardown in 1c runs, then closure continues with step 2. If the session file is kept: set `block_closed: true` in its front matter so the next session does not resume it as interrupted.
+   - WHY we stopped: block files are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.
+   - WHAT to do: review the full candidate list presented via `AskUserQuestion`: `.claude/session/block-[name].md` (session file - consolidated in steps 0/0b), `.claude/session/refactoring-findings.md` (scratch, now flushed), `.claude/FIRST_SESSION.md` (one-time onboarding guide, obsolete after the first block), audit-generated screenshots/artifacts (enumerate from `git status --porcelain` untracked leftovers and known output dirs; an empty scan must be stated, not assumed). The block branch and, if this block ran in a worktree, the worktree directory are not candidates here: they carry the closure commits and the promotion, and are removed at the branch cleanup (step 11). Also confirm serial staging is clear: no other developer active in a sibling worktree. The spec archive move (step 5) is a move, not a removal - it is not part of this gate.
+   - NEXT after action: only the approved items are deleted, then closure continues with step 2. If the session file is kept: set `block_closed: true` in its front matter so the next session does not resume it as interrupted.
    *****
-
-1c. **Worktree teardown** *(only if this block ran in a worktree — skip otherwise; runs only on cleanup-gate approval)*:
-    - Run `ExitWorktree({action: "keep"})` first (never `"remove"` — the tool only removes worktrees it created via `name:`, not ones entered via `path:`; `"remove"` always fails here). Or close the worktree session.
-    - `git worktree remove .claude/worktrees/[block-name]`
-    - `git branch -d worktree-[block-name]`
 
 2. Update `docs/implementation-checklist.md`: mark the block ✅.
 3. Update `CLAUDE.md` only if block introduces non-obvious patterns, changes access control rules, or adds a new convention.
@@ -410,10 +405,21 @@ Only after explicit confirmation (it covers the closure steps below, never the s
     ***** STOP — Promotion authorization (production) *****
     - WHY we stopped: the next command writes to the protected `main` branch and ships the block to production. No prior approval (Phase 6 sign-off, closure confirmation, or a `/pr-review` verdict) covers this push.
     - WHAT to do: confirm you want exactly this to run: `git checkout main && git merge staging --no-ff && git push origin main`.
-    - NEXT after action: reply with the bare keyword `Promote` to authorize this ONE push; the merge+push runs, then Phase 8.5 context review closes the session.
+    - NEXT after action: reply with the bare keyword `Promote` to authorize this ONE push; the merge+push runs, then the step-11 branch cleanup.
     *****
 
     `git checkout main && git merge staging --no-ff && git push origin main`
+
+11. **Branch cleanup** (the block branch, and the worktree if this block ran in one, left the step-1 cleanup gate because the closure commits and the promotion needed them):
+
+    ***** STOP — Branch cleanup confirmation *****
+    - WHY we stopped: the merged block branch, and its worktree, are about to be removed; removal is never bundled into the promotion authorization.
+    - WHAT to do: review the candidates: the local block branch, now merged into `main`, and the worktree directory `.claude/worktrees/[block-name]` if this block ran in one.
+    - NEXT after action: confirm the list (or name what to keep); only the approved items are deleted, then Phase 8.5 context review closes the session.
+    *****
+
+    - Not in a worktree: `git branch -d feature/block-name`.
+    - In a worktree: run `ExitWorktree({action: "keep"})` first (never `"remove"` — the tool only removes worktrees it created via `name:`, not ones entered via `path:`; `"remove"` always fails here), or close the worktree session. Then `git worktree remove .claude/worktrees/[block-name]` and `git branch -d worktree-[block-name]`.
 
 ## Phase 8.5 - Context review + compact
 

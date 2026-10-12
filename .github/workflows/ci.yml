@@ -57,6 +57,10 @@ jobs:
       - name: Prettier
         run: npx --prefix packages/cli prettier --check packages/cli/src/ packages/cli/test/
 
+      # Banned patterns, wizard placeholder coverage, tier M/L file sync
+      - name: Template lint
+        run: node scripts/lint-templates.mjs
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
