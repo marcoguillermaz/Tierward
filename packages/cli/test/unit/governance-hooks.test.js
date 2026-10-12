@@ -397,6 +397,122 @@ describe('governance-gate hook — all-branches and mirror pushes (DEC-56 A)', (
   });
 });
 
+// A push that names no branch updates the current branch, or its upstream
+// (DEC-59 b): the gate asks git which branch that is. When git cannot tell
+// (no repository, detached HEAD), the push counts as a promotion.
+describe('governance-gate hook — pushes that name no branch (DEC-59 b)', () => {
+  const decision = (out) => (out.match(/"permissionDecision":"(\w+)"/) || [])[1] || 'allow';
+  const FM = 'block: test\nrequirements_approved: true\npromotion_approved: false';
+  const git = (cwd, ...args) => execFileSync('git', args, { cwd, stdio: 'ignore' });
+  // A repository checked out on `branch`, optionally tracking `upstream`.
+  function repoOn(branch, upstream) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-gate-repo-'));
+    git(dir, 'init', '-q');
+    git(dir, 'symbolic-ref', 'HEAD', `refs/heads/${branch}`);
+    if (upstream) {
+      git(dir, 'config', `branch.${branch}.remote`, 'origin');
+      git(dir, 'config', `branch.${branch}.merge`, `refs/heads/${upstream}`);
+    }
+    return dir;
+  }
+  const push = (command, cwd, opts) =>
+    decision(runHook(GATE, { tool_name: 'Bash', tool_input: { command }, cwd }, opts).stdout);
+  const NO_BRANCH = [
+    'git push',
+    'git push origin',
+    'git push -u origin HEAD',
+    'git push origin HEAD',
+    'git push origin @',
+    'git push --force-with-lease',
+    'git fetch && git push',
+  ];
+
+  it('treats them as a promotion when the current branch is main or staging', () => {
+    for (const branch of ['main', 'staging']) {
+      const dir = repoOn(branch);
+      try {
+        for (const cmd of NO_BRANCH) {
+          assert.equal(push(cmd, dir, { sessionFrontMatter: FM }), 'deny', `${branch}: ${cmd}`);
+        }
+        assert.equal(push('git push', dir), 'ask', `${branch}: outside a block`);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('reads the branch of the repository `git -C` names', () => {
+    const dir = repoOn('main');
+    const work = repoOn('feature/x');
+    try {
+      assert.equal(push(`git -C ${dir} push`, work, { sessionFrontMatter: FM }), 'deny');
+      // a relative -C resolves against the session's directory
+      const rel = path.relative(work, dir);
+      assert.equal(push(`git -C ${rel} push`, work, { sessionFrontMatter: FM }), 'deny');
+      assert.equal(push(`git -C ${work} push`, dir, { sessionFrontMatter: FM }), 'allow');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(work, { recursive: true, force: true });
+    }
+  });
+
+  it('treats them as a promotion when the upstream is main', () => {
+    const dir = repoOn('feature/x', 'main');
+    try {
+      assert.equal(push('git push', dir, { sessionFrontMatter: FM }), 'deny');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves them alone on a work branch', () => {
+    const dir = repoOn('feature/x', 'feature/x');
+    try {
+      for (const cmd of NO_BRANCH) {
+        assert.equal(push(cmd, dir, { sessionFrontMatter: FM }), 'allow', cmd);
+      }
+      assert.equal(push('git push --tags', dir, { sessionFrontMatter: FM }), 'allow');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('pushes of tags only never need the branch', () => {
+    const dir = repoOn('main');
+    try {
+      assert.equal(push('git push --tags', dir, { sessionFrontMatter: FM }), 'allow');
+      assert.equal(push('git push origin --tags', dir, { sessionFrontMatter: FM }), 'allow');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('counts them as a promotion when git cannot tell the branch', () => {
+    const notRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-gate-norepo-'));
+    const detached = repoOn('main');
+    try {
+      git(
+        detached,
+        '-c',
+        'user.name=t',
+        '-c',
+        'user.email=t@example.com',
+        'commit',
+        '--allow-empty',
+        '-q',
+        '-m',
+        'x',
+      );
+      git(detached, 'checkout', '-q', '--detach');
+      assert.equal(push('git push', notRepo, { sessionFrontMatter: FM }), 'deny', 'no repository');
+      assert.equal(push('git push origin HEAD', detached, { sessionFrontMatter: FM }), 'deny');
+    } finally {
+      fs.rmSync(notRepo, { recursive: true, force: true });
+      fs.rmSync(detached, { recursive: true, force: true });
+    }
+  });
+});
+
 // The scaffold no longer writes allow or ask rules (DEC-55), so the gate is
 // the only Tierward guard on a promotion: inside a block it needs `Promote`,
 // outside a block it asks the human. MCP tools that commit a file straight to
