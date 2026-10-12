@@ -3,7 +3,6 @@ name: external-review
 description: Run a fresh-context review of Tierward before a release. --mode=quick spawns a Claude general-purpose subagent with no project memory and an auto-bundled snapshot. --mode=full fans out the same bundle to GPT-4.1, Gemini 2.5 Pro, Mistral Large, and Perplexity Sonar Pro for cross-LLM coverage. Maintainer-only; not shipped to user projects.
 user-invocable: true
 model: sonnet
-context: fork
 allowed-tools: Bash Read Write Glob Agent
 argument-hint: --mode=quick|full [--focus=<area>]
 ---

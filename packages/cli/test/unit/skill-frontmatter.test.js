@@ -165,6 +165,23 @@ describe('shipped forked skills', () => {
     }
   });
 
+  // Maintainer-only, not shipped, same rule (DEC-54): its quick mode needs the
+  // result of a general-purpose subagent.
+  it("the maintainer's external-review skill delegates, so it does not fork", () => {
+    const file = path.join(
+      PACKAGE_ROOT,
+      '..',
+      '..',
+      '.claude',
+      'skills',
+      'external-review',
+      'SKILL.md',
+    );
+    const skill = parseSkillFile(fs.readFileSync(file, 'utf8'));
+    assert.match(skill.body, /subagent_type=general-purpose/);
+    assert.equal(skill.fields.context, null);
+  });
+
   it('the shipped guides no longer contradict each other on subagents', () => {
     const repo = path.join(PACKAGE_ROOT, '..', '..');
     const read = (rel) => fs.readFileSync(path.join(repo, rel), 'utf8');
