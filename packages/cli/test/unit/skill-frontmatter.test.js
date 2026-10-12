@@ -165,6 +165,28 @@ describe('shipped forked skills', () => {
     }
   });
 
+  // arch-audit's C13 check (and its AUTO-FIX) must not fork the skills that run
+  // in the main conversation on purpose: pr-review (DEC-53) and repo-hygiene
+  // (it asks the user mid-run), and a fork it adds waits for its result (DEC-46).
+  it("arch-audit's fork check leaves pr-review and repo-hygiene in the main conversation", () => {
+    const archAudit = [
+      ...['s', 'm', 'l'].map((t) =>
+        path.join(PACKAGE_ROOT, 'templates', `tier-${t}`, '.claude', 'skills', 'arch-audit'),
+      ),
+      path.join(PACKAGE_ROOT, '..', '..', 'plugin', 'skills', 'arch-audit'),
+    ];
+    for (const dir of archAudit) {
+      const batch = fs.readFileSync(path.join(dir, 'BATCH_COMMANDS.md'), 'utf8');
+      const row = batch.split('\n').find((line) => line.startsWith('| C13'));
+      assert.match(row, /pr-review/, dir);
+      assert.match(row, /repo-hygiene/, dir);
+      const skill = fs.readFileSync(path.join(dir, 'SKILL.md'), 'utf8');
+      const c13 = skill.slice(skill.indexOf('**C13 - '), skill.indexOf('**C14 - '));
+      assert.match(c13, /pr-review/, dir);
+      assert.match(c13, /background: false/, dir);
+    }
+  });
+
   // Maintainer-only, not shipped, same rule (DEC-54): its quick mode needs the
   // result of a general-purpose subagent.
   it("the maintainer's external-review skill delegates, so it does not fork", () => {
