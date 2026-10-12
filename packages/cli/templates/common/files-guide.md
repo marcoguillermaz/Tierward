@@ -166,11 +166,12 @@ variables, model selection, sandbox mode, and more.
 
 **Precedence** (highest to lowest): managed (org-wide) → command-line → local → project → user.
 
-**This project's `.claude/settings.json`** (committed): `permissions.allow` names the commands the pipeline runs
-(the git subcommands it uses, the stack's tools, the npx tools of the configured commands), so they run without a prompt.
-`permissions.ask` always prompts for promotion pushes, `git -c`, `npm exec`/`npm x` and MCP merge or file-write tools;
-`permissions.deny` refuses force pushes, `git add -A`/`--all`/`.` and destructive commands. Anything else follows your
-permission mode. Put personal overrides in `.claude/settings.local.json` or `~/.claude/settings.json`.
+**This project's `.claude/settings.json`** (committed): Tierward pre-approves no command, so there is no
+`permissions.allow` or `permissions.ask`: every command follows your own permission settings and mode.
+`permissions.deny` refuses force pushes, `git add -A`/`--all`/`.`, `git -c`, `npm exec`/`npm x` and destructive
+commands. Promotions (a push, a pull request merge or an MCP file write to a protected branch) go through the
+governance gate hook: `Promote` inside a block, a confirmation outside one. Put your own rules in
+`.claude/settings.local.json` or `~/.claude/settings.json`.
 
 Key settings configured:
 - `attribution.commit/pr: ""` - suppresses automatic Co-Authored-By (pipeline adds it manually in commit heredoc)

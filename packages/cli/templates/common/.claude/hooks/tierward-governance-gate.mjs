@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 // Governance enforcement gate (Tierward v1.34+).
-// Wired as a `PreToolUse` hook on the `Bash` matcher and on the MCP pull-request
-// merge tools. Blocks `git commit` when the active block's requirements have not
-// been approved by the human (see tierward-capture-approval.mjs, which records
-// approval from the human's prompt). Also blocks a promotion, meaning a `git push`
-// toward a protected branch (staging/main) or a pull request merge (`gh pr merge`,
-// an MCP `merge_pull_request` tool), unless the human authorized it with a bare
-// `Promote` — a one-shot flag consumed per promotion, so no promotion is ever
-// automatic and no prior execution keyword covers it.
+// Wired as a `PreToolUse` hook on the `Bash` matcher and on the MCP tools that
+// merge a pull request or write a file to a branch. Blocks `git commit` when the
+// active block's requirements have not been approved by the human (see
+// tierward-capture-approval.mjs, which records approval from the human's
+// prompt). Also blocks a promotion, meaning a `git push` toward a
+// protected branch (staging/main), a pull request merge (`gh pr merge`, an MCP
+// `merge_pull_request` tool) or an MCP file write (`push_files`,
+// `create_or_update_file`, `delete_file`) to a protected branch, unless the
+// human authorized it with a bare `Promote` — a one-shot flag consumed per
+// promotion, so no promotion is ever automatic and no prior execution keyword
+// covers it. Outside a block there is no `Promote` to give, so a promotion asks
+// the human to confirm it: the scaffold writes no allow or ask rules, and this
+// gate is Tierward's only guard on a promotion.
 //
 // WHY PreToolUse, not Stop: approval requires Claude to YIELD THE TURN so the human
 // can type "Proceed". The Stop hook blocks the turn-yield — gating approval there is
@@ -22,16 +27,19 @@
 // human-attested, hook-enforced gate; it is not an adversarial sandbox.
 //
 // Spec reference: https://code.claude.com/docs/en/hooks
-//   - matcher: "Bash", and a regex for MCP merge tools (`mcp__<server>__merge_pull_request`,
-//     `mcp__plugin_<plugin>_<server>__merge_pull_request`)
-//   - input: JSON on stdin with tool_name and tool_input (tool_input.command for Bash)
+//   - matcher: "Bash", and a regex for the MCP merge and write tools
+//     (`mcp__<server>__<tool>`, `mcp__plugin_<plugin>_<server>__<tool>`)
+//   - input: JSON on stdin with tool_name and tool_input (tool_input.command for
+//     Bash, tool_input.branch for the MCP write tools)
 //   - block: exit 0 with hookSpecificOutput.permissionDecision = "deny" + reason
+//   - confirm: exit 0 with hookSpecificOutput.permissionDecision = "ask" + reason
 //   - allow: exit 0 silently (no output)
 //
-// Fail-open: no input or no active session file → allow. A misconfigured project
-// never has commits blocked spuriously; worst case is the pre-v1.34 status quo
-// (no governance gate). A command the parser cannot read falls back to the
-// whole-text check below, not to allow.
+// Fail-open: no input, or a commit with no active session file → allow. A
+// misconfigured project never has commits blocked spuriously; worst case is the
+// pre-v1.34 status quo (no governance gate). A promotion with no active session
+// file asks instead of allowing. A command the parser cannot read falls back to
+// the whole-text check below, not to allow.
 
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -62,6 +70,9 @@ const PROTECTED = '(staging|main)';
 // nor a merge through the REST API (`gh api .../pulls/<n>/merge`).
 const PROTECTED_BRANCH_RE = new RegExp(`^(?:refs/heads/)?${PROTECTED}$`);
 const MCP_MERGE_TOOL_RE = /^mcp__.+__merge_pull_request$/;
+// MCP tools that commit a file straight to the branch they are given. Their
+// schemas require `branch`; a call without one is treated as a protected write.
+const MCP_WRITE_TOOL_RE = /^mcp__.+__(push_files|create_or_update_file|delete_file)$/;
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh']);
 const GIT_OPTIONS_WITH_VALUE = new Set([
   '-C',
@@ -352,29 +363,50 @@ function consumePromotionApproval(file) {
   );
 }
 
-function deny(reason) {
+function decide(permissionDecision, reason) {
   process.stdout.write(
     JSON.stringify({
-      hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason },
+      hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision, permissionDecisionReason: reason },
     }),
   );
   process.exit(0);
+}
+
+const deny = (reason) => decide('deny', reason);
+const ask = (reason) => decide('ask', reason);
+
+// An MCP write lands on a protected branch when it names one, or names none.
+function writesProtectedBranch(branch) {
+  if (typeof branch !== 'string' || branch.trim() === '') return true;
+  return PROTECTED_BRANCH_RE.test(branch.trim());
+}
+
+// { push, merge, commit } for one tool call.
+function classify(payload) {
+  const tool = payload?.tool_name || '';
+  if (MCP_MERGE_TOOL_RE.test(tool)) return { push: false, merge: true, commit: false };
+  if (MCP_WRITE_TOOL_RE.test(tool)) {
+    return { push: writesProtectedBranch(payload?.tool_input?.branch), merge: false, commit: false };
+  }
+  return inspect(payload?.tool_input?.command || '');
 }
 
 async function main() {
   try {
     const raw = await readStdin();
     if (!raw.trim()) process.exit(0);
-    const payload = JSON.parse(raw);
-    const { push, merge, commit } = MCP_MERGE_TOOL_RE.test(payload?.tool_name || '')
-      ? { push: false, merge: true, commit: false }
-      : inspect(payload?.tool_input?.command || '');
+    const { push, merge, commit } = classify(JSON.parse(raw));
 
-    // Promotion gate first (stricter): a push naming a protected branch, or a
-    // pull request merge.
+    // Promotion gate first (stricter): a push or an MCP write to a protected
+    // branch, or a pull request merge.
     if (push || merge) {
       const file = activeSessionFile();
-      if (!file) process.exit(0); // no active block → gate inactive, allow
+      if (!file) {
+        // No block, so no `Promote` to check: the human confirms instead
+        ask(
+          'Tierward: this promotes to a protected branch (staging/main) and no block is open, so the `Promote` gate does not apply. Approve only if you want this promotion now.',
+        );
+      }
       if (!promotionApproved(file)) {
         deny(
           'Promotion to a protected branch (staging/main) requires its own authorization. Present the Promotion authorization gate (why / what runs / next step) and ask the developer to reply with the bare keyword `Promote`. No prior approval or execution keyword covers a promotion push or pull request merge.',

@@ -348,12 +348,88 @@ describe('governance-gate hook — promotion push gate', () => {
     assert.ok(blocked(stdout));
   });
 
-  it('promotion gate inactive without a session file (fail-open, like the commit gate)', () => {
+  it('asks for confirmation of a promotion push without a session file (no block, no Promote)', () => {
     const { stdout } = runHook(GATE, {
       tool_name: 'Bash',
       tool_input: { command: 'git push origin staging' },
     });
+    assert.ok(stdout.includes('"permissionDecision":"ask"'), stdout);
+  });
+});
+
+// The scaffold no longer writes allow or ask rules (DEC-55), so the gate is
+// the only Tierward guard on a promotion: inside a block it needs `Promote`,
+// outside a block it asks the human. MCP tools that commit a file straight to
+// a branch count as a push to that branch.
+describe('governance-gate hook — MCP writes and promotions outside a block (DEC-55)', () => {
+  const decision = (out) => (out.match(/"permissionDecision":"(\w+)"/) || [])[1] || 'allow';
+  const FM = 'block: test\nrequirements_approved: true\npromotion_approved: false';
+  const MCP_WRITE_TOOLS = [
+    'mcp__github__push_files',
+    'mcp__github__create_or_update_file',
+    'mcp__github__delete_file',
+    'mcp__plugin_github_github__push_files',
+  ];
+  const write = (toolName, branch, opts) => {
+    const toolInput = { owner: 'o', repo: 'r', path: 'a.md', content: 'x', message: 'm' };
+    if (branch !== undefined) toolInput.branch = branch;
+    return runHook(GATE, { tool_name: toolName, tool_input: toolInput }, opts);
+  };
+
+  it('denies an MCP write to a protected branch inside a block without `Promote`', () => {
+    for (const tool of MCP_WRITE_TOOLS) {
+      for (const branch of ['main', 'staging', 'refs/heads/main']) {
+        const { stdout } = write(tool, branch, { sessionFrontMatter: FM });
+        assert.equal(decision(stdout), 'deny', `${tool} -> ${branch}`);
+        assert.ok(stdout.includes('Promote'), 'deny reason must name the Promote keyword');
+      }
+    }
+  });
+
+  it('treats an MCP write with no branch as a write to a protected branch', () => {
+    const { stdout } = write('mcp__github__push_files', undefined, { sessionFrontMatter: FM });
+    assert.equal(decision(stdout), 'deny');
+  });
+
+  it('allows an MCP write to a protected branch once with `Promote`, then consumes the flag', () => {
+    const fm = 'block: test\nrequirements_approved: true\npromotion_approved: true';
+    const { stdout, sessionContent } = write('mcp__github__create_or_update_file', 'main', {
+      sessionFrontMatter: fm,
+    });
     assert.equal(stdout.trim(), '');
+    assert.match(sessionContent, /promotion_approved:\s*false/);
+  });
+
+  it('allows an MCP write to a work branch, inside or outside a block', () => {
+    for (const branch of ['feature/main-nav', 'fix/staging-copy', 'main-backup']) {
+      assert.equal(write('mcp__github__push_files', branch, { sessionFrontMatter: FM }).stdout, '');
+      assert.equal(write('mcp__github__push_files', branch).stdout, '');
+    }
+  });
+
+  it('asks outside a block for every promotion form: push, PR merge, MCP merge, MCP write', () => {
+    const bash = (command) => runHook(GATE, { tool_name: 'Bash', tool_input: { command } });
+    const cases = {
+      'git push origin main': bash('git push origin main'),
+      'git push origin HEAD:main': bash('git push origin HEAD:main'),
+      'gh pr merge 12 --merge': bash('gh pr merge 12 --merge'),
+      mcp__github__merge_pull_request: runHook(GATE, {
+        tool_name: 'mcp__github__merge_pull_request',
+        tool_input: { owner: 'o', repo: 'r', pullNumber: 12 },
+      }),
+      'mcp__github__push_files -> main': write('mcp__github__push_files', 'main'),
+    };
+    for (const [label, { stdout }] of Object.entries(cases)) {
+      assert.equal(decision(stdout), 'ask', label);
+      assert.ok(stdout.includes('"hookEventName":"PreToolUse"'), label);
+    }
+  });
+
+  it('stays silent outside a block for commits and work-branch pushes', () => {
+    for (const command of ['git commit -m "x"', 'git push -u origin feature/x', 'git status']) {
+      const { stdout } = runHook(GATE, { tool_name: 'Bash', tool_input: { command } });
+      assert.equal(stdout.trim(), '', command);
+    }
   });
 });
 
@@ -574,13 +650,13 @@ describe('governance-gate hook — pull request merge (D3)', () => {
     assert.match(sessionContent, /promotion_approved:\s*false/);
   });
 
-  it('ignores other MCP tools, and is inactive without a session file', () => {
+  it('ignores other MCP tools, and asks for a merge without a session file (DEC-55)', () => {
     assert.equal(mcp('mcp__github__create_pull_request').stdout.trim(), '');
     const { stdout } = runHook(GATE, {
       tool_name: 'mcp__github__merge_pull_request',
       tool_input: { pullNumber: 12 },
     });
-    assert.equal(stdout.trim(), '');
+    assert.ok(stdout.includes('"permissionDecision":"ask"'), stdout);
   });
 });
 

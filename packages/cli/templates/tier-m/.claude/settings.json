@@ -6,49 +6,6 @@
   },
   "includeGitInstructions": false,
   "permissions": {
-    "allow": [
-      "Bash(node:*)",
-      "Bash(npm:*)",
-      "Bash(git status *)",
-      "Bash(git diff *)",
-      "Bash(git log *)",
-      "Bash(git show *)",
-      "Bash(git add *)",
-      "Bash(git commit *)",
-      "Bash(git checkout *)",
-      "Bash(git switch *)",
-      "Bash(git branch *)",
-      "Bash(git fetch *)",
-      "Bash(git pull *)",
-      "Bash(git merge *)",
-      "Bash(git push *)",
-      "Bash(git worktree *)",
-      "Bash(git stash *)",
-      "Bash(git rev-parse *)",
-      "Bash(git rev-list *)",
-      "Bash(git merge-base *)",
-      "Bash(git ls-files *)",
-      "Bash(git check-ignore *)",
-      "Edit(/.tierward/tmp/**)"
-    ],
-    "ask": [
-      "Bash(git push origin main*)",
-      "Bash(git push * main)",
-      "Bash(git push * main *)",
-      "Bash(git push *:main)",
-      "Bash(git push *:main *)",
-      "Bash(git push * +main)",
-      "Bash(git push * +main *)",
-      "Bash(git push *refs/heads/main)",
-      "Bash(git push *refs/heads/main *)",
-      "Bash(git -c *)",
-      "Bash(npm exec *)",
-      "Bash(npm x *)",
-      "mcp__*__merge_pull_request",
-      "mcp__*__push_files",
-      "mcp__*__create_or_update_file",
-      "mcp__*__delete_file"
-    ],
     "deny": [
       "Bash(git add -A*)",
       "Bash(git add --all*)",
@@ -58,6 +15,9 @@
       "Bash(git add * -A*)",
       "Bash(git add * --all*)",
       "Bash(git push --force*)",
+      "Bash(git -c *)",
+      "Bash(npm exec *)",
+      "Bash(npm x *)",
       "Bash(rm -rf /*)",
       "Bash(DROP TABLE*)",
       "Bash(DROP DATABASE*)",
@@ -88,7 +48,7 @@
         ]
       },
       {
-        "matcher": "^mcp__.+__merge_pull_request$",
+        "matcher": "^mcp__.+__(merge_pull_request|push_files|create_or_update_file|delete_file)$",
         "hooks": [
           {
             "type": "command",

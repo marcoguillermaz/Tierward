@@ -9,6 +9,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **New projects pre-approve no command.** `.claude/settings.json` no longer has `permissions.allow` or `permissions.ask`. Every command goes through your own permission settings and mode, so in the default mode Claude Code asks before running a command you have not allowed. The deny list stays and now also refuses `git -c`, `npm exec` and `npm x`, which used to ask. In `pr` mode the pushes to `main` stay denied.
+- **The governance gate guards every promotion.** It now also sees the GitHub MCP tools that write a file to a branch (`push_files`, `create_or_update_file`, `delete_file`): a write to `main` or `staging` needs `Promote`, like a push. With no block open, a push, merge or file write to a protected branch now asks you to confirm instead of running unchecked.
+- **`init` keeps an existing `.claude/settings.json`.** "New project" used to overwrite it, and "Existing project" changed its allow and deny rules on native stacks without adding Tierward's hooks. Both modes now write a timestamped backup next to it (`settings.json.bak.<timestamp>`) and add only Tierward's hooks, so the governance gate runs there too. Your permissions and other settings stay as they are. Running `init` again, or switching tier, replaces Tierward's hooks instead of adding them twice.
+
+Existing projects: `tierward upgrade` shows the new governance gate as a diff and does not rewrite `.claude/settings.json`. By hand:
+
+- Copy the new `.claude/hooks/tierward-governance-gate.mjs`.
+- In `.claude/settings.json`, change the matcher `^mcp__.+__merge_pull_request$` to `^mcp__.+__(merge_pull_request|push_files|create_or_update_file|delete_file)$`. Without it the gate never sees the MCP writes.
+- Optional, for the new defaults: remove `permissions.allow` and `permissions.ask`, and add `Bash(git -c *)`, `Bash(npm exec *)` and `Bash(npm x *)` to `permissions.deny`.
+
 ---
 
 ## [2.2.0] — 2026-10-11
