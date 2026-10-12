@@ -5250,11 +5250,27 @@ async function scenarioExistingUserSettings() {
       const dir = await seed(`existing-settings-${initMode}-${stack}`);
       await run(dir);
 
+      // DEC-73: the user's deny rules first, then the template's (a fresh
+      // scaffold of the same config says which), allow and ask untouched
+      const fresh = await scaffold(`existing-settings-fresh-${initMode}-${stack}`, 'm', config);
+      const freshDeny = JSON.parse(read(fresh)).permissions.deny;
+      const expectedDeny = [
+        ...userSettings.permissions.deny,
+        ...freshDeny.filter((rule) => !userSettings.permissions.deny.includes(rule)),
+      ];
       const after = JSON.parse(read(dir));
       const problems = [
-        ...['permissions', 'env']
-          .filter((key) => JSON.stringify(after[key]) !== JSON.stringify(userSettings[key]))
+        ...['allow', 'ask']
+          .filter(
+            (key) =>
+              JSON.stringify(after.permissions?.[key]) !==
+              JSON.stringify(userSettings.permissions[key]),
+          )
           .map((key) => `${key} changed`),
+        ...(JSON.stringify(after.permissions?.deny) === JSON.stringify(expectedDeny)
+          ? []
+          : ['deny is not the user list followed by the template list']),
+        ...(JSON.stringify(after.env) === JSON.stringify(userSettings.env) ? [] : ['env changed']),
         ...(after.hooks?.Stop?.some(
           (g) => JSON.stringify(g) === JSON.stringify(userSettings.hooks.Stop[0]),
         )
@@ -5273,7 +5289,7 @@ async function scenarioExistingUserSettings() {
         problems.push(`backup: ${saved.join(', ') || 'none'}`);
       }
       if (problems.length === 0) {
-        pass(`${label}: user permissions and keys kept, Tierward hooks added, backup written`);
+        pass(`${label}: allow, ask and keys kept, Tierward hooks and deny rules added, backup`);
       } else {
         fail(`${label}: existing settings not kept`, problems.join(' | '));
       }
@@ -5295,10 +5311,143 @@ async function scenarioExistingUserSettings() {
   await scaffoldTier('m', switched, cfg('m'), TEMPLATES_DIR);
   const direct = await seed('existing-settings-direct-m');
   await scaffoldTier('m', direct, cfg('m'), TEMPLATES_DIR);
-  if (read(switched) === read(direct)) {
-    pass('existing-settings[tier change s->m]: same file as a direct Tier M install');
+  const switchedJson = JSON.parse(read(switched));
+  const directJson = JSON.parse(read(direct));
+  const switchProblems = [
+    ...(JSON.stringify(switchedJson.hooks) === JSON.stringify(directJson.hooks)
+      ? []
+      : ['Tier S hooks left next to Tier M hooks']),
+    ...directJson.permissions.deny
+      .filter((rule) => !switchedJson.permissions.deny.includes(rule))
+      .map((rule) => `Tier M deny rule missing: ${rule}`),
+  ];
+  if (switchProblems.length === 0) {
+    pass(
+      'existing-settings[tier change s->m]: same hooks and deny rules as a direct Tier M install',
+    );
   } else {
-    fail('existing-settings[tier change s->m]: Tier S hooks left next to Tier M hooks');
+    fail(
+      'existing-settings[tier change s->m]: differs from a direct install',
+      switchProblems.join(' | '),
+    );
+  }
+}
+
+// F3 (DEC-73): an existing settings.json gains Tierward's deny rules on every
+// init path: the pr-mode push denies, the tier's extra rules on a tier switch,
+// the stack's publish denies in place. Allow and ask rules are never written
+// or changed, and init lists the rules it added with the backup path.
+async function scenarioExistingSettingsDeny() {
+  section('Existing settings.json - Tierward deny rules added, allow and ask untouched');
+
+  const settingsFile = (dir) => path.join(dir, '.claude', 'settings.json');
+  const readJson = (dir) => JSON.parse(fs.readFileSync(settingsFile(dir), 'utf8'));
+  const seed = async (name, settings) => {
+    const dir = path.join(OUTPUT_DIR, name);
+    await fs.remove(dir);
+    await fs.ensureDir(path.join(dir, '.claude'));
+    await fs.writeFile(settingsFile(dir), JSON.stringify(settings, null, 2) + '\n');
+    return dir;
+  };
+  const cfg = (tier, extra = {}) => ({ ...BASE, tier, isDiscovery: false, ...extra });
+  const captured = async (fn) => {
+    const logs = [];
+    const origLog = console.log;
+    console.log = (msg) => logs.push(String(msg));
+    try {
+      await fn();
+    } finally {
+      console.log = origLog;
+    }
+    return logs.join('\n');
+  };
+
+  // pr mode over an empty deny list: the pushes to main are denied there too
+  {
+    const label = 'existing-settings-deny[pr/m]';
+    const dir = await seed('existing-settings-deny-pr', { permissions: { deny: [] } });
+    await scaffoldTier('m', dir, cfg('m', { promotion: 'pr' }), TEMPLATES_DIR);
+    const { allow, ask, deny = [] } = readJson(dir).permissions;
+    const problems = [
+      ...PR_MODE_PUSH_DENY.filter((rule) => !deny.includes(rule)).map((rule) => `missing ${rule}`),
+      ...(allow === undefined ? [] : ['allow written']),
+      ...(ask === undefined ? [] : ['ask written']),
+    ];
+    if (problems.length === 0) {
+      pass(`${label}: pushes to main denied in the user file, no allow or ask written`);
+    } else {
+      fail(`${label}: pr-mode denies not applied`, problems.join(' | '));
+    }
+  }
+
+  // tier switch m -> l: Tier L's extra rules join, Tier M's stay
+  {
+    const label = 'existing-settings-deny[tier change m->l]';
+    const dir = await seed('existing-settings-deny-m-to-l', { permissions: { deny: [] } });
+    await scaffoldTier('m', dir, cfg('m'), TEMPLATES_DIR);
+    const afterM = readJson(dir).permissions.deny;
+    await scaffoldTier('l', dir, cfg('l'), TEMPLATES_DIR);
+    const afterL = readJson(dir).permissions.deny;
+    const freshL = readJson(await scaffold('existing-settings-deny-fresh-l', 'l', cfg('l')))
+      .permissions.deny;
+    const problems = [
+      ...freshL
+        .filter((rule) => !afterL.includes(rule))
+        .map((rule) => `Tier L rule missing: ${rule}`),
+      ...afterM.filter((rule) => !afterL.includes(rule)).map((rule) => `Tier M rule lost: ${rule}`),
+    ];
+    if (problems.length === 0) {
+      pass(`${label}: Tier L rules added, Tier M rules kept`);
+    } else {
+      fail(`${label}: deny rules after the switch`, problems.join(' | '));
+    }
+  }
+
+  // in-place init over a file shaped like a 2.1.0 scaffold, native stack: the
+  // old allow and ask lists stay, the old deny rules stay first, the template's
+  // and the stack's deny rules follow, and init names what it added
+  {
+    const label = 'existing-settings-deny[in-place/swift/m over a 2.1.0 file]';
+    const old = {
+      permissions: {
+        allow: [
+          'Bash(node:*)',
+          'Bash(npm:*)',
+          'Bash(npx:*)',
+          'Bash(git status:*)',
+          'Bash(git diff:*)',
+        ],
+        ask: ['Bash(git push origin main*)'],
+        deny: ['Bash(rm -rf /*)', 'Bash(git push --force*)'],
+      },
+    };
+    const swift = { techStack: 'swift', testCommand: 'swift test', typeCheckCommand: '' };
+    const dir = await seed('existing-settings-deny-2-1-0', old);
+    const out = await captured(() =>
+      scaffoldTierSafe('m', dir, cfg('m', { ...swift, mode: 'in-place' }), TEMPLATES_DIR),
+    );
+    const freshDeny = readJson(
+      await scaffold('existing-settings-deny-fresh-swift-m', 'm', cfg('m', swift)),
+    ).permissions.deny;
+    const { allow, ask, deny } = readJson(dir).permissions;
+    const added = freshDeny.filter((rule) => !old.permissions.deny.includes(rule));
+    const problems = [
+      ...(JSON.stringify(allow) === JSON.stringify(old.permissions.allow) ? [] : ['allow changed']),
+      ...(JSON.stringify(ask) === JSON.stringify(old.permissions.ask) ? [] : ['ask changed']),
+      ...(JSON.stringify(deny.slice(0, 2)) === JSON.stringify(old.permissions.deny)
+        ? []
+        : ['old deny rules not kept first']),
+      ...added.filter((rule) => !deny.includes(rule)).map((rule) => `missing ${rule}`),
+      ...(deny.includes('Bash(xcodebuild archive*)') ? [] : ['stack publish deny missing']),
+      ...added.filter((rule) => !out.includes(rule)).map((rule) => `not listed: ${rule}`),
+      ...(/settings\.json\.bak\./.test(out) ? [] : ['backup path not printed']),
+      ...(old.permissions.allow.some((rule) => out.includes(rule)) ? ['allow rules listed'] : []),
+    ];
+    if (problems.length === 0) {
+      pass(`${label}: allow and ask kept, deny rules added and listed with the backup`);
+    } else {
+      fail(`${label}: deny rules on an older file`, problems.join(' | '));
+    }
   }
 }
 
@@ -5361,10 +5510,15 @@ async function scenarioSettingsSafety() {
           problems.push('Stop hook does not run the quoted command');
         }
         if (withSettings) {
-          for (const key of ['permissions', 'env']) {
-            if (JSON.stringify(settings[key]) !== JSON.stringify(userSettings[key])) {
-              problems.push(`${key} changed`);
-            }
+          // the deny list grows by Tierward's rules (DEC-73); allow and env stay
+          if (
+            JSON.stringify(settings.permissions?.allow) !==
+            JSON.stringify(userSettings.permissions.allow)
+          ) {
+            problems.push('allow changed');
+          }
+          if (JSON.stringify(settings.env) !== JSON.stringify(userSettings.env)) {
+            problems.push('env changed');
           }
           if (backups(dir).length !== 1 || backupRaw(dir) !== userRaw) {
             problems.push(`backup: ${backups(dir).join(', ') || 'none'}`);
@@ -6090,6 +6244,7 @@ async function main() {
   await scenarioPromotionInsideWorktree();
   await scenarioNoPreapprovedCommands();
   await scenarioExistingUserSettings();
+  await scenarioExistingSettingsDeny();
   await scenarioSettingsSafety();
   await scenarioDoctorPreCommitYaml();
   await scenarioFromContextAnswers();

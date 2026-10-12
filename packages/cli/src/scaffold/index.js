@@ -38,6 +38,19 @@ async function applyAuditModel(targetDir, config, keep = []) {
 
 const SETTINGS_FILE = path.join('.claude', 'settings.json');
 
+// Publish and release commands denied per stack, on top of the tier template's
+// deny list. JavaScript stacks and Go: the template list is complete.
+const STACK_DENY = {
+  swift: ['Bash(xcodebuild archive*)', 'Bash(xcrun altool --upload-app*)'],
+  kotlin: ['Bash(./gradlew publish*)', 'Bash(gradle publish*)'],
+  rust: ['Bash(cargo publish*)'],
+  dotnet: ['Bash(dotnet nuget push*)'],
+  java: ['Bash(mvn deploy*)', 'Bash(./gradlew publish*)', 'Bash(gradle publish*)'],
+  ruby: ['Bash(gem push*)'],
+  python: ['Bash(twine upload*)', 'Bash(alembic downgrade base*)'],
+};
+const stackDenyRules = (config) => STACK_DENY[config.techStack] || [];
+
 // The settings.json the project had before the scaffold ran, as
 // `{ raw, backup }` with its backup already written, or null. Read and backed
 // up before any template is copied, so a scaffold that fails midway cannot
@@ -81,8 +94,9 @@ async function tierwardSettings(tier, config, templatesDir) {
 }
 
 // Last step of every scaffold. A settings.json the scaffold wrote gets the
-// stack's deny rules. One the project already had keeps the user's
-// permissions and every other key, and gains Tierward's hooks (DEC-55).
+// stack's deny rules. One the project already had keeps the user's allow and
+// ask rules and every other key, and gains Tierward's hooks (DEC-55) and its
+// deny rules, the stack's included (DEC-73); Tier 0 carries no rules.
 async function finishSettings(tier, targetDir, config, templatesDir, userSettings) {
   if (userSettings === null) {
     await patchSettingsPermissions(targetDir, config);
@@ -90,7 +104,12 @@ async function finishSettings(tier, targetDir, config, templatesDir, userSetting
   }
   const { tierward, context } = await tierwardSettings(tier, config, templatesDir);
   if (!tierward) return;
-  await keepUserSettings(path.join(targetDir, SETTINGS_FILE), userSettings, tierward, context);
+  const deny = [
+    ...(tierward.permissions?.deny || []),
+    ...(tier === '0' ? [] : stackDenyRules(config)),
+  ];
+  const withStackDeny = { ...tierward, permissions: { ...tierward.permissions, deny } };
+  await keepUserSettings(path.join(targetDir, SETTINGS_FILE), userSettings, withStackDeny, context);
 }
 
 /**
@@ -349,18 +368,8 @@ async function patchSettingsPermissions(targetDir, config) {
   const settingsPath = path.join(targetDir, '.claude', 'settings.json');
   if (!(await fs.pathExists(settingsPath))) return;
 
-  const denyByStack = {
-    swift: ['Bash(xcodebuild archive*)', 'Bash(xcrun altool --upload-app*)'],
-    kotlin: ['Bash(./gradlew publish*)', 'Bash(gradle publish*)'],
-    rust: ['Bash(cargo publish*)'],
-    dotnet: ['Bash(dotnet nuget push*)'],
-    java: ['Bash(mvn deploy*)', 'Bash(./gradlew publish*)', 'Bash(gradle publish*)'],
-    ruby: ['Bash(gem push*)'],
-    python: ['Bash(twine upload*)', 'Bash(alembic downgrade base*)'],
-  };
-
-  const stackDeny = denyByStack[config.techStack];
-  if (!stackDeny) return; // JavaScript stacks and Go: the template list is complete
+  const stackDeny = stackDenyRules(config);
+  if (stackDeny.length === 0) return;
 
   try {
     const raw = await fs.readFile(settingsPath, 'utf8');

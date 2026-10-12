@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`init` adds its deny rules to an existing `.claude/settings.json`.** 2.3.0 left an existing file with its own rules only, so a project that had one got none of Tierward's deny rules, and in `pr` mode the pushes to `main` that the guide promises to deny were not denied. The same held on a tier switch and on an `init` over a project scaffolded by 2.1.0. `init` now adds Tierward's deny rules after yours, the tier's list, the `pr`-mode pushes to `main` and the stack's publish commands, skipping the ones you already have, and prints what it added with the backup path. It still writes no allow or ask rule and changes none of yours. A Tierward rule you removed on purpose comes back at the next `init`: remove it again afterwards. Existing projects: run `init` again, "Existing project", to receive the rules.
+
 ### Fixed
 
 - **`init` no longer loses an existing `.claude/settings.json` when the scaffold fails.** Since 2.3.0 the backup of that file was written at the end of the scaffold, after the templates had already replaced it, so a scaffold that failed in between left the file broken and no backup. The backup (`settings.json.bak.<timestamp>`) is now written before anything else is copied, in every mode and tier, and a scaffold that fails after the copy puts your file back as it was. If a 2.3.0 or 2.3.1 `init` failed over your settings file, restore it from git history.
