@@ -1,7 +1,8 @@
 // A project that already has a `.claude/settings.json` keeps it (DEC-55):
-// Tierward writes a timestamped backup, then adds only its own hooks. The
-// user's permissions and every other key stay exactly as they were, so an
-// `init` never overrides what the user allowed, asked or denied.
+// Tierward writes a timestamped backup before the scaffold touches anything,
+// then adds only its own hooks. The user's permissions and every other key
+// stay exactly as they were, so an `init` never overrides what the user
+// allowed, asked or denied.
 //
 // Tierward's own hook groups are recognised, so a second `init` or a tier
 // change replaces them instead of adding them again: a group is Tierward's
@@ -84,32 +85,43 @@ export function keptUserHooks(user, tierward, context) {
 }
 
 /**
- * Write the user's settings back with Tierward's hooks merged in, after a
- * timestamped backup of the user's original bytes. `userRaw` is the file as it
- * was before the scaffold ran. A file that is not valid JSON is restored as it
+ * The project's settings.json before the scaffold runs, as `{ raw, backup }`:
+ * the file's bytes and the timestamped backup written here, before anything
+ * else touches the file. `null` when the project has none.
+ */
+export async function backupUserSettings(settingsPath, now = new Date()) {
+  if (!(await fs.pathExists(settingsPath))) return null;
+  const raw = await fs.readFile(settingsPath, 'utf8');
+  const backup = backupPath(settingsPath, now);
+  await fs.writeFile(backup, raw);
+  return { raw, backup };
+}
+
+/**
+ * Write the user's settings back with Tierward's hooks merged in. `user` is
+ * what backupUserSettings returned before the scaffold ran: the file's bytes
+ * and the path of its backup. A file that is not valid JSON is put back as it
  * was and left without Tierward's hooks. Lists the user's hooks kept on the
  * events Tierward hooks. Returns `{ backup, keptHooks }`, or `null` when
  * nothing was merged.
  */
-export async function keepUserSettings(settingsPath, userRaw, tierward, context, now = new Date()) {
+export async function keepUserSettings(settingsPath, { raw, backup }, tierward, context) {
   let user;
   try {
-    user = JSON.parse(userRaw);
+    user = JSON.parse(raw);
     if (!user || typeof user !== 'object' || Array.isArray(user)) {
       throw new Error('the top level is not an object');
     }
   } catch (err) {
-    await fs.writeFile(settingsPath, userRaw);
+    await fs.writeFile(settingsPath, raw);
     console.warn(
       `[tierward] Warning: ${settingsPath} is not valid JSON (${err.message}). ` +
-        `It was left as it was and Tierward's hooks were not added: ` +
-        `fix the file and run init again.`,
+        `It was put back as it was and Tierward's hooks were not added: ` +
+        `fix the file and run init again. Your original file: ${backup}`,
     );
     return null;
   }
 
-  const backup = backupPath(settingsPath, now);
-  await fs.writeFile(backup, userRaw);
   const merged = mergeTierwardHooks(user, tierward, context);
   await fs.writeFile(settingsPath, JSON.stringify(merged, null, 2) + '\n');
 

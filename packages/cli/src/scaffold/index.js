@@ -9,7 +9,7 @@ import {
   getCheatsheetSkillsToRemove,
 } from './skill-registry.js';
 import { STACK_COMMANDS, TEST_INFRA_MARKERS } from '../utils/stack-commands.js';
-import { keepUserSettings } from './user-settings.js';
+import { backupUserSettings, keepUserSettings } from './user-settings.js';
 import { DEFAULT_AUDIT_MODEL, auditModelAlias } from '../utils/constants.js';
 
 // Skills that take the wizard's audit-model answer (DEC-57)
@@ -38,10 +38,25 @@ async function applyAuditModel(targetDir, config, keep = []) {
 
 const SETTINGS_FILE = path.join('.claude', 'settings.json');
 
-// The settings.json the project had before the scaffold ran, or null.
+// The settings.json the project had before the scaffold ran, as
+// `{ raw, backup }` with its backup already written, or null. Read and backed
+// up before any template is copied, so a scaffold that fails midway cannot
+// cost the project the file (DEC-71).
 async function existingSettings(targetDir) {
-  const file = path.join(targetDir, SETTINGS_FILE);
-  return (await fs.pathExists(file)) ? fs.readFile(file, 'utf8') : null;
+  return backupUserSettings(path.join(targetDir, SETTINGS_FILE));
+}
+
+// Run a scaffold body; when it fails after the project's settings.json was
+// read, put that file back as it was (the backup stays) before rethrowing.
+async function restoringSettings(targetDir, userSettings, body) {
+  try {
+    await body();
+  } catch (err) {
+    if (userSettings) {
+      await fs.writeFile(path.join(targetDir, SETTINGS_FILE), userSettings.raw).catch(() => {});
+    }
+    throw err;
+  }
 }
 
 // Tierward's settings for this tier, rendered for this project, and what
@@ -51,7 +66,9 @@ async function tierwardSettings(tier, config, templatesDir) {
   const render = async (t) => {
     const file = path.join(templatesDir, `tier-${t}`, SETTINGS_FILE);
     if (!(await fs.pathExists(file))) return null;
-    return JSON.parse(interpolate(await fs.readFile(file, 'utf8'), { ...config, tier: t }));
+    return JSON.parse(
+      renderFile(SETTINGS_FILE, await fs.readFile(file, 'utf8'), { ...config, tier: t }),
+    );
   };
   const knownGroups = [];
   for (const t of ['0', 's', 'm', 'l']) {
@@ -66,14 +83,14 @@ async function tierwardSettings(tier, config, templatesDir) {
 // Last step of every scaffold. A settings.json the scaffold wrote gets the
 // stack's deny rules. One the project already had keeps the user's
 // permissions and every other key, and gains Tierward's hooks (DEC-55).
-async function finishSettings(tier, targetDir, config, templatesDir, userRaw) {
-  if (userRaw === null) {
+async function finishSettings(tier, targetDir, config, templatesDir, userSettings) {
+  if (userSettings === null) {
     await patchSettingsPermissions(targetDir, config);
     return;
   }
   const { tierward, context } = await tierwardSettings(tier, config, templatesDir);
   if (!tierward) return;
-  await keepUserSettings(path.join(targetDir, SETTINGS_FILE), userRaw, tierward, context);
+  await keepUserSettings(path.join(targetDir, SETTINGS_FILE), userSettings, tierward, context);
 }
 
 /**
@@ -82,8 +99,14 @@ async function finishSettings(tier, targetDir, config, templatesDir, userRaw) {
  * No pipeline, no docs folder, no pre-commit, no .github.
  */
 async function scaffoldTier0(targetDir, config, templatesDir) {
-  const tierDir = path.join(templatesDir, 'tier-0');
   const userSettings = await existingSettings(targetDir);
+  await restoringSettings(targetDir, userSettings, () =>
+    writeTier0(targetDir, config, templatesDir, userSettings),
+  );
+}
+
+async function writeTier0(targetDir, config, templatesDir, userSettings) {
+  const tierDir = path.join(templatesDir, 'tier-0');
 
   // Copy Tier 0 files with interpolation (CLAUDE.md handled by generateClaudeMd)
   const files = [
@@ -97,7 +120,7 @@ async function scaffoldTier0(targetDir, config, templatesDir) {
     if (!(await fs.pathExists(srcPath))) continue;
     await fs.ensureDir(path.dirname(destPath));
     const content = await fs.readFile(srcPath, 'utf8');
-    await fs.writeFile(destPath, interpolate(content, config));
+    await fs.writeFile(destPath, renderFile(destPath, content, config));
   }
 
   // Copy the communication-governance rule only. Tier 0 deliberately gets no
@@ -129,9 +152,15 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
     return scaffoldTier0(targetDir, config, templatesDir);
   }
   assertPromotion(config);
+  const userSettings = await existingSettings(targetDir);
+  await restoringSettings(targetDir, userSettings, () =>
+    writeTier(tier, targetDir, config, templatesDir, userSettings),
+  );
+}
+
+async function writeTier(tier, targetDir, config, templatesDir, userSettings) {
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
-  const userSettings = await existingSettings(targetDir);
 
   // Copy common files - skip rules/ here, handled separately below
   const commonFileMap = {
@@ -395,7 +424,7 @@ async function copyTemplateDir(
     await fs.ensureDir(path.dirname(dest));
 
     const content = await fs.readFile(src, 'utf8');
-    await fs.writeFile(dest, interpolate(content, config));
+    await fs.writeFile(dest, renderFile(dest, content, config));
   }
 }
 
@@ -406,9 +435,15 @@ async function copyTemplateDir(
  */
 export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
   assertPromotion(config);
+  const userSettings = await existingSettings(targetDir);
+  await restoringSettings(targetDir, userSettings, () =>
+    writeTierSafe(tier, targetDir, config, templatesDir, userSettings),
+  );
+}
+
+async function writeTierSafe(tier, targetDir, config, templatesDir, userSettings) {
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
-  const userSettings = await existingSettings(targetDir);
   const userAuditSkills = await existingAuditModelSkills(targetDir);
 
   await copyTemplateDirSafe(
@@ -530,8 +565,35 @@ async function copyTemplateDirSafe(
 
     await fs.ensureDir(path.dirname(dest));
     const content = await fs.readFile(src, 'utf8');
-    await fs.writeFile(dest, interpolate(content, config));
+    await fs.writeFile(dest, renderFile(dest, content, config));
   }
+}
+
+/**
+ * Render one template file for its destination. A `.json` destination (the
+ * settings templates) carries user text inside JSON strings, the Stop hook's
+ * [TEST_COMMAND] among them, so every string value of the config is escaped
+ * as JSON writes it, and the result is parsed before anything is written: a
+ * template that does not render as JSON is refused by name instead of
+ * reaching the project. Every other file takes the values as typed.
+ */
+function renderFile(destName, content, config) {
+  if (!destName.endsWith('.json')) return interpolate(content, config);
+  const escaped = Object.fromEntries(
+    Object.entries(config).map(([key, value]) => [
+      key,
+      typeof value === 'string' ? JSON.stringify(value).slice(1, -1) : value,
+    ]),
+  );
+  const rendered = interpolate(content, escaped);
+  try {
+    JSON.parse(rendered);
+  } catch (err) {
+    throw new Error(`${destName}: the rendered file is not valid JSON (${err.message})`, {
+      cause: err,
+    });
+  }
+  return rendered;
 }
 
 /**
@@ -1377,6 +1439,7 @@ export { interpolate };
 // Exported for unit testing only - not part of the public API
 export const _testHelpers = {
   interpolate,
+  renderFile,
   pruneSkills,
   patchSettingsPermissions,
 };

@@ -1,7 +1,8 @@
 // A project that already has a `.claude/settings.json` keeps it (DEC-55):
-// Tierward adds its own hooks after a backup and never touches the user's
-// permissions or any other key. Its own hooks are recognised so a second
-// `init`, or a tier change, replaces them instead of adding them again.
+// Tierward backs it up before the scaffold writes anything, adds its own hooks
+// and never touches the user's permissions or any other key. Its own hooks are
+// recognised so a second `init`, or a tier change, replaces them instead of
+// adding them again.
 
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,6 +12,7 @@ import path from 'node:path';
 import {
   isTierwardHookGroup,
   mergeTierwardHooks,
+  backupUserSettings,
   keepUserSettings,
 } from '../../src/scaffold/user-settings.js';
 
@@ -102,7 +104,7 @@ describe('mergeTierwardHooks', () => {
   });
 });
 
-describe('keepUserSettings', () => {
+describe('backupUserSettings', () => {
   let dir;
   let settingsPath;
   beforeEach(async () => {
@@ -114,14 +116,55 @@ describe('keepUserSettings', () => {
     await fs.remove(dir);
   });
 
-  it('writes a timestamped backup of the original bytes, then the merged file', async () => {
+  it('writes a timestamped backup of the original bytes and returns them with its path', async () => {
     const raw = JSON.stringify(user, null, 4) + '\n';
-    await fs.writeFile(settingsPath, 'overwritten by the scaffold');
+    await fs.writeFile(settingsPath, raw);
     const now = new Date('2026-10-12T08:30:00Z');
-    const { backup } = await keepUserSettings(settingsPath, raw, tierM, ctx, now);
-    assert.equal(backup, `${settingsPath}.bak.2026-10-12T08-30-00`);
+    const result = await backupUserSettings(settingsPath, now);
+    assert.deepEqual(result, { raw, backup: `${settingsPath}.bak.2026-10-12T08-30-00` });
+    assert.equal(await fs.readFile(result.backup, 'utf8'), raw);
+    assert.equal(await fs.readFile(settingsPath, 'utf8'), raw, 'the file itself is untouched');
+  });
+
+  it('backs up a file that is not valid JSON too: the scaffold may overwrite it', async () => {
+    const raw = '{ "permissions": ';
+    await fs.writeFile(settingsPath, raw);
+    const { backup } = await backupUserSettings(settingsPath);
+    assert.equal(await fs.readFile(backup, 'utf8'), raw);
+  });
+
+  it('returns null, and writes nothing, when the project has no settings.json', async () => {
+    assert.equal(await backupUserSettings(settingsPath), null);
+    assert.deepEqual(await fs.readdir(path.dirname(settingsPath)), []);
+  });
+});
+
+describe('keepUserSettings', () => {
+  let dir;
+  let settingsPath;
+  const saved = (raw) => ({ raw, backup: `${settingsPath}.bak.2026-10-12T08-30-00` });
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tierward-user-settings-'));
+    settingsPath = path.join(dir, '.claude', 'settings.json');
+    await fs.ensureDir(path.dirname(settingsPath));
+  });
+  afterEach(async () => {
+    await fs.remove(dir);
+  });
+
+  it('writes the merged file over what the scaffold wrote, and reports the backup made at read time', async () => {
+    const raw = JSON.stringify(user, null, 4) + '\n';
+    await fs.writeFile(settingsPath, raw);
+    const read = await backupUserSettings(settingsPath, new Date('2026-10-12T08:30:00Z'));
+    await fs.writeFile(settingsPath, 'overwritten by the scaffold');
+    const { backup } = await keepUserSettings(settingsPath, read, tierM, ctx);
+    assert.equal(backup, read.backup);
     assert.equal(await fs.readFile(backup, 'utf8'), raw);
     assert.deepEqual(await fs.readJson(settingsPath), mergeTierwardHooks(user, tierM, ctx));
+    const backups = (await fs.readdir(path.dirname(settingsPath))).filter((f) =>
+      f.includes('.bak'),
+    );
+    assert.equal(backups.length, 1, 'no second backup');
   });
 
   // DEC-60 f: an inline hook an earlier Tierward version wrote is not recognised
@@ -140,7 +183,12 @@ describe('keepUserSettings', () => {
     console.log = (msg) => logs.push(String(msg));
     let result;
     try {
-      result = await keepUserSettings(settingsPath, JSON.stringify(withOld), tierWithStart, ctx);
+      result = await keepUserSettings(
+        settingsPath,
+        saved(JSON.stringify(withOld)),
+        tierWithStart,
+        ctx,
+      );
     } finally {
       console.log = origLog;
     }
@@ -161,7 +209,12 @@ describe('keepUserSettings', () => {
     console.log = (msg) => logs.push(String(msg));
     let result;
     try {
-      result = await keepUserSettings(settingsPath, JSON.stringify(onlyOwnEvent), tierM, ctx);
+      result = await keepUserSettings(
+        settingsPath,
+        saved(JSON.stringify(onlyOwnEvent)),
+        tierM,
+        ctx,
+      );
     } finally {
       console.log = origLog;
     }
@@ -169,13 +222,16 @@ describe('keepUserSettings', () => {
     assert.deepEqual(logs, []);
   });
 
-  it('leaves a malformed file as it was, with a warning and no backup', async () => {
+  it('puts a malformed file back as it was, with a warning that names the backup', async () => {
     const raw = '{ "permissions": ';
+    await fs.writeFile(settingsPath, raw);
+    const read = await backupUserSettings(settingsPath);
+    await fs.writeFile(settingsPath, 'overwritten by the scaffold');
     const warnings = [];
     const origWarn = console.warn;
     console.warn = (msg) => warnings.push(msg);
     try {
-      const result = await keepUserSettings(settingsPath, raw, tierM, ctx);
+      const result = await keepUserSettings(settingsPath, read, tierM, ctx);
       assert.equal(result, null);
     } finally {
       console.warn = origWarn;
@@ -183,9 +239,7 @@ describe('keepUserSettings', () => {
     assert.equal(await fs.readFile(settingsPath, 'utf8'), raw);
     assert.equal(warnings.length, 1);
     assert.match(warnings[0], /hooks were not added/i);
-    assert.deepEqual(
-      (await fs.readdir(path.dirname(settingsPath))).filter((f) => f.includes('.bak')),
-      [],
-    );
+    assert.ok(warnings[0].includes(read.backup), 'names the backup');
+    assert.equal(await fs.readFile(read.backup, 'utf8'), raw);
   });
 });

@@ -5191,6 +5191,153 @@ async function scenarioExistingUserSettings() {
   }
 }
 
+// A quoted test command, or a scaffold that fails midway, must never cost the
+// project its settings.json (P15a, DEC-71): the backup is written before any
+// template is copied, a `.json` render is escaped and parsed before the write,
+// and a scaffold that fails after the copy puts the user's file back.
+async function scenarioSettingsSafety() {
+  section('settings.json safety - quoted commands, backup before any write, restore on failure');
+
+  const userSettings = { permissions: { allow: ['Bash(make:*)'] }, env: { MY: '1' } };
+  const userRaw = JSON.stringify(userSettings, null, 2) + '\n';
+  const quoted = 'npx vitest run -t "fast"';
+  const settingsFile = (dir) => path.join(dir, '.claude', 'settings.json');
+  const read = (dir) => fs.readFileSync(settingsFile(dir), 'utf8');
+  const backups = (dir) =>
+    fs.readdirSync(path.join(dir, '.claude')).filter((f) => f.startsWith('settings.json.bak.'));
+  const backupRaw = (dir) => fs.readFileSync(path.join(dir, '.claude', backups(dir)[0]), 'utf8');
+  const seed = async (name, withSettings) => {
+    const dir = path.join(OUTPUT_DIR, name);
+    await fs.remove(dir);
+    await fs.ensureDir(path.join(dir, '.claude'));
+    if (withSettings) await fs.writeFile(settingsFile(dir), userRaw);
+    return dir;
+  };
+  const stopCommands = (settings) =>
+    (settings.hooks?.Stop || []).flatMap((group) => group.hooks.map((hook) => hook.command));
+
+  // (a) every tier and mode, with and without a prior settings.json: the quoted
+  // command renders as valid JSON, and a prior file keeps its keys with 1 backup
+  for (const tier of ['0', 's', 'm', 'l']) {
+    for (const safe of [false, true]) {
+      if (tier === '0' && safe) continue; // in-place init has no Tier 0
+      const initMode = safe ? 'in-place' : 'greenfield';
+      for (const withSettings of [true, false]) {
+        const label = `settings-safety[${tier}/${initMode}/${withSettings ? 'existing' : 'fresh'}]`;
+        const config = {
+          ...BASE,
+          tier,
+          isDiscovery: tier === '0',
+          mode: initMode,
+          testCommand: quoted,
+        };
+        const dir = await seed(`settings-safety-${tier}-${initMode}-${withSettings}`, withSettings);
+        try {
+          await (safe ? scaffoldTierSafe : scaffoldTier)(tier, dir, config, TEMPLATES_DIR);
+        } catch (err) {
+          fail(`${label}: scaffold threw`, err.message);
+          continue;
+        }
+        let settings;
+        try {
+          settings = JSON.parse(read(dir));
+        } catch (err) {
+          fail(`${label}: settings.json is not valid JSON`, err.message);
+          continue;
+        }
+        const problems = [];
+        if (!stopCommands(settings).some((command) => command.includes(quoted))) {
+          problems.push('Stop hook does not run the quoted command');
+        }
+        if (withSettings) {
+          for (const key of ['permissions', 'env']) {
+            if (JSON.stringify(settings[key]) !== JSON.stringify(userSettings[key])) {
+              problems.push(`${key} changed`);
+            }
+          }
+          if (backups(dir).length !== 1 || backupRaw(dir) !== userRaw) {
+            problems.push(`backup: ${backups(dir).join(', ') || 'none'}`);
+          }
+        } else if (backups(dir).length !== 0) {
+          problems.push('a backup was written with no prior settings.json');
+        }
+        if (problems.length === 0) {
+          pass(
+            `${label}: valid JSON, quoted command kept${withSettings ? ', keys kept, 1 backup' : ''}`,
+          );
+        } else {
+          fail(`${label}: settings.json unsafe`, problems.join(' | '));
+        }
+      }
+    }
+  }
+
+  // (b) a scaffold that fails after settings.json was copied: a templates copy
+  // whose common rule is a directory, so reading it throws once the tier files
+  // (settings.json included) are already on disk. The backup must exist and
+  // the user's file must be back as it was.
+  const brokenRule = path.join(OUTPUT_DIR, 'settings-safety-templates-broken-rule');
+  await fs.remove(brokenRule);
+  await fs.copy(TEMPLATES_DIR, brokenRule);
+  await fs.ensureDir(path.join(brokenRule, 'common', 'rules', 'zz-not-a-file.md'));
+  {
+    const label = 'settings-safety[m/greenfield/failure after the copy]';
+    const dir = await seed('settings-safety-failure-after-copy', true);
+    let threw = false;
+    try {
+      await scaffoldTier('m', dir, { ...BASE, tier: 'm', isDiscovery: false }, brokenRule);
+    } catch {
+      threw = true;
+    }
+    const problems = [];
+    if (!threw) problems.push('scaffold did not fail (fixture broken)');
+    if (backups(dir).length !== 1 || backupRaw(dir) !== userRaw) {
+      problems.push(`backup: ${backups(dir).join(', ') || 'none'}`);
+    }
+    if (read(dir) !== userRaw) problems.push('settings.json not restored');
+    if (problems.length === 0) {
+      pass(`${label}: scaffold failed, backup written before the copy, user file restored`);
+    } else {
+      fail(`${label}: settings.json lost`, problems.join(' | '));
+    }
+  }
+
+  // (c) a settings template that does not render as JSON is refused by name,
+  // before the write: the user's file is untouched and backed up.
+  const brokenSettings = path.join(OUTPUT_DIR, 'settings-safety-templates-broken-settings');
+  await fs.remove(brokenSettings);
+  await fs.copy(TEMPLATES_DIR, brokenSettings);
+  for (const tier of ['0', 'm']) {
+    await fs.writeFile(
+      path.join(brokenSettings, `tier-${tier}`, '.claude', 'settings.json'),
+      '{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "[TEST_COMMAND]"}]}]}',
+    );
+  }
+  for (const tier of ['0', 'm']) {
+    const label = `settings-safety[${tier}/greenfield/template not JSON]`;
+    const dir = await seed(`settings-safety-template-not-json-${tier}`, true);
+    let message = '';
+    try {
+      await scaffoldTier(tier, dir, { ...BASE, tier, isDiscovery: tier === '0' }, brokenSettings);
+    } catch (err) {
+      message = err.message;
+    }
+    const problems = [];
+    if (!/settings\.json/.test(message) || !/JSON/.test(message)) {
+      problems.push(`error: ${message || 'none'}`);
+    }
+    if (read(dir) !== userRaw) problems.push('settings.json changed');
+    if (backups(dir).length !== 1 || backupRaw(dir) !== userRaw) {
+      problems.push(`backup: ${backups(dir).join(', ') || 'none'}`);
+    }
+    if (problems.length === 0) {
+      pass(`${label}: refused by name, user file untouched, backup written`);
+    } else {
+      fail(`${label}: settings.json unsafe`, problems.join(' | '));
+    }
+  }
+}
+
 // `pr` promotion mode: no staging, the promotion is a pull request merged
 // behind the gate, and every string-exact rewrite of the transform fired.
 async function scenarioPrPromotion() {
@@ -5831,6 +5978,7 @@ async function main() {
   await scenarioPhase8CleanupOrder();
   await scenarioNoPreapprovedCommands();
   await scenarioExistingUserSettings();
+  await scenarioSettingsSafety();
   await scenarioDoctorPreCommitYaml();
   await scenarioFromContextAnswers();
 
