@@ -1183,6 +1183,9 @@ function assertNoStagingResiduals(dir, label) {
 // Runs the scaffolded governance gate on one command, with an active block and
 // no `Promote`. Returns true when the gate denies it. Guards the profile
 // rewrite of the gate's protected-branch list by behaviour, not by text.
+// The project is its own repository on the work branch: for a push that names
+// no branch the gate asks git which branch it is on, and without this it would
+// read the Tierward checkout, which CI runs on a detached HEAD.
 function scaffoldedGateDenies(dir, label, command) {
   const project = path.join(OUTPUT_DIR, `gate-probe-${label}`);
   fs.removeSync(project);
@@ -1191,11 +1194,15 @@ function scaffoldedGateDenies(dir, label, command) {
     path.join(project, '.claude', 'session', 'block-probe.md'),
     '---\nblock: probe\nrequirements_approved: true\npromotion_approved: false\n---\n',
   );
+  execFileSync('git', ['init', '-q'], { cwd: project });
+  execFileSync('git', ['symbolic-ref', 'HEAD', 'refs/heads/feature/block-name'], {
+    cwd: project,
+  });
   const stdout = execFileSync(
     'node',
     [path.join(dir, '.claude', 'hooks', 'tierward-governance-gate.mjs')],
     {
-      input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }),
+      input: JSON.stringify({ tool_name: 'Bash', tool_input: { command }, cwd: project }),
       env: { ...process.env, CLAUDE_PROJECT_DIR: project },
       encoding: 'utf8',
     },
