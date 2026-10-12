@@ -93,7 +93,7 @@ Read `CLAUDE.md` and check the Framework field.
 - **Native project**: skip to Step 4
 ```
 
-**Subagent delegation**: Do the work inside the skill. A skill with `context: fork` already runs in its own context, and a subagent it launches can outlive it. In a test on Claude Code 2.1.295 (October 2026), a subagent launched from a forked skill ran in the background, the skill finished without its result, and the result reached the main conversation instead. Run independent sub-checks one after the other:
+**Subagent delegation**: Do the work inside the skill. A skill with `context: fork` already runs in its own context, and a subagent it launches does not report back to it. On Claude Code 2.1.296 (October 2026), in interactive sessions and with `-p`, a subagent launched from a forked skill ran in the background, the skill ended before the result arrived, and the result reached the main conversation instead. If a skill must hand work to a subagent and use the result, leave out `context: fork`, as `/pr-review` does. Otherwise run independent sub-checks one after the other:
 
 ```markdown
 ## Step 2 - Run checks

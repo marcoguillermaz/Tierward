@@ -6,7 +6,7 @@ model: opus
 effort: high
 context: fork
 background: false
-allowed-tools: Read Glob Grep Bash Agent Edit Write
+allowed-tools: Read Glob Grep Bash Edit Write
 argument-hint: [target:section:<section>|target:table:<table>]
 ---
 
@@ -181,9 +181,9 @@ When a block applies migrations, run `/migration-audit` alongside `/skill-db` in
 
 ---
 
-## Step 3 - API query pattern check (Explore agent)
+## Step 3 - API query pattern check
 
-Launch a **single Explore subagent** (model: haiku) with the following instructions. Pass the API route file list from `[SITEMAP_OR_ROUTE_LIST]` as the file scope.
+Run the check below yourself, in this context, over the API route file list from `[SITEMAP_OR_ROUTE_LIST]` (no subagent: this skill runs in a forked context, and a subagent launched from it hands its result to the main conversation, not to this skill).
 
 ```
 MATCH | check_code | file:line | matched_pattern | severity

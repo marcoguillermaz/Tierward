@@ -6,7 +6,7 @@ model: sonnet
 context: fork
 background: false
 argument-hint: [target:section:<section-name>]
-allowed-tools: Read Glob Grep Agent Edit Write
+allowed-tools: Read Glob Grep Edit Write
 ---
 
 ## Configuration (fill in before first run)
@@ -65,15 +65,15 @@ Checks marked **[web only]** are skipped on native stacks. All other checks run 
 
 ---
 
-## Step 2 - Delegate grep checks to Explore agent
+## Step 2 - Grep checks
 
-Launch a **single Explore subagent** (model: haiku) with the following instructions and the exact file lists from Step 1. Pass all file paths explicitly - do not ask the agent to discover them.
+Run the checks below yourself, in this context, over the exact file lists from Step 1 (no subagent: this skill runs in a forked context, and a subagent launched from it hands its result to the main conversation, not to this skill).
 
-**Before launching**:
-1. Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` (already loaded in Step 1). For each CHECK, inline the user's grep patterns from the reference file into the instructions you pass to the Explore agent. If patterns are not yet filled, pass the checks as-is - the agent will use its own judgment to construct patterns.
-2. Pass the **Platform** value from Step 1. Instruct the Explore agent to skip checks marked `[web only]` if Platform is `native`.
+**Before running them**:
+1. Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` (already loaded in Step 1). For each CHECK, use the grep patterns filled in the reference file. If patterns are not yet filled, build them from the check definitions.
+2. Use the **Platform** value from Step 1: skip checks marked `[web only]` if Platform is `native`.
 
-### Instructions for the Explore agent:
+### Checks:
 
 "Run all 12 checks below. For each check: report the total match count, list every match as `file:line - excerpt`, and state PASS (0 matches) or FAIL (N matches). If a check returns 0 matches, explicitly state '0 matches - PASS'. Do not skip any check.
 
@@ -229,7 +229,7 @@ If all checks pass: output `UI Audit CLEAN - [DATE]. No violations found.`
 
 - Do NOT make any code changes during this skill. Audit only.
 - Do NOT re-read files already in context from Step 1.
-- The Explore agent in Step 2 handles all grep work. Do not duplicate searches in the main context.
+- Step 2 runs every grep check once. Do not repeat those searches in later steps.
 - **Pipeline integration**: Critical findings block Phase 6 progression per pipeline.md severity handling. Medium/Low findings are persisted to `docs/refactoring-backlog.md` via the backlog write-once protocol (`.claude/rules/backlog-protocol.md`).
 - **Concurrent execution**: when invoked from pipeline.md Phase 5d Track A, this skill launches concurrently with the first browser-based skill. It is fully static - no dev server required.
 - **Complementary skill**: run `/accessibility-audit` alongside `/ui-audit` for any UI change. It owns axe-core WCAG 2.2 scan, APCA contrast, and static a11y patterns (aria-label, tabindex, form labels, focus visibility, keyboard accessibility). These checks were migrated from this skill during the v2 review cycle.
@@ -238,4 +238,4 @@ If all checks pass: output `UI Audit CLEAN - [DATE]. No violations found.`
 
 ## Pattern reference
 
-All framework-specific grep patterns, verification methods, and platform configuration are in `${CLAUDE_SKILL_DIR}/PATTERNS.md`. Read it in Step 1 before launching the Explore agent.
+All framework-specific grep patterns, verification methods, and platform configuration are in `${CLAUDE_SKILL_DIR}/PATTERNS.md`. Read it in Step 1 before running the Step 2 checks.

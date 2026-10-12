@@ -785,8 +785,8 @@ All skill applicability rules are managed by a central skill registry (`packages
 
 - Code-audit skills are **audit-only** - no code is modified (except `/simplify`, which applies changes directly). Findings go to `docs/refactoring-backlog.md` with severity-ranked IDs (`PERF-`, `API-`, `DB-`, `MIG-`, `DEV-`, `SEC-`, `UX-`, `A11Y-`, `TEST-`).
 - Live-browser skills (`/responsive-audit`, `/ux-audit`, `/visual-audit`, `/accessibility-audit`) require the Playwright MCP server configured in `.claude/settings.json` and the dev server running. `/ui-audit` is static and does not require Playwright.
-- Each skill runs in an isolated context fork (`context: fork`) - it does not pollute the main session window. It also sets `background: false`, so the turn that runs it waits for the result.
-- Each skill delegates grep-heavy scanning to a Haiku Explore subagent to protect the main context window.
+- Each audit skill runs in an isolated context fork (`context: fork`), so it does not pollute the main session window. It also sets `background: false`, so the turn that runs it waits for the result.
+- Each forked skill runs its scans itself. A subagent launched from a forked skill hands its result to the main conversation, and the skill ends without it (observed on Claude Code 2.1.296, interactive and `-p`). `/pr-review` is the one skill that delegates: it does not fork, so the review subagent's result comes back to it.
 - Before first run: fill in the `## Configuration` placeholders at the top of each `SKILL.md`.
 - Skills not installed at init can be added later: `npx tierward add skill <name>`.
 

@@ -3,8 +3,6 @@ name: pr-review
 description: Autonomous local code review. Reviews either an open PR's diff (via `gh`) or the local working diff against a base branch (`--local`, auto-selected when no PR exists yet), spawns a dedicated review subagent with universal + stack-specific severity criteria, posts the review as a comment on the PR (audit trail; skipped in local mode), and asks for a decision. Stack-aware via sibling PATTERNS.md (node-ts, python, swift in v1; agnostic body fallback for others). Severity rules configurable via `team-settings.json` `prReviewSeverity` (Option β); hard-coded universal defaults when absent (Option α). Default model is sonnet; `--deep` escalates to opus. Skill never modifies code, never auto-merges — merge is always the user's decision.
 user-invocable: true
 model: sonnet
-context: fork
-background: false
 allowed-tools: Bash(gh pr view:*) Bash(gh pr list:*) Bash(gh pr diff:*) Bash(gh pr comment:*) Bash(gh repo view:*) Bash(git branch:*) Bash(git rev-parse:*) Bash(git diff:*) Bash(git merge-base:*) Bash(mkdir -p .tierward/tmp) Read Glob Grep Agent
 argument-hint: [PR_NUMBER] [--local] [--base <branch>] [--deep] [--with-context]
 ---

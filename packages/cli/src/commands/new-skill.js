@@ -206,7 +206,7 @@ export async function newSkill(options) {
         choices: [
           { name: 'low    - quick checks, single file', value: 'low' },
           { name: 'medium - multi-file analysis', value: 'medium' },
-          { name: 'high   - deep audit, subagent delegation', value: 'high' },
+          { name: 'high   - deep audit, multi-step reasoning', value: 'high' },
           { name: '(skip) - omit from frontmatter', value: '(skip)' },
         ],
         default: 'medium',

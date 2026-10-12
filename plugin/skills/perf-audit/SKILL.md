@@ -5,7 +5,7 @@ user-invocable: true
 model: sonnet
 context: fork
 background: false
-allowed-tools: Read Glob Grep Bash Agent Edit Write
+allowed-tools: Read Glob Grep Bash Edit Write
 argument-hint: [target:section:<section>|target:page:<route>|mode:audit|mode:apply]
 ---
 
@@ -87,9 +87,9 @@ Read `docs/refactoring-backlog.md` - note existing `PERF-` entries to avoid dupl
 
 ---
 
-## Step 2 - Server/Client boundary checks (Explore agent)
+## Step 2 - Server/Client boundary checks
 
-Launch a **single Explore subagent** (model: haiku) with all page, component, and lib files from Step 1:
+Run these checks yourself, in this context, over all page, component, and lib files from Step 1 (no subagent: this skill runs in a forked context, and a subagent launched from it hands its result to the main conversation, not to this skill):
 
 "Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` for framework-specific grep patterns. Run all 9 checks below. For each: state total match count, list every match as `file:line - excerpt`, and state PASS or FAIL.
 
@@ -162,7 +162,7 @@ Flag: any package with 100+ exports where only a subset is used, not covered by 
 
 ---
 
-## Step 4 - API query efficiency (Explore agent - separate pass)
+## Step 4 - API query efficiency (separate pass)
 
 "Run these 3 checks. Adapt grep patterns to the project's database client or ORM:
 
@@ -207,9 +207,9 @@ Run the profiler on the main execution path. Identify the top 5 hotspots by CPU 
 
 ---
 
-### Step 6a - Algorithmic and resource checks (Explore agent)
+### Step 6a - Algorithmic and resource checks
 
-Launch a **single Explore subagent** (model: haiku) with all source files from the project:
+Run these checks yourself, in this context, over all source files of the project:
 
 "Run these 4 checks on the provided source files. For each: state total match count, list every match as `file:line - excerpt`, and state PASS or FAIL.
 

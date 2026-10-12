@@ -19,6 +19,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **Every usual form of a force push is denied.** The deny list matched only `git push --force…` written with the flag first. It now also refuses `-f`, the flag at the end of the command, and a `+` refspec such as `git push origin +feature/x`.
 - **The governance gate sees pushes of every branch.** `git push --all` and `git push --mirror` update `main` and `staging` without naming them, so the gate now treats them as promotions.
+- **Audit skills run their scans themselves.** `/security-audit`, `/perf-audit`, `/accessibility-audit`, `/ui-audit`, `/skill-db` and `/api-design` told Claude to hand their grep scans to an Explore subagent. A skill with `context: fork` ends before a subagent it starts has returned, and the subagent's result goes to the main conversation (observed on Claude Code 2.1.296, in interactive sessions and with `-p`), so a delegated scan was missing from the report. The scans now run in the skill's own context, and these skills no longer pre-approve the Agent tool.
+- **`/pr-review` runs in the main conversation.** It no longer declares `context: fork`, so the result of its review subagent comes back to it. `--deep` still moves the review to Opus.
+- The `arch-audit` delegation check, the `skill-dev` agent guide, the operational guide and `docs/custom-skills.md` now agree: a forked skill does its own work, and a skill that needs a subagent's result does not fork.
+
+Existing projects: `tierward upgrade` does not rewrite skills. By hand, in each of the six audit skills listed above, replace the line that launches an Explore subagent with running the same checks in the skill and remove `Agent` from `allowed-tools`; in `.claude/skills/pr-review/SKILL.md`, delete the `context: fork` and `background: false` lines.
 
 Existing projects: `tierward upgrade` shows the new governance gate as a diff and does not rewrite `.claude/settings.json`. By hand:
 

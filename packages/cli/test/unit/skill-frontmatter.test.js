@@ -133,4 +133,61 @@ describe('shipped forked skills', () => {
       [],
     );
   });
+
+  // A forked skill ends before a subagent it launches returns, and the result
+  // lands in the main conversation (P12a probes, Claude Code 2.1.296, interactive
+  // and `-p`). So a forked skill does its work itself (DEC-53).
+  const DELEGATION =
+    /Launch [^.\n]*(sub)?agent|Explore (sub)?agent|spawn[^.\n]*subagent|subagent_type|run_in_background/i;
+
+  it('no forked skill launches a subagent or grants itself the Agent tool', () => {
+    const delegating = skillFiles
+      .map((file) => ({ file, skill: parseSkillFile(fs.readFileSync(file, 'utf8')) }))
+      .filter(({ skill }) => skill.fields.context === 'fork')
+      .filter(
+        ({ skill }) =>
+          DELEGATION.test(skill.body) || /(^|\s)Agent(\s|$)/.test(skill.fields.allowedTools || ''),
+      )
+      .map(({ file }) => path.relative(PACKAGE_ROOT, file));
+    assert.deepEqual(delegating, []);
+  });
+
+  it('pr-review runs in the main conversation and keeps its review subagent', () => {
+    const prReview = skillFiles.filter((file) => file.includes(`${path.sep}pr-review${path.sep}`));
+    assert.equal(prReview.length, 2, prReview.join(', '));
+    for (const file of prReview) {
+      const skill = parseSkillFile(fs.readFileSync(file, 'utf8'));
+      // parseSkillFile reports an absent field as null
+      assert.equal(skill.fields.context, null, file);
+      assert.equal(skill.fields.background, null, file);
+      assert.match(skill.body, /subagent_type: general-purpose/, file);
+      assert.match(skill.fields.allowedTools || '', /(^|\s)Agent(\s|$)/, file);
+    }
+  });
+
+  it('the shipped guides no longer contradict each other on subagents', () => {
+    const repo = path.join(PACKAGE_ROOT, '..', '..');
+    const read = (rel) => fs.readFileSync(path.join(repo, rel), 'utf8');
+    assert.ok(!read('docs/operational-guide.md').includes('delegates grep-heavy scanning'));
+    assert.ok(!read('docs/custom-skills.md').includes('In a test on Claude Code 2.1.295'));
+    const copies = (name) =>
+      roots.flatMap((root) =>
+        fs.existsSync(root)
+          ? fs
+              .readdirSync(root, { recursive: true })
+              .filter((rel) => path.basename(rel) === name)
+              .map((rel) => path.join(root, rel))
+          : [],
+      );
+    for (const file of copies('advanced-checks.md')) {
+      assert.ok(!fs.readFileSync(file, 'utf8').includes('Known exceptions to rule 1'), file);
+    }
+    for (const file of copies('AGENT_PATTERN.md')) {
+      assert.match(
+        fs.readFileSync(file, 'utf8'),
+        /`\/pr-review` does not declare `context: fork`/,
+        file,
+      );
+    }
+  });
 });
