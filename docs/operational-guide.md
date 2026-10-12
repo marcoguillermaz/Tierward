@@ -1275,7 +1275,7 @@ npx tierward doctor --ci      # silent mode: exit 1 if any check fails
 
 Runs 28 checks:
 
-1. Claude Code CLI is installed and reachable
+1. Claude Code CLI is installed and reachable (a warning when the `CI` variable is set, since CI runners do not have Claude Code)
 2. `CLAUDE.md` is present
 3. `CLAUDE.md` is under 200 lines
 4. `.claude/settings.json` is present and valid JSON

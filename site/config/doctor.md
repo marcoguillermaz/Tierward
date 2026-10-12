@@ -45,6 +45,8 @@ Use `--ci` in pull request workflows to block merges when the scaffold is broken
   run: npx tierward@latest doctor --report
 ```
 
+CI runners do not have Claude Code installed, so when the `CI` variable is set (GitHub Actions always sets it) a missing Claude Code CLI is a warning, not a failure.
+
 ## Fixing failures
 
 Most `doctor` failures have a direct fix:

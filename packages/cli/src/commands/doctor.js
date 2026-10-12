@@ -38,6 +38,16 @@ const checks = [
         execSync('claude --version', { stdio: 'pipe' });
         return { pass: true };
       } catch {
+        // CI runners have no Claude Code: there the check describes the runner,
+        // not the project, so it must not fail `--report` or `--ci`.
+        const ci = process.env.CI;
+        if (ci && ci !== 'false' && ci !== '0') {
+          return {
+            pass: false,
+            warn: true,
+            fix: 'Claude Code is not installed on this CI runner. Only the machines that run Claude Code need it.',
+          };
+        }
         return { pass: false, fix: 'Install Claude Code: https://claude.ai/code' };
       }
     },
