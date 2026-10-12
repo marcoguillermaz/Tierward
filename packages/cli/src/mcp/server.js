@@ -258,7 +258,7 @@ export function buildServer() {
       config: {
         title: 'Tierward doctor report',
         description:
-          'Runs `tierward doctor --report` against the current project and returns the JSON compliance summary (27 checks: governance files, hooks, skill spec, drift markers).',
+          'Runs `tierward doctor --report` against the current project and returns the JSON compliance summary (28 checks: governance files, hooks, skill spec, drift markers).',
         inputSchema: {},
       },
       handler: async () => buildToolReply(runDoctorReport(getCwd())),

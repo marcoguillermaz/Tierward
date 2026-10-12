@@ -15,6 +15,7 @@ import {
   hasPlaceholder,
   detectPipelineTier,
   detectPhaseCountTier,
+  yamlParseError,
 } from '../utils/doctor-cross-file.js';
 import { fileURLToPath } from 'url';
 import { ANTHROPIC_FILES, detectScaffoldedTier } from './upgrade.js';
@@ -426,7 +427,7 @@ const checks = [
         info: pass
           ? undefined
           : `H1 declares Tier ${declaredTier.toUpperCase()} but phase markers look like Tier ${bodyTier.toUpperCase()}`,
-        fix: 'Reconcile pipeline.md: H1 and phase sections must agree on tier. Reinstall via `tierward init --tier=<tier>` (choose "Existing project") if in doubt.',
+        fix: 'Reconcile pipeline.md: H1 and phase sections must agree on tier. If in doubt, reinstall the tier: commit, switch to a new branch, run `tierward init --tier=<tier>`, choose "New project" and review the diff (https://marcoguillermaz.github.io/Tierward/guide/tiers.html#changing-tier).',
       };
     },
   },
@@ -638,6 +639,23 @@ const checks = [
       } catch {
         return { pass: true, skip: true };
       }
+    },
+  },
+  {
+    // Warn, not fail: doctor cannot tell whether `pre-commit install` has run, and
+    // the config is inert until it has. Parse only; the schema is pre-commit's job.
+    id: 'pre-commit-config-parses',
+    label: '.pre-commit-config.yaml is valid YAML',
+    check: (cwd) => {
+      const p = path.join(cwd, '.pre-commit-config.yaml');
+      if (!fs.existsSync(p)) return { pass: true, skip: true };
+      const error = yamlParseError(fs.readFileSync(p, 'utf8'));
+      return {
+        pass: error === null,
+        warn: true,
+        info: error || undefined,
+        fix: `.pre-commit-config.yaml does not parse${error ? ` (${error})` : ''}: once \`pre-commit install\` has run, every \`git commit\` fails. Fix the line shown; if it is the AI commit audit hook scaffolded before 2.0.1, the 2.0.1 CHANGELOG entry has the replacement block. \`pre-commit validate-config\` checks the full schema.`,
+      };
     },
   },
 ];

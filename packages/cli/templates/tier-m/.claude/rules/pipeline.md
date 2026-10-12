@@ -304,8 +304,8 @@ Only after explicit confirmation (it covers the closure steps below, never the s
 1. **Cleanup gate** (mandatory - no removal happens outside it; runs after steps 0/0b so consolidation and metrics are already banked):
 
    ***** STOP — Cleanup confirmation *****
-   - WHY we stopped: files and branches are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.
-   - WHAT to do: review the full candidate list presented via `AskUserQuestion`: `.claude/session/block-[name].md` (session file - consolidated in steps 0/0b), `.claude/session/refactoring-findings.md` (scratch, now flushed), `.claude/FIRST_SESSION.md` (one-time onboarding guide, obsolete after the first block), audit-generated screenshots/artifacts (enumerate from `git status --porcelain` untracked leftovers and known output dirs; an empty scan must be stated, not assumed), and the local `feature/block-name` branch. The spec archive move (step 5) is a move, not a removal - it is not part of this gate.
+   - WHY we stopped: block files are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.
+   - WHAT to do: review the full candidate list presented via `AskUserQuestion`: `.claude/session/block-[name].md` (session file - consolidated in steps 0/0b), `.claude/session/refactoring-findings.md` (scratch, now flushed), `.claude/FIRST_SESSION.md` (one-time onboarding guide, obsolete after the first block), audit-generated screenshots/artifacts (enumerate from `git status --porcelain` untracked leftovers and known output dirs; an empty scan must be stated, not assumed). The `feature/block-name` branch is not a candidate here: it carries the closure commits and the promotion, and is removed at the branch cleanup (step 11). The spec archive move (step 5) is a move, not a removal - it is not part of this gate.
    - NEXT after action: only the approved items are deleted, then closure continues with step 2. If the session file is kept: set `block_closed: true` in its front matter so the next session does not resume it as interrupted.
    *****
 2. Update `docs/implementation-checklist.md`: mark the block ✅.
@@ -330,10 +330,20 @@ Only after explicit confirmation (it covers the closure steps below, never the s
     ***** STOP — Promotion authorization (production) *****
     - WHY we stopped: the next command writes to the protected `main` branch and ships the block to production. No prior approval (Phase 6 sign-off, closure confirmation, or a `/pr-review` verdict) covers this push.
     - WHAT to do: confirm you want exactly this to run: `git checkout main && git merge staging --no-ff && git push origin main`.
-    - NEXT after action: reply with the bare keyword `Promote` to authorize this ONE push; the merge+push runs, then Phase 8.5 context review closes the session.
+    - NEXT after action: reply with the bare keyword `Promote` to authorize this ONE push; the merge+push runs, then the step-11 branch cleanup.
     *****
 
     `git checkout main && git merge staging --no-ff && git push origin main`
+
+11. **Branch cleanup** (the branch left the step-1 cleanup gate because the closure commits and the promotion needed it):
+
+    ***** STOP — Branch cleanup confirmation *****
+    - WHY we stopped: the merged branch is about to be removed; removal is never bundled into the promotion authorization.
+    - WHAT to do: review the candidate: the local `feature/block-name` branch, now merged into `main`.
+    - NEXT after action: confirm (or keep the branch); only an approved branch is deleted, then Phase 8.5 context review closes the session.
+    *****
+
+    `git branch -d feature/block-name`
 
 ## Phase 8.5 - Context review + compact
 

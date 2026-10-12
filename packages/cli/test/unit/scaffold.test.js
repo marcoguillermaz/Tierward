@@ -5,7 +5,7 @@ import path from 'path';
 import os from 'os';
 import { _testHelpers } from '../../src/scaffold/index.js';
 
-const { interpolate, pruneSkills, patchSettingsPermissions, projectNpxRules } = _testHelpers;
+const { interpolate, pruneSkills, patchSettingsPermissions } = _testHelpers;
 
 // Helper: run interpolate on a single placeholder with given config
 function interp(placeholder, config) {
@@ -615,23 +615,12 @@ describe('pruneSkills', () => {
 describe('patchSettingsPermissions', () => {
   let tmpDir;
 
+  // The templates carry deny rules only (DEC-55): nothing is pre-approved
   const baseSettings = {
     permissions: {
-      allow: [
-        'Bash(node:*)',
-        'Bash(npm:*)',
-        'Bash(npx tsc *)',
-        'Bash(npx tierward *)',
-        'Bash(git status *)',
-        'Bash(git commit *)',
-        'Bash(docker:*)',
-      ],
       deny: ['Bash(npm publish*)'],
     },
   };
-
-  // Rules that are not template stack tools (node, npm, npx, docker) survive the swap
-  const keptAllow = ['Bash(npx tierward *)', 'Bash(git status *)', 'Bash(git commit *)'];
 
   async function writeSettings(dir, obj) {
     const settingsPath = path.join(dir, '.claude', 'settings.json');
@@ -652,45 +641,26 @@ describe('patchSettingsPermissions', () => {
     await fs.remove(tmpDir);
   });
 
-  // --- allow list per stack ---
+  const ALL_STACKS = [
+    'node-ts',
+    'node-js',
+    'swift',
+    'kotlin',
+    'rust',
+    'dotnet',
+    'java',
+    'ruby',
+    'go',
+    'python',
+  ];
 
-  const expectedStackAllow = {
-    swift: ['Bash(swift:*)', 'Bash(xcodebuild:*)', 'Bash(xcrun:*)'],
-    kotlin: ['Bash(./gradlew:*)', 'Bash(gradle:*)'],
-    rust: ['Bash(cargo:*)', 'Bash(rustc:*)'],
-    dotnet: ['Bash(dotnet:*)'],
-    java: ['Bash(mvn:*)', 'Bash(./gradlew:*)', 'Bash(gradle:*)'],
-    ruby: ['Bash(bundle:*)', 'Bash(rails:*)', 'Bash(rake:*)'],
-    go: ['Bash(go:*)'],
-    python: [
-      'Bash(python:*)',
-      'Bash(pip:*)',
-      'Bash(uv:*)',
-      'Bash(pytest:*)',
-      'Bash(mypy:*)',
-      'Bash(uvicorn:*)',
-      'Bash(alembic:*)',
-    ],
-  };
-
-  for (const [stack, expected] of Object.entries(expectedStackAllow)) {
-    it(`${stack} swaps the JavaScript runtime rules for stack-specific tools`, async () => {
+  it('never adds an allow or ask rule, whatever the stack', async () => {
+    for (const stack of ALL_STACKS) {
       await writeSettings(tmpDir, baseSettings);
       await patchSettingsPermissions(tmpDir, { techStack: stack });
-      const result = await readSettings(tmpDir);
-      assert.deepEqual(result.permissions.allow, [...expected, ...keptAllow]);
-    });
-  }
-
-  it('no stack list carries a broad git or curl rule', async () => {
-    for (const stack of Object.keys(expectedStackAllow)) {
-      await writeSettings(tmpDir, baseSettings);
-      await patchSettingsPermissions(tmpDir, { techStack: stack });
-      const { allow } = (await readSettings(tmpDir)).permissions;
-      assert.ok(
-        !allow.some((r) => /^Bash\((git|curl)(:\*| \*)\)$/.test(r)),
-        `${stack}: ${allow.join(', ')}`,
-      );
+      const { permissions } = await readSettings(tmpDir);
+      assert.equal(permissions.allow, undefined, `${stack}: allow`);
+      assert.equal(permissions.ask, undefined, `${stack}: ask`);
     }
   });
 
@@ -716,22 +686,15 @@ describe('patchSettingsPermissions', () => {
     });
   }
 
-  // --- no-op for JS stacks ---
+  // --- no-op for JS stacks and Go ---
 
-  it('node-ts leaves settings unchanged', async () => {
-    await writeSettings(tmpDir, baseSettings);
-    await patchSettingsPermissions(tmpDir, { techStack: 'node-ts' });
-    const result = await readSettings(tmpDir);
-    assert.deepEqual(result.permissions.allow, baseSettings.permissions.allow);
-    assert.deepEqual(result.permissions.deny, baseSettings.permissions.deny);
-  });
-
-  it('node-js leaves settings unchanged', async () => {
-    await writeSettings(tmpDir, baseSettings);
-    await patchSettingsPermissions(tmpDir, { techStack: 'node-js' });
-    const result = await readSettings(tmpDir);
-    assert.deepEqual(result.permissions.allow, baseSettings.permissions.allow);
-  });
+  for (const stack of ['node-ts', 'node-js', 'go']) {
+    it(`${stack} leaves settings unchanged`, async () => {
+      await writeSettings(tmpDir, baseSettings);
+      await patchSettingsPermissions(tmpDir, { techStack: stack });
+      assert.deepEqual(await readSettings(tmpDir), baseSettings);
+    });
+  }
 
   // --- edge cases ---
 
@@ -741,25 +704,11 @@ describe('patchSettingsPermissions', () => {
     // should complete without error
   });
 
-  it('malformed JSON does not crash', async () => {
+  it('malformed JSON emits a console.warn and leaves the file unchanged', async () => {
     const settingsPath = path.join(tmpDir, '.claude', 'settings.json');
     await fs.ensureDir(path.dirname(settingsPath));
-    await fs.writeFile(settingsPath, '{ invalid json !!!');
-    // Suppress the expected warning to keep test output clean.
-    const origWarn = console.warn;
-    console.warn = () => {};
-    try {
-      await patchSettingsPermissions(tmpDir, { techStack: 'swift' });
-    } finally {
-      console.warn = origWarn;
-    }
-    // should complete without error (catch block)
-  });
-
-  it('malformed JSON emits a console.warn surfacing the issue', async () => {
-    const settingsPath = path.join(tmpDir, '.claude', 'settings.json');
-    await fs.ensureDir(path.dirname(settingsPath));
-    await fs.writeFile(settingsPath, '{ invalid json !!!');
+    const originalContent = '{ invalid json !!!';
+    await fs.writeFile(settingsPath, originalContent);
     const warnings = [];
     const origWarn = console.warn;
     console.warn = (msg) => warnings.push(msg);
@@ -771,85 +720,6 @@ describe('patchSettingsPermissions', () => {
     assert.equal(warnings.length, 1, 'expected exactly one warning');
     assert.match(warnings[0], /could not patch/i);
     assert.match(warnings[0], /swift/i);
-  });
-
-  it('malformed JSON leaves the original file contents unchanged', async () => {
-    const settingsPath = path.join(tmpDir, '.claude', 'settings.json');
-    await fs.ensureDir(path.dirname(settingsPath));
-    const originalContent = '{ invalid json !!!';
-    await fs.writeFile(settingsPath, originalContent);
-    const origWarn = console.warn;
-    console.warn = () => {};
-    try {
-      await patchSettingsPermissions(tmpDir, { techStack: 'swift' });
-    } finally {
-      console.warn = origWarn;
-    }
-    const content = await fs.readFile(settingsPath, 'utf8');
-    assert.equal(content, originalContent);
-  });
-
-  it('go has no deny list - original deny preserved without additions', async () => {
-    await writeSettings(tmpDir, baseSettings);
-    await patchSettingsPermissions(tmpDir, { techStack: 'go' });
-    const result = await readSettings(tmpDir);
-    // go has allow but no deny entry
-    assert.deepEqual(result.permissions.deny, baseSettings.permissions.deny);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// projectNpxRules()
-// ---------------------------------------------------------------------------
-
-describe('projectNpxRules', () => {
-  const node = {
-    techStack: 'node-ts',
-    testCommand: 'npx vitest run',
-    typeCheckCommand: 'npx tsc --noEmit',
-    buildCommand: 'npm run build',
-  };
-
-  it('allows the tools of the configured npx commands, plus tierward', () => {
-    assert.deepEqual(projectNpxRules(node), [
-      'Bash(npx tsc *)',
-      'Bash(npx vitest *)',
-      'Bash(npx eslint *)',
-      'Bash(npx tierward *)',
-    ]);
-  });
-
-  it('uses the default type check when none is configured', () => {
-    const rules = projectNpxRules({ ...node, typeCheckCommand: '' });
-    assert.ok(rules.includes('Bash(npx tsc *)'));
-  });
-
-  it('keeps npx flags and scoped package names in the rule', () => {
-    const rules = projectNpxRules({
-      ...node,
-      e2eCommand: 'npx --no-install @playwright/test test',
-    });
-    assert.ok(rules.includes('Bash(npx --no-install @playwright/test *)'), rules.join(', '));
-  });
-
-  it('reads every npx part of a compound command, without duplicates', () => {
-    const rules = projectNpxRules({
-      ...node,
-      buildCommand: 'npx prisma generate && npx tsc --noEmit && next build',
-    });
-    assert.ok(rules.includes('Bash(npx prisma *)'));
-    assert.equal(rules.filter((r) => r === 'Bash(npx tsc *)').length, 1);
-  });
-
-  it('adds nothing for commands that do not use npx', () => {
-    assert.deepEqual(
-      projectNpxRules({
-        techStack: 'node-js',
-        testCommand: 'npm test',
-        typeCheckCommand: 'npm run typecheck',
-        lintCommand: 'npm run lint',
-      }),
-      ['Bash(npx eslint *)', 'Bash(npx tierward *)'],
-    );
+    assert.equal(await fs.readFile(settingsPath, 'utf8'), originalContent);
   });
 });

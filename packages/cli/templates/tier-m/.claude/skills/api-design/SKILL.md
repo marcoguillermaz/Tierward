@@ -77,9 +77,9 @@ Also read current `docs/refactoring-backlog.md` to avoid duplicates.
 
 ---
 
-## Step 2 - Pattern checks (two Explore subagents, run in parallel)
+## Step 2 - Pattern checks
 
-Split into two parallel Explore subagents (model: haiku) to stay within context budget. Launch both at once. Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` for stack-specific grep patterns used across checks.
+Run the checks yourself, in this context, in two batches, N1-N7 then N8-N13, so each batch keeps only its own matches in view (no subagents: this skill runs in a forked context, and a subagent launched from it hands its result to the main conversation, not to this skill). Read `${CLAUDE_SKILL_DIR}/PATTERNS.md` for stack-specific grep patterns used across checks.
 
 **CHECK N1 - HTTP verb / action alignment**
 For each route file, identify the exported function names (GET, POST, PUT, PATCH, DELETE).
@@ -125,7 +125,7 @@ Some frameworks require async handling of route params. Check PATTERNS.md → N6
 
 ---
 
-### Subagent B - checks N8-N13 (validation safety, json try/catch, top-level array, params, field naming, resource modeling)
+### Second batch - checks N8-N13 (validation safety, json try/catch, top-level array, params, field naming, resource modeling)
 
 **CHECK N8 - Throwing validation in route handlers**
 Validation in route handlers must use the non-throwing API variant (see PATTERNS.md → N8 for correct vs throwing patterns per library). The throwing variant causes unhandled exceptions that become 500 responses.
@@ -179,7 +179,7 @@ Count total action-style path segments (non-resource, non-ID segments) vs total 
 
 ---
 
-## Step 2b - Route coverage verification (main context, after both subagents complete) - [COMPARATIVE - full-project baseline; ignores target filter]
+## Step 2b - Route coverage verification (after both batches) - [COMPARATIVE - full-project baseline; ignores target filter]
 
 Cross-check: confirm the route inventory from Step 1 (derived from `[SITEMAP_OR_ROUTE_LIST]`) matches the actual filesystem.
 

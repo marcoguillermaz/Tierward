@@ -10,7 +10,13 @@ import assert from 'node:assert/strict';
 import { IN_PLACE_GITIGNORE_ENTRIES } from '../../src/commands/init-in-place.js';
 
 describe('in-place init .gitignore entries', () => {
-  for (const entry of ['.claude/session/', '.claude/logs/', '.tierward/tmp/']) {
+  // .claude/worktrees/: Tier L creates block worktrees there (DEC-56 C)
+  for (const entry of [
+    '.claude/session/',
+    '.claude/logs/',
+    '.tierward/tmp/',
+    '.claude/worktrees/',
+  ]) {
     it(`appends ${entry} to an existing .gitignore`, () => {
       assert.ok(IN_PLACE_GITIGNORE_ENTRIES.includes(entry), `${entry} missing`);
     });

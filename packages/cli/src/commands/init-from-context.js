@@ -6,13 +6,120 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { cloneRepo } from '../utils/clone-repo.js';
 import { scaffoldTierSafe } from '../scaffold/index.js';
+import { promotionError } from '../scaffold/skill-registry.js';
 import { generateContextImport } from '../generators/context-import.js';
 import { printPlan, printNextSteps } from '../utils/print-plan.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
+const FROM_CONTEXT_TIERS = ['s', 'm', 'l'];
+
+function refuse(message) {
+  console.error(chalk.red(message));
+  process.exit(1);
+}
+
+function resolveDoc(doc) {
+  return doc.startsWith('~') ? path.join(process.env.HOME || '~', doc.slice(1)) : path.resolve(doc);
+}
+
+// The values `--answers` (or a CONTEXT.md, which init turns into answers)
+// gives: no prompt is asked. `sourceRepos` and `sourceDocs` are the repository
+// and document inputs, `primaryRepo` the main repository.
+async function valuesFromAnswers(answers, options) {
+  const sourceInputs = (Array.isArray(answers.sourceRepos) ? answers.sourceRepos : [])
+    .map((s) => String(s).trim())
+    .filter(Boolean);
+  if (sourceInputs.length === 0) {
+    refuse(
+      'From existing docs needs at least one source repository: set `sourceRepos` in --answers, or `sources.primary_repo` in CONTEXT.md.',
+    );
+  }
+  const docInputs = [];
+  for (const doc of Array.isArray(answers.sourceDocs) ? answers.sourceDocs : []) {
+    const resolved = resolveDoc(String(doc));
+    if (await fs.pathExists(resolved)) docInputs.push(resolved);
+    else console.log(chalk.yellow(`  ⚠ File not found: ${resolved} - skipping`));
+  }
+  return {
+    sourceInputs,
+    docInputs,
+    projectName:
+      answers.projectName ||
+      sourceInputs[0]
+        .split('/')
+        .pop()
+        .replace(/\.git$/, ''),
+    primaryRepo: answers.primaryRepo || sourceInputs[0],
+    tier: options.tier || answers.tier || 's',
+    includePreCommit: answers.includePreCommit ?? true,
+    includeGithub: answers.includeGithub ?? true,
+  };
+}
 
 export async function initFromContext(options) {
+  const answers = options.answers ? JSON.parse(options.answers) : null;
+  const values = answers ? await valuesFromAnswers(answers, options) : await promptValues(options);
+  const { sourceInputs, docInputs, projectName, primaryRepo, includePreCommit, includeGithub } =
+    values;
+  const tier = String(values.tier).toLowerCase();
+  if (!FROM_CONTEXT_TIERS.includes(tier)) {
+    refuse(`From existing docs scaffolds tier S, M or L, not "${values.tier}".`);
+  }
+
+  const config = {
+    ...(answers || {}),
+    projectName,
+    tier,
+    primaryRepo,
+    includePreCommit,
+    includeGithub,
+    mode: 'from-context',
+    sourceRepos: [],
+    sourceDocs: [],
+  };
+  // Checked here because the target directory and the source copies are
+  // written before the scaffold runs its own check
+  const invalidPromotion = promotionError(config);
+  if (invalidPromotion) refuse(invalidPromotion);
+
+  if (options.dryRun) {
+    console.log();
+    console.log(chalk.yellow('Dry run - no files will be written.'));
+    console.log();
+    config.sourceRepos = sourceInputs.map((s) => ({ source: s }));
+    config.sourceDocs = docInputs;
+    printPlan(config);
+    return;
+  }
+
+  // ── Target directory ─────────────────────────────────────────────────
+
+  const targetDir = path.join(process.cwd(), projectName);
+
+  if (await fs.pathExists(targetDir)) {
+    // With answers there is no one to ask, and the prompt's default is "no"
+    if (answers) {
+      refuse(`Directory '${projectName}' already exists. Remove it or choose another projectName.`);
+    }
+    const { overwrite } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'overwrite',
+        message: `Directory '${projectName}' already exists. Continue and add files into it?`,
+        default: false,
+      },
+    ]);
+    if (!overwrite) {
+      console.log(chalk.dim('Aborted.'));
+      process.exit(0);
+    }
+  }
+
+  await scaffoldFromSources(config, targetDir, sourceInputs, docInputs);
+}
+
+async function promptValues(options) {
   console.log();
   console.log(
     chalk.dim(
@@ -66,9 +173,7 @@ export async function initFromContext(options) {
     ]);
     if (doc.trim() === '') break;
 
-    const resolved = doc.startsWith('~')
-      ? path.join(process.env.HOME || '~', doc.slice(1))
-      : path.resolve(doc);
+    const resolved = resolveDoc(doc);
 
     if (!(await fs.pathExists(resolved))) {
       console.log(chalk.yellow(`  ⚠ File not found: ${resolved} - skipping`));
@@ -126,46 +231,18 @@ export async function initFromContext(options) {
     ],
   );
 
-  const config = {
+  return {
+    sourceInputs,
+    docInputs,
     projectName,
-    tier: options.tier || tier,
     primaryRepo: primaryRepo || sourceInputs[0],
+    tier: options.tier || tier,
     includePreCommit,
     includeGithub,
-    mode: 'from-context',
-    sourceRepos: [],
-    sourceDocs: [],
   };
+}
 
-  if (options.dryRun) {
-    console.log();
-    console.log(chalk.yellow('Dry run - no files will be written.'));
-    console.log();
-    config.sourceRepos = sourceInputs.map((s) => ({ source: s }));
-    config.sourceDocs = docInputs;
-    printPlan(config);
-    return;
-  }
-
-  // ── Target directory ─────────────────────────────────────────────────
-
-  const targetDir = path.join(process.cwd(), projectName);
-
-  if (await fs.pathExists(targetDir)) {
-    const { overwrite } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'overwrite',
-        message: `Directory '${projectName}' already exists. Continue and add files into it?`,
-        default: false,
-      },
-    ]);
-    if (!overwrite) {
-      console.log(chalk.dim('Aborted.'));
-      process.exit(0);
-    }
-  }
-
+async function scaffoldFromSources(config, targetDir, sourceInputs, docInputs) {
   await fs.ensureDir(targetDir);
   const contextDir = path.join(targetDir, '.claude', 'context');
 

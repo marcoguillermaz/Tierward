@@ -37,6 +37,24 @@ describe('marketplace plugin / CLI package version sync', () => {
     );
   });
 
+  // Claude Code reads a GitHub marketplace from .claude-plugin/marketplace.json
+  // (code.claude.com/docs/en/plugin-marketplaces); a root file is never found
+  // by `/plugin marketplace add <owner>/<repo>`.
+  it('the marketplace file is at .claude-plugin/marketplace.json, not at the root', () => {
+    assert.ok(fs.existsSync(path.join(repoRoot, '.claude-plugin/marketplace.json')));
+    assert.ok(!fs.existsSync(path.join(repoRoot, 'marketplace.json')));
+    const marketplace = fs.readJsonSync(path.join(repoRoot, '.claude-plugin/marketplace.json'));
+    assert.equal(marketplace.plugins?.[0]?.name, 'tierward');
+  });
+
+  it('the release scripts write the marketplace file where it lives', () => {
+    for (const rel of ['scripts/sync-plugin-version.mjs', 'scripts/release-sha-followup.sh']) {
+      const text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+      assert.match(text, /\.claude-plugin\/marketplace\.json/, rel);
+      assert.doesNotMatch(text, /(^|[\s'"(])marketplace\.json/m, rel);
+    }
+  });
+
   it('server.json packages[0].version equals packages/cli/package.json version', () => {
     const pkg = fs.readJsonSync(path.join(repoRoot, 'packages/cli/package.json'));
     const server = fs.readJsonSync(path.join(repoRoot, 'server.json'));

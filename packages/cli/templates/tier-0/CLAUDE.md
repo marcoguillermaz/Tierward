@@ -12,9 +12,10 @@ When the developer describes what they want to build:
    so they can course-correct before you build. Then build. (Propose; do not wait for a
    formal approval — this tier has no gates.)
 2. As the work grows — more than one feature, rising risk, or a second person involved —
-   **suggest more structure**: `npx tierward init --tier=s` (choose "Existing project")
-   adds the Fast Lane workflow; `--tier=m` adds the Standard phased pipeline with audit
-   skills and STOP gates (and `--tier=l` the Full pipeline for complex, team-scale work).
+   **suggest more structure**: on a new branch, `npx tierward init --tier=s` with
+   "New project" adds the Fast Lane workflow; `--tier=m` adds the Standard phased pipeline
+   with audit skills and STOP gates (and `--tier=l` the Full pipeline for complex,
+   team-scale work). The developer then reviews the diff and brings back their own edits.
 
 Keep it lightweight: **propose and suggest, never block**. Tier 0 deliberately has no STOP
 gates — that structure lives at Tier S and above. Your value here is momentum with a sense

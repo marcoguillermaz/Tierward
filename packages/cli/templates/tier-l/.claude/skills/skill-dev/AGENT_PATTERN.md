@@ -41,7 +41,7 @@ The pattern:
 
 ### Live example: /pr-review (explicit review subagent)
 
-`/pr-review` is the clearest example of the Agent tool in a skill. In Step 4, the skill spawns a dedicated review subagent.
+`/pr-review` is the clearest example of the Agent tool in a skill. In Step 4, the skill spawns a dedicated review subagent. `/pr-review` does not declare `context: fork`: it runs in the main conversation, which is where a subagent's result comes back.
 
 The orchestrator does the groundwork — resolves the repo, fetches the diff to disk, loads severity config, reads `CLAUDE.md` — then composes a prompt for the subagent. The subagent receives paths, not raw content. It reviews, returns a markdown report. The orchestrator posts the comment. The user decides the merge; the Agent never calls `gh pr merge`.
 
@@ -52,7 +52,7 @@ Three hard constraints the skill enforces on the subagent:
 
 ### The `context: fork` constraint — when you cannot delegate at all
 
-Before reaching for the Agent tool inside a skill, check the skill's own frontmatter. A skill that declares `context: fork` runs in a forked context, and an agent spawned from there does not deliver its result back to the skill that spawned it. The skill waits for output that never arrives, then either stalls or silently redoes the work itself.
+Before reaching for the Agent tool inside a skill, check the skill's own frontmatter. A skill that declares `context: fork` runs as a subagent of its own, and an agent it spawns runs in the background: the forked skill ends before the result arrives, and the result goes to the main conversation instead (observed on Claude Code 2.1.296, in interactive sessions and with `-p`). The skill reports without the output it was waiting for, or silently redoes the work itself.
 
 `/skill-dev` is the worked example. It declares `context: fork`, and its Step 2 pattern checks (D1–D10) used to run as a background Explore agent while Step 3's judgment checks proceeded in parallel — on paper, roughly half the wall-clock time. In practice the Step 4 join never received anything. Step 2 now runs inline, in the skill's own context, and the steps are sequential.
 

@@ -23,12 +23,14 @@ const TEMPLATES_DIR = path.resolve(__dirname, '../../templates');
 
 // An existing .gitignore is kept, so these entries are appended when missing.
 // .claude/logs/ holds the instructions log, .tierward/tmp/ the pr-review and
-// dependency-audit temp files (PR diffs, test output).
+// dependency-audit temp files (PR diffs, test output), .claude/worktrees/ the
+// Tier L block worktrees.
 export const IN_PLACE_GITIGNORE_ENTRIES = [
   '.claude/session/',
   '.claude/context/',
   '.claude/logs/',
   '.tierward/tmp/',
+  '.claude/worktrees/',
   '.claude/CLAUDE.local.md',
   '.claude/settings.local.json',
   'CONTEXT_IMPORT.md',

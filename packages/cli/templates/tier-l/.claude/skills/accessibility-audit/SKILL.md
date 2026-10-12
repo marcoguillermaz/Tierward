@@ -6,7 +6,7 @@ model: sonnet
 context: fork
 background: false
 argument-hint: [static|full|wcag] [target:route:<path>|target:file:<glob>|target:role:<role>]
-allowed-tools: Read Glob Grep Bash(curl:*) mcp__playwright__browser_navigate mcp__playwright__browser_evaluate mcp__playwright__browser_wait_for Agent Edit Write
+allowed-tools: Read Glob Grep Bash(curl:*) mcp__playwright__browser_navigate mcp__playwright__browser_evaluate mcp__playwright__browser_wait_for Edit Write
 ---
 
 ## Configuration (fill in before first run)
@@ -78,11 +78,11 @@ Read `[SITEMAP_OR_ROUTE_LIST]` (if present) to build the target file list - page
 
 Read `${CLAUDE_SKILL_DIR}/CHECKS.md` for severity classification and WCAG references.
 
-Launch a **single Explore subagent** (model: haiku) with the full file list and the check definitions below. Pass file paths explicitly - do not ask the agent to discover them.
+Run the checks below yourself, in this context, over the full file list (no subagent: this skill runs in a forked context, and a subagent launched from it hands its result to the main conversation, not to this skill).
 
 > **Ripgrep note**: patterns are written for ripgrep (`rg`). Use `|` for alternation. Character classes work as-is.
 
-### Instructions for the Explore agent
+### Static checks
 
 "Run all 8 checks below. For each check: report total match count, list every match as `file:line - excerpt`, and state PASS (0 matches) or FAIL (N matches). If 0 matches, explicitly state '0 matches - PASS'. Do not skip any check.
 
@@ -332,7 +332,7 @@ See `${CLAUDE_SKILL_DIR}/CHECKS.md` → Overall severity classification for the 
 ## Execution notes
 
 - Do NOT apply a11y fixes during this skill. Audit only.
-- The Explore agent in Step 2 handles all static grep work. Do not duplicate searches in the main context.
+- Step 2 runs every static grep check once. Do not repeat those searches in later steps.
 - **Concurrent execution**: when invoked from pipeline.md Phase 5d Track A, this skill runs sequentially with `/visual-audit` → `/ux-audit` → `/responsive-audit` - they share the browser MCP session. `/ui-audit` still launches concurrently first.
 - **Static mode degradation**: if the dev server is unreachable and mode was auto, the report must state explicitly which steps were skipped. Never silently omit checks.
 - **axe-core false positives**: document suppressed false positives explicitly in the report. Do not flag patterns managed by headless UI libraries (inert Dialog children, Portal color-contrast measurements) as violations without manual verification.
