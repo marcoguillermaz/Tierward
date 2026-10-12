@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run when adding new skills to a portfolio or after editing multiple existing ones, to verify each skill meets the spec and that tiers are coherent across the set. It catches cross-skill inconsistencies that per-skill checks miss, such as conflicting model assignments or missing behavioral fixtures.
 
-## Output atteso
+## Expected output
 
 A compliance matrix per skill covering spec fields, tier assignments, model correctness, and fixture coverage, with a cross-portfolio coherence summary. A typical finding: two skills in the same tier using different model defaults for an identical task profile.

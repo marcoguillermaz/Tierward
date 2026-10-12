@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run before a usability review or after user feedback indicates confusion with a flow. It applies ISO 9241-11 and Nielsen heuristics systematically, which is useful when there is no UX researcher available to conduct a formal evaluation.
 
-## Output atteso
+## Expected output
 
 A heuristic-tagged report with findings ordered by impact on user confidence and task completion. Each finding includes the violated principle, the affected interaction, and a concrete recommendation. A typical finding: a destructive action with no confirmation dialog, violating the error prevention heuristic.

@@ -25,4 +25,25 @@ describe('maintainer scripts', () => {
     assert.ok(!fs.existsSync(path.join(REPO, 'scripts/fill-skill-content.mjs')));
     assert.doesNotMatch(read('.gitignore'), /fill-skill-content/);
   });
+
+  // The docs site is English; the generator used to emit Italian section
+  // headings, and every page it created kept them (DEC-67).
+  it('the skill page generator and the skill pages use English section headings', () => {
+    const italian = /Dove e quando|Output atteso/;
+    const sections = /^## When to use$[\s\S]*^## Expected output$/m;
+
+    const generator = read('scripts/gen-skill-registry.mjs');
+    assert.doesNotMatch(generator, italian);
+    assert.match(generator, sections);
+
+    const pages = fs
+      .readdirSync(path.join(REPO, 'site/skills'))
+      .filter((f) => f.endsWith('.md') && f !== 'index.md');
+    assert.ok(pages.length > 0, 'no skill pages found');
+    for (const page of pages) {
+      const text = read(`site/skills/${page}`);
+      assert.doesNotMatch(text, italian, `${page} has an Italian heading`);
+      assert.match(text, sections, `${page} lacks the English section headings`);
+    }
+  });
 });

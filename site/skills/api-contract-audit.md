@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run before merging a PR that changes any API handler, or after auto-generating a new OpenAPI spec, to confirm the spec matches the implementation and no breaking changes are introduced for existing consumers. Richardson Maturity scoring gives a quick read on API quality without a full review.
 
-## Output atteso
+## Expected output
 
 A drift report listing endpoints present in code but absent from the spec, breaking changes flagged by type (removed field, changed type, new required parameter), and an overall Richardson Maturity level from L0 to L3. A typical finding: a required query parameter added to an existing endpoint without a corresponding spec update.

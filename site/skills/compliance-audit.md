@@ -8,10 +8,10 @@
 
 ---
 
-## Dove e quando
+## When to use
 
 Run before a compliance review, when onboarding a new data category, or when legal requests a GDPR readiness assessment. The GDPR profile is the default target; SOC 2 and HIPAA scaffolds are available when the project scope requires them.
 
-## Output atteso
+## Expected output
 
 A compliance gap report covering identified PII fields, missing data-subject rights handlers, consent management gaps, encryption-at-rest status, retention policy coverage, and undocumented sub-processors. A typical finding: a user email stored in an analytics event log with no documented retention policy or deletion pathway.
