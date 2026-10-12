@@ -165,6 +165,26 @@ describe('shipped forked skills', () => {
     }
   });
 
+  // On a 4-line diff Claude reviewed the change itself instead of spawning the
+  // review subagent: Step 4 never said the subagent was required. This checks
+  // the wording only; whether the model follows it is a probe's job.
+  it('pr-review Step 4 spawns the review subagent for every diff size', () => {
+    const prReview = skillFiles.filter((file) => file.includes(`${path.sep}pr-review${path.sep}`));
+    assert.equal(prReview.length, 2, prReview.join(', '));
+    const steps = prReview.map((file) => {
+      const body = fs.readFileSync(file, 'utf8');
+      const step4 = body.slice(body.indexOf('## Step 4'), body.indexOf('## Step 5'));
+      const rule = step4.indexOf('whatever the size of the diff');
+      assert.ok(rule > -1, `${file}: Step 4 does not require the subagent for every diff`);
+      assert.ok(rule < step4.indexOf('**PR mode'), `${file}: the rule comes after the reuse block`);
+      assert.match(step4, /Do not review the diff yourself/, file);
+      assert.match(step4, /Local mode has no exception/, file);
+      assert.match(step4, /`model: opus` if `--deep`/, file);
+      return step4;
+    });
+    assert.equal(steps[0], steps[1]);
+  });
+
   // arch-audit's C13 check (and its AUTO-FIX) must not fork the skills that run
   // in the main conversation on purpose: pr-review (DEC-53) and repo-hygiene
   // (it asks the user mid-run), and a fork it adds waits for its result (DEC-46).

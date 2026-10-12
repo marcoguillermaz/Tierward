@@ -115,6 +115,8 @@ Also read `CLAUDE.md` (project conventions). Pass it to the subagent so project-
 
 ## Step 4 — Spawn the review subagent
 
+Every review runs in a review subagent, whatever the size of the diff: a one-line change gets the same subagent, model and criteria as a large one. Do not review the diff yourself in this conversation, and do not skip the subagent because the change looks small, simple or already understood. The subagent starts without this conversation's history, so it can catch what the author talked themselves out of, and `--deep` reaches Opus only through it. The one exception is the PR-mode reuse below, and only when every one of its conditions holds. Local mode has no exception: it always spawns the subagent.
+
 **PR mode — reuse a same-commit pre-PR review (confirmatory short-circuit).** Before spawning, check whether a local pre-PR review already covers this exact commit *and* base:
 
 ```bash
@@ -148,7 +150,7 @@ When all hold, write the reused body to the PR output path with a reuse banner p
 
 Otherwise **re-review** (spawn below). This is the conservative default: no local report, a `Reviewed-SHA`/`Reviewed-Base` mismatch, a Critical/Major in the local report, a `--deep` request against a shallow report, or a maintainer choosing a fresh pass after seeing CI at Step 7 — all lead here. The skill does not query CI status itself; that judgment is the maintainer's at Step 7.
 
-Use the **Agent tool** (`subagent_type: general-purpose`). Model: `sonnet` by default, `opus` if `--deep`.
+Spawn the subagent with the **Agent tool**: `subagent_type: general-purpose`, `model: sonnet` by default, `model: opus` if `--deep`. This holds for every diff that is not reused, however small.
 
 Compose the subagent prompt by substituting these placeholders into the template under "Review subagent prompt" below: `<REPO>`, `<N>`, `<TITLE>`, `<HEAD_REF>`, `<BASE_REF>`, `<DIFF_PATH>` (do NOT inline the diff content; pass the path so the subagent reads it from disk), `<META_JSON>`, `<CLAUDE_MD>`, `<STACK_PATTERNS>` (contents of PATTERNS.md or "(no stack-specific patterns for this project)"), `<TEAM_SEVERITY>` (parsed `prReviewSeverity` JSON or `null`), and `<SESSION_FILE_CONTENT>` (only if `--with-context`).
 
