@@ -426,7 +426,7 @@ const checks = [
         info: pass
           ? undefined
           : `H1 declares Tier ${declaredTier.toUpperCase()} but phase markers look like Tier ${bodyTier.toUpperCase()}`,
-        fix: 'Reconcile pipeline.md: H1 and phase sections must agree on tier. Reinstall via `tierward init --tier=<tier>` (choose "Existing project") if in doubt.',
+        fix: 'Reconcile pipeline.md: H1 and phase sections must agree on tier. If in doubt, reinstall the tier: commit, switch to a new branch, run `tierward init --tier=<tier>`, choose "New project" and review the diff (https://marcoguillermaz.github.io/Tierward/guide/tiers.html#changing-tier).',
       };
     },
   },

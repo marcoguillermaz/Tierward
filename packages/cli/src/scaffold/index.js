@@ -1185,10 +1185,9 @@ bin/`,
  * as a local merge into `main`. The work branch is pushed and a pull request
  * opened (neither is a promotion), then `gh pr merge --merge` runs behind the
  * Promotion gate; a merge commit keeps the block's separate code, docs and
- * context commits. The work branch, and a tier L worktree, stay out of the
- * step-1 cleanup gate because the pull request needs them, and are removed at
- * a post-merge cleanup confirmation. Replacements are string-exact; the
- * integration suite asserts that each one fired.
+ * context commits. The work branch, and a tier L worktree, are removed at a
+ * post-merge cleanup confirmation, as in every mode. Replacements are
+ * string-exact; the integration suite asserts that each one fired.
  */
 function toPullRequestPromotion(content) {
   let result = content;
@@ -1231,33 +1230,15 @@ function toPullRequestPromotion(content) {
     `(session file, \`git branch -d fix/description\`, \`git push origin --delete fix/description\` ${remoteGone}, artifacts)`,
   );
 
-  // Tier M/L Phase 8 step 1: the branch (and a tier L worktree) leave the gate
+  // Tier M/L Phase 8 step 1: the branch (and a tier L worktree) wait for the
+  // pull request, then leave at the post-merge cleanup
   result = result.replace(
-    ', and the local `feature/block-name` branch. The spec archive move',
-    '. The `feature/block-name` branch is not a candidate here: it carries the closure commits and the pull request, and is removed at the post-merge cleanup (step 11). The spec archive move',
+    'carries the closure commits and the promotion, and is removed at the branch cleanup (step 11)',
+    'carries the closure commits and the pull request, and is removed at the post-merge cleanup (step 11)',
   );
   result = result.replace(
-    ', the block branch, and - if this block ran in a worktree - the worktree directory `.claude/worktrees/[block-name]` itself.',
-    '. The block branch and, if this block ran in a worktree, the worktree directory are not candidates here: they carry the closure commits and the pull request, and are removed at the post-merge cleanup (step 11).',
-  );
-  result = result.replace(', and BEFORE the worktree teardown in 1c):', '):');
-  const blockFilesWhy =
-    'block files are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.';
-  result = result.replace(
-    'WHY we stopped: files and branches are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.',
-    `WHY we stopped: ${blockFilesWhy}`,
-  );
-  result = result.replace(
-    'files, branches and (if applicable) the worktree are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here, before the worktree disappears with anything still inside it.',
-    blockFilesWhy,
-  );
-  result = result.replace(
-    'only the approved items are deleted, the worktree teardown in 1c runs, then closure continues with step 2.',
-    'only the approved items are deleted, then closure continues with step 2.',
-  );
-  result = result.replace(
-    /1c\. \*\*Worktree teardown\*\*[^\n]*\n(?: {4}- [^\n]*\n)+/,
-    '1c. **Worktree teardown**: runs at the post-merge cleanup (step 11), once the pull request is merged; the branch is needed until then.\n',
+    'carry the closure commits and the promotion, and are removed at the branch cleanup (step 11)',
+    'carry the closure commits and the pull request, and are removed at the post-merge cleanup (step 11)',
   );
 
   // Tier M/L step 8: closure commits reach `main` through the pull request

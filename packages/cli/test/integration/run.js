@@ -4929,6 +4929,50 @@ function gateCovers(settings, tool) {
     );
 }
 
+// Phase 8, Tier M/L (DEC-56 B): the work branch, and a Tier L worktree, carry
+// the closure commits and the promotion, so they are removed only after the
+// step-10 promotion, in every promotion mode.
+async function scenarioPhase8CleanupOrder() {
+  section('Phase 8 - branch and worktree removed after the promotion');
+
+  const after = (text, needle, from) => {
+    const found = [];
+    for (let i = text.indexOf(needle); i !== -1; i = text.indexOf(needle, i + 1)) found.push(i);
+    return { all: found, early: found.filter((i) => i < from) };
+  };
+  for (const tier of ['m', 'l']) {
+    for (const promotion of ['staging', 'direct', 'pr']) {
+      const label = `phase8-order[${promotion}/${tier}]`;
+      const config = { ...BASE, tier, isDiscovery: false, promotion };
+      const dir = await scaffold(`phase8-order-${promotion}-${tier}`, tier, config);
+      const pipeline = fs.readFileSync(path.join(dir, '.claude/rules/pipeline.md'), 'utf8');
+      const phase8 = pipeline.slice(
+        pipeline.indexOf('## Phase 8 - Block closure'),
+        pipeline.indexOf('## Phase 8.5'),
+      );
+      const gate = phase8.slice(phase8.indexOf('1. **Cleanup gate**'), phase8.indexOf('\n2. '));
+      const promote = phase8.indexOf('10. Promote to production');
+      const branchDelete = after(phase8, 'git branch -d', promote);
+      const worktreeRemove = after(phase8, 'git worktree remove', promote);
+      const problems = [
+        ...(promote === -1 ? ['step 10 not found'] : []),
+        ...(/, and the local `feature\/block-name` branch|, the block branch, and/.test(gate)
+          ? ['the step-1 cleanup gate lists the work branch']
+          : []),
+        ...(branchDelete.all.length === 0 ? ['no branch removal after the promotion'] : []),
+        ...(branchDelete.early.length ? ['branch removed before the promotion'] : []),
+        ...(tier === 'l' && worktreeRemove.all.length === 0 ? ['no worktree removal'] : []),
+        ...(worktreeRemove.early.length ? ['worktree removed before the promotion'] : []),
+      ];
+      if (problems.length === 0) {
+        pass(`${label}: branch${tier === 'l' ? ' and worktree' : ''} removed after the promotion`);
+      } else {
+        fail(`${label}: Phase 8 removes what later steps need`, problems.join(' | '));
+      }
+    }
+  }
+}
+
 // Nothing pre-approved (DEC-55): the scaffold writes deny rules only. A
 // promotion is guarded by the governance gate (`Promote` inside a block, a
 // confirmation outside), which also sees the MCP tools that write to a branch.
@@ -5120,7 +5164,6 @@ async function scenarioPrPromotion() {
       ...shared,
       ...blockRewrites,
       'are removed at the post-merge cleanup (step 11)',
-      '1c. **Worktree teardown**: runs at the post-merge cleanup',
       '`git worktree remove .claude/worktrees/[block-name]`',
       'then closure continues with step 2.',
     ],
@@ -5495,6 +5538,7 @@ async function main() {
   await scenarioPromotionCommands();
   await scenarioHookLogs();
   await scenarioSkillTempFiles();
+  await scenarioPhase8CleanupOrder();
   await scenarioNoPreapprovedCommands();
   await scenarioExistingUserSettings();
 
