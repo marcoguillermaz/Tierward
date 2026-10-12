@@ -1,6 +1,6 @@
 # doctor
 
-`npx tierward doctor` validates your scaffold and reports on 27 checks across four categories: scaffold presence, Stop hook configuration, pipeline structure, and CODEOWNERS coverage.
+`npx tierward doctor` validates your scaffold and reports on 28 checks across four categories: scaffold presence, Stop hook configuration, pipeline structure, and CODEOWNERS coverage.
 
 ## Usage
 
@@ -19,6 +19,7 @@ Use `--ci` in pull request workflows to block merges when the scaffold is broken
 - `.claude/settings.json` exists
 - `.claude/rules/` contains the expected rule files for your tier
 - No unfilled `[PLACEHOLDER]` values remain in any governance file
+- `.pre-commit-config.yaml`, when present, is valid YAML (a warning that gives the line and column of the error)
 
 **Stop hook**
 - `settings.json` contains a `Stop` hook

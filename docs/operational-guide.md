@@ -1302,7 +1302,7 @@ Runs 28 checks:
 27. No duplicate entries in `permissions.deny` list (warn if duplicates found)
 28. `.pre-commit-config.yaml` is valid YAML, with the line and column of the error (warn-level; skips when the file is absent)
 
-Checks 13-28 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier. Check 28 runs on any tier where `.pre-commit-config.yaml` exists.
+Checks 13-27 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now runs for Tier 0 too, since output-style.md ships in every tier. Check 28 runs on any tier where `.pre-commit-config.yaml` exists.
 
 **`--report` output**: machine-readable JSON with timestamp, cwd, summary (passed/warned/failed/skipped), and per-check details. Consumed by CI systems or external audit tools.
 
