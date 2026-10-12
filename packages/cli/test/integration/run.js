@@ -4787,9 +4787,10 @@ const PR_MODE_MAIN_PUSHES = [
 async function scenarioPromotionCommands() {
   section('Promotion commands - not denied by the tier settings, gated only when promoting');
 
+  // `git -C <dir> push` is the step-10 worktree form (DEC-72)
   const isPromotion = (cmd) =>
     (/\bgh pr merge\b/.test(cmd) && !cmd.includes('--disable-auto')) ||
-    /\bgit push( -\S+)* origin (main|staging)(\s|$)/.test(cmd);
+    /\bgit( -C \S+)? push( -\S+)* origin (main|staging)(\s|$)/.test(cmd);
   const bareProtectedPush = /git checkout (main|staging)\b.*&& git push\s*$/;
   const profiles = [
     ['web-staging', {}],
@@ -5029,6 +5030,116 @@ async function scenarioPhase8CleanupOrder() {
         pass(`${label}: branch${tier === 'l' ? ' and worktree' : ''} removed after the promotion`);
       } else {
         fail(`${label}: Phase 8 removes what later steps need`, problems.join(' | '));
+      }
+    }
+  }
+}
+
+// Phase 8 step 10 runs inside the block worktree (DEC-56 B moved the teardown
+// after it), where git refuses to check out `main` while the main working tree
+// holds it. The pipeline's worktree form of the command (DEC-72) must promote
+// from there, in staging and direct mode, on tiers M and L.
+async function scenarioPromotionInsideWorktree() {
+  section('Phase 8 step 10 - the worktree form promotes from inside the block worktree');
+
+  const env = {
+    ...process.env,
+    GIT_AUTHOR_NAME: 'Tierward Test',
+    GIT_AUTHOR_EMAIL: 'test@example.com',
+    GIT_COMMITTER_NAME: 'Tierward Test',
+    GIT_COMMITTER_EMAIL: 'test@example.com',
+    GIT_MERGE_AUTOEDIT: 'no',
+  };
+  const git = (cwd, ...args) =>
+    execFileSync('git', args, {
+      cwd,
+      env,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  const commit = (cwd, name) => {
+    fs.writeFileSync(path.join(cwd, name), `${name}\n`);
+    git(cwd, 'add', name);
+    git(cwd, 'commit', '-q', '-m', `add ${name}`);
+  };
+  const worktreeForm = (pipeline) => {
+    const step10 = pipeline.slice(
+      pipeline.indexOf('10. Promote to production'),
+      pipeline.indexOf('11. **Branch cleanup**'),
+    );
+    const found = /In a worktree[^\n]*?`(git [^`]+)`/.exec(step10);
+    return found ? found[1] : null;
+  };
+
+  for (const tier of ['m', 'l']) {
+    for (const promotion of ['staging', 'direct']) {
+      const label = `promote-in-worktree[${promotion}/${tier}]`;
+      const dir = await scaffold(`promote-in-worktree-${promotion}-${tier}`, tier, {
+        ...BASE,
+        tier,
+        isDiscovery: false,
+        promotion,
+      });
+      const pipeline = fs.readFileSync(path.join(dir, '.claude/rules/pipeline.md'), 'utf8');
+      const command = worktreeForm(pipeline);
+      if (!command) {
+        fail(`${label}: step 10 has no worktree form`);
+        continue;
+      }
+
+      // A repository as the pipeline leaves it before step 10: a bare origin,
+      // the main working tree on `main`, the block worktree on its own branch
+      // (in staging mode the block is already merged into staging and pushed).
+      const repo = path.join(OUTPUT_DIR, `promote-in-worktree-repo-${promotion}-${tier}`);
+      await fs.remove(repo);
+      const origin = path.join(repo, 'origin.git');
+      const proj = path.join(repo, 'proj');
+      await fs.ensureDir(origin);
+      await fs.ensureDir(proj);
+      git(origin, 'init', '-q', '--bare');
+      git(proj, 'init', '-q', '-b', 'main');
+      commit(proj, 'base.txt');
+      git(proj, 'remote', 'add', 'origin', origin);
+      const source = promotion === 'staging' ? 'staging' : 'main';
+      if (promotion === 'staging') git(proj, 'branch', 'staging');
+      git(proj, 'push', '-q', 'origin', 'main', ...(promotion === 'staging' ? ['staging'] : []));
+      const worktree = path.join(proj, '.claude', 'worktrees', 'blk');
+      git(proj, 'worktree', 'add', '-q', worktree, '-b', 'worktree-blk', source);
+      commit(worktree, 'block.txt');
+      if (promotion === 'staging') {
+        git(worktree, 'checkout', '-q', 'staging');
+        git(worktree, 'merge', '-q', '--no-ff', '-m', 'merge block into staging', 'worktree-blk');
+        git(worktree, 'push', '-q', 'origin', 'staging');
+        git(worktree, 'checkout', '-q', 'worktree-blk');
+      }
+      const before = git(proj, 'rev-parse', 'main');
+
+      const run = spawnSync('bash', ['-c', command.replace(/\[block-name\]/g, 'blk')], {
+        cwd: worktree,
+        env,
+        encoding: 'utf8',
+      });
+      const problems = [];
+      if (run.status !== 0) {
+        problems.push(`exit ${run.status}: ${(run.stderr || '').trim().split('\n').pop()}`);
+      }
+      const main = git(proj, 'rev-parse', 'main');
+      const remoteMain = git(proj, 'ls-remote', 'origin', 'main').split(/\s/)[0];
+      if (main === before) problems.push('local main unchanged');
+      if (remoteMain !== main) problems.push('origin/main not updated');
+      if (git(proj, 'rev-list', '--parents', '-n', '1', 'main').split(' ').length !== 3) {
+        problems.push('no merge commit on main');
+      }
+      if (git(proj, 'branch', '--show-current') !== 'main') {
+        problems.push('main working tree left its branch');
+      }
+      if (git(worktree, 'branch', '--show-current') !== 'worktree-blk') {
+        problems.push('worktree left its branch');
+      }
+      if (problems.length === 0) {
+        pass(`${label}: the worktree form merged into main and pushed it from the worktree`);
+      } else {
+        fail(`${label}: worktree form failed`, problems.join(' | '));
       }
     }
   }
@@ -5976,6 +6087,7 @@ async function main() {
   await scenarioSkillTempFiles();
   await scenarioAuditModel();
   await scenarioPhase8CleanupOrder();
+  await scenarioPromotionInsideWorktree();
   await scenarioNoPreapprovedCommands();
   await scenarioExistingUserSettings();
   await scenarioSettingsSafety();

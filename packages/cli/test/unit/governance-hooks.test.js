@@ -284,6 +284,26 @@ describe('governance-gate hook — promotion push gate', () => {
     assert.ok(blocked(stdout), 'absent flag counts as not approved');
   });
 
+  // DEC-72: inside a block worktree step 10 runs each git with `-C ../../..`,
+  // the main working tree; the gate treats that form exactly like the plain one.
+  it('gates the worktree form of step 10 (git -C ../../..) like the plain one', () => {
+    const command =
+      'git -C ../../.. checkout main && git -C ../../.. merge staging --no-ff && git -C ../../.. push origin main';
+    const denied = runHook(
+      GATE,
+      { tool_name: 'Bash', tool_input: { command } },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: true' },
+    );
+    assert.ok(blocked(denied.stdout), 'the worktree form needs Promote too');
+    const allowed = runHook(
+      GATE,
+      { tool_name: 'Bash', tool_input: { command } },
+      { sessionFrontMatter: 'block: test\nrequirements_approved: true\npromotion_approved: true' },
+    );
+    assert.equal(allowed.stdout.trim(), '', 'authorized worktree form must pass');
+    assert.match(allowed.sessionContent, /promotion_approved:\s*false/, 'flag consumed');
+  });
+
   it('a prior requirements approval does NOT cover promotion (leak guard)', () => {
     const { stdout } = runHook(
       GATE,

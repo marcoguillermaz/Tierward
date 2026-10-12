@@ -1035,6 +1035,11 @@ function interpolate(content, config) {
       /git checkout main && git merge staging --no-ff && git push origin main/g,
       `git checkout main && git merge ${workBranch} --no-ff && git push origin main`,
     );
+    // The step-10 worktree form (DEC-72) merges the worktree's own branch
+    result = result.replace(
+      /git -C \.\.\/\.\.\/\.\. checkout main && git -C \.\.\/\.\.\/\.\. merge staging --no-ff && git -C \.\.\/\.\.\/\.\. push origin main/g,
+      'git -C ../../.. checkout main && git -C ../../.. merge worktree-[block-name] --no-ff && git -C ../../.. push origin main',
+    );
     // Branch protection rules: remove staging (covers m/l + tier-s + git.md wording)
     result = result.replace(
       /Never commit to `main` or `staging` directly\./g,
