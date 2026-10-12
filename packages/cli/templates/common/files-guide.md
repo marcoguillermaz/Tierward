@@ -174,7 +174,8 @@ governance gate hook: `Promote` inside a block, a confirmation outside one. Put 
 `.claude/settings.local.json` or `~/.claude/settings.json`.
 
 Key settings configured:
-- `attribution.commit/pr: ""` - suppresses automatic Co-Authored-By (pipeline adds it manually in commit heredoc)
+- `attribution.commit` - the trailer Claude Code adds to every commit it makes: `Co-authored-by: Claude <noreply@anthropic.com>`
+- `attribution.pr` - the line Claude Code adds to every pull request description: `AI-assisted: requires human review before merging`
 - `includeGitInstructions: false` - removes redundant built-in git instructions from system prompt (pipeline.md covers this); replaces the old `env.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` env var approach
 - `hooks.SessionStart` - checks `.claude/session/last-arch-audit` timestamp in the project directory; if >7 days since last `/arch-audit` **and at least one block has completed** (a ✅ row in the `docs/implementation-checklist.md` Blocks table), prints a reminder at session open. The completed-block gate means a brand-new project is never nagged about an audit it cannot need yet. Also emits a **stale-block reminder** (tier M/L): if the active `.claude/session/block-*.md` has been open ≥5 days, it surfaces a scope-creep prompt (close the block in Phase 8 or split the work)
 - `hooks.InstructionsLoaded` - `.claude/hooks/tierward-audit-log.mjs` appends the hook input (JSON, one line per loaded file) to `.claude/logs/instructions-YYYYMMDD.log` in the project, gitignored (async, non-blocking); inspect this file to debug which CLAUDE.md or rules files were loaded and when

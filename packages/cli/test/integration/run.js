@@ -4929,6 +4929,60 @@ function gateCovers(settings, tool) {
     );
 }
 
+// DEC-57: the wizard's audit-model answer reaches ux-audit and visual-audit
+// (Tier M/L, frontend projects) as the family alias, which every provider
+// accepts; the default keeps them on Opus. A skill file the project already
+// has is left alone.
+async function scenarioAuditModel() {
+  section('Audit model - the wizard answer reaches ux-audit and visual-audit');
+
+  const modelOf = (dir, skill) =>
+    (fs
+      .readFileSync(path.join(dir, '.claude/skills', skill, 'SKILL.md'), 'utf8')
+      .match(/^model: (.+)$/m) || [])[1];
+  const cases = [
+    ['claude-fable-5-1', 'fable'],
+    ['claude-sonnet-5-5', 'sonnet'],
+    [undefined, 'opus'],
+  ];
+  for (const tier of ['m', 'l']) {
+    for (const [auditModel, alias] of cases) {
+      const label = `audit-model[${tier}/${auditModel || 'default'}]`;
+      const dir = await scaffold(`audit-model-${tier}-${alias}`, tier, {
+        ...BASE,
+        tier,
+        isDiscovery: false,
+        auditModel,
+      });
+      const deep = ['ux-audit', 'visual-audit'].map((skill) => modelOf(dir, skill));
+      const other = modelOf(dir, 'security-audit');
+      if (deep.every((m) => m === alias) && other === 'sonnet') {
+        pass(`${label}: ux-audit and visual-audit use ${alias}, other skills unchanged`);
+      } else {
+        fail(`${label}: audit model not applied`, `${deep.join(', ')} | security-audit ${other}`);
+      }
+    }
+  }
+
+  const dir = path.join(OUTPUT_DIR, 'audit-model-in-place');
+  await fs.remove(dir);
+  const own = '---\nname: ux-audit\nmodel: haiku\n---\n\nMy own audit.\n';
+  await fs.ensureDir(path.join(dir, '.claude/skills/ux-audit'));
+  await fs.writeFile(path.join(dir, '.claude/skills/ux-audit/SKILL.md'), own);
+  await scaffoldTierSafe(
+    'm',
+    dir,
+    { ...BASE, tier: 'm', isDiscovery: false, mode: 'in-place', auditModel: 'claude-fable-5-1' },
+    TEMPLATES_DIR,
+  );
+  const kept = fs.readFileSync(path.join(dir, '.claude/skills/ux-audit/SKILL.md'), 'utf8');
+  if (kept === own && modelOf(dir, 'visual-audit') === 'fable') {
+    pass('audit-model[in-place/m]: an existing skill is left alone, a new one gets the model');
+  } else {
+    fail('audit-model[in-place/m]: existing skill changed or new skill not set');
+  }
+}
+
 // Phase 8, Tier M/L (DEC-56 B): the work branch, and a Tier L worktree, carry
 // the closure commits and the promotion, so they are removed only after the
 // step-10 promotion, in every promotion mode.
@@ -5538,6 +5592,7 @@ async function main() {
   await scenarioPromotionCommands();
   await scenarioHookLogs();
   await scenarioSkillTempFiles();
+  await scenarioAuditModel();
   await scenarioPhase8CleanupOrder();
   await scenarioNoPreapprovedCommands();
   await scenarioExistingUserSettings();

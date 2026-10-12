@@ -112,7 +112,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "mkdir -p ~/.claude/audit && echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) SESSION_START project=$(basename $CLAUDE_PROJECT_DIR)\" >> ~/.claude/audit/sessions.log",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-audit-log.mjs\"",
             "async": true
           },
           {

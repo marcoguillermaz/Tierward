@@ -134,6 +134,17 @@ function validateSkillMd(content, dirName) {
   return { errors, warnings };
 }
 
+// The effort levels Claude Code accepts in skill frontmatter
+// (code.claude.com/docs/en/skills); which ones apply depends on the model.
+const EFFORT_CHOICES = [
+  { name: 'low    - quick checks, single file', value: 'low' },
+  { name: 'medium - multi-file analysis', value: 'medium' },
+  { name: 'high   - deep audit, multi-step reasoning', value: 'high' },
+  { name: 'xhigh  - harder audits, longer reasoning', value: 'xhigh' },
+  { name: 'max    - the hardest cases, highest cost', value: 'max' },
+  { name: '(skip) - omit from frontmatter', value: '(skip)' },
+];
+
 // ── command handler ─────────────────────────────────────────────────────────
 
 export async function newSkill(options) {
@@ -203,12 +214,7 @@ export async function newSkill(options) {
         type: 'select',
         name: 'effort',
         message: 'Expected effort level:',
-        choices: [
-          { name: 'low    - quick checks, single file', value: 'low' },
-          { name: 'medium - multi-file analysis', value: 'medium' },
-          { name: 'high   - deep audit, multi-step reasoning', value: 'high' },
-          { name: '(skip) - omit from frontmatter', value: '(skip)' },
-        ],
+        choices: EFFORT_CHOICES,
         default: 'medium',
       },
       {
@@ -324,4 +330,10 @@ export async function newSkill(options) {
 }
 
 // Export internals for testing
-export const _testHelpers = { normalizeName, buildSkillMd, buildTestFixture, validateSkillMd };
+export const _testHelpers = {
+  normalizeName,
+  buildSkillMd,
+  buildTestFixture,
+  validateSkillMd,
+  EFFORT_CHOICES,
+};

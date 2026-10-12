@@ -10,6 +10,31 @@ import {
 } from './skill-registry.js';
 import { STACK_COMMANDS, TEST_INFRA_MARKERS } from '../utils/stack-commands.js';
 import { keepUserSettings } from './user-settings.js';
+import { DEFAULT_AUDIT_MODEL, auditModelAlias } from '../utils/constants.js';
+
+// Skills that take the wizard's audit-model answer (DEC-57)
+const AUDIT_MODEL_SKILLS = ['ux-audit', 'visual-audit'];
+const skillFile = (targetDir, skill) =>
+  path.join(targetDir, '.claude', 'skills', skill, 'SKILL.md');
+
+// The audit-model skills the project already has: they are the user's files.
+async function existingAuditModelSkills(targetDir) {
+  const files = AUDIT_MODEL_SKILLS.map((skill) => skillFile(targetDir, skill));
+  const found = await Promise.all(files.map((file) => fs.pathExists(file)));
+  return files.filter((_, i) => found[i]);
+}
+
+// Write the audit model's alias into the `model:` of ux-audit and visual-audit,
+// leaving out the files listed in `keep`.
+async function applyAuditModel(targetDir, config, keep = []) {
+  const alias = auditModelAlias(config.auditModel || DEFAULT_AUDIT_MODEL);
+  for (const skill of AUDIT_MODEL_SKILLS) {
+    const file = skillFile(targetDir, skill);
+    if (keep.includes(file) || !(await fs.pathExists(file))) continue;
+    const content = await fs.readFile(file, 'utf8');
+    await fs.writeFile(file, content.replace(/^model: .+$/m, `model: ${alias}`));
+  }
+}
 
 const SETTINGS_FILE = path.join('.claude', 'settings.json');
 
@@ -200,6 +225,7 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
     await pruneConditionalDocs(targetDir, config);
     await pruneSkills(targetDir, config);
     await pruneCheatsheet(targetDir, config);
+    await applyAuditModel(targetDir, config);
   } else if (tier === 's') {
     await pruneSkills(targetDir, config);
   }
@@ -383,6 +409,7 @@ export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
   const userSettings = await existingSettings(targetDir);
+  const userAuditSkills = await existingAuditModelSkills(targetDir);
 
   await copyTemplateDirSafe(
     commonDir,
@@ -451,6 +478,7 @@ export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
     await pruneConditionalDocs(targetDir, config);
     await pruneSkills(targetDir, config);
     await pruneCheatsheet(targetDir, config);
+    await applyAuditModel(targetDir, config, userAuditSkills);
   } else if (tier === 's') {
     await pruneSkills(targetDir, config);
   }

@@ -329,3 +329,28 @@ describe('new skill - CLI', () => {
     assert.ok(!content.includes('effort:'));
   });
 });
+
+// Claude Code accepts low, medium, high, xhigh and max for `effort` (skills
+// page, frontmatter table); the wizard offered the first three only (DEC-56 C).
+describe('new skill effort choices', () => {
+  it('offers every effort level Claude Code accepts, plus skip', () => {
+    assert.deepEqual(
+      _testHelpers.EFFORT_CHOICES.map((c) => c.value),
+      ['low', 'medium', 'high', 'xhigh', 'max', '(skip)'],
+    );
+  });
+
+  it('writes xhigh and max into the frontmatter', () => {
+    for (const effort of ['xhigh', 'max']) {
+      const md = buildSkillMd({
+        name: 'custom-x',
+        description: 'x',
+        model: 'sonnet',
+        userInvocable: true,
+        effort,
+        stepCount: 1,
+      });
+      assert.ok(md.includes(`effort: ${effort}`), effort);
+    }
+  });
+});

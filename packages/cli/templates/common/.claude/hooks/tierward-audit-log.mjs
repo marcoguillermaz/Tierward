@@ -3,7 +3,7 @@
 // Wired as an async hook on:
 //   - PostToolUse (Write|Edit on tier S, Write|Edit|Bash on tier M/L): one JSON line
 //     per tool call in ~/.claude/audit/<project>.jsonl
-//   - SessionStart (tier L): one line in ~/.claude/audit/sessions.log
+//   - SessionStart (tier M/L): one line in ~/.claude/audit/sessions.log
 //   - InstructionsLoaded (every tier): the hook input as one JSON line in
 //     <project>/.claude/logs/instructions-YYYYMMDD.log (gitignored)
 //

@@ -184,7 +184,7 @@ For experienced users, the wizard asks:
   - "Do you use a component library or design system?" -> installs `/ui-audit`
   - "Design system name?" -> populates `[DESIGN_SYSTEM_NAME]` placeholder
   - "Track a PRD per feature block?" -> determines if `docs/prd/prd.md` is referenced in context review
-  - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-sonnet-5-5` (override with any current model id). The `init` wizard offers the same question as a list: `claude-sonnet-5-5` (default), `claude-opus-5-5`, `claude-fable-5-1`
+  - "Preferred Claude model for deep-analysis skills (visual-audit, ux-audit)?" -> free-text input, default `claude-opus-5-5` (override with any current model id). The `init` wizard offers the same question as a list: `claude-sonnet-5-5`, `claude-opus-5-5` (default), `claude-fable-5-1`. The answer goes into the `model:` of both skills as the family alias (`sonnet`, `opus` or `fable`), which works on every provider; any other value is written as you typed it.
 - Whether to include pre-commit config and `.github/` files
 - How changes reach `main`: through a staging branch, by a direct merge, or by a pull request (see [4d](#4d-how-changes-reach-main-promotion-modes)). Native stacks get the last two only.
 
@@ -625,7 +625,7 @@ Permissions and hooks. Besides the governance hooks in `.claude/hooks/` (commit 
 | ------------------------- | -------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Test gate                 | `Stop`               | S M L | Runs the test command when Claude tries to finish. If tests fail, the stop is blocked and Claude gets a turn to fix them (see [Stop hook](#stop-hook)). |
 | Audit log                 | `PostToolUse`        | S M L | Appends Write/Edit calls (tier S) or Write/Edit/Bash calls (tier M/L) to `~/.claude/audit/[project].jsonl`.                                              |
-| Session log               | `SessionStart`       | M L   | Logs session start to `~/.claude/audit/sessions.log`. Tier L adds the model when Claude Code provides it.                                                 |
+| Session log               | `SessionStart`       | M L   | Logs session start to `~/.claude/audit/sessions.log`, with the model when Claude Code provides it.                                                         |
 | Arch-audit reminder       | `SessionStart`       | S M L | If `/arch-audit` hasn't run in 7 days, prints a reminder at session open.                                                                                  |
 | Instructions debug log    | `InstructionsLoaded` | S M L | Appends one line per loaded instruction file to `.claude/logs/instructions-YYYYMMDD.log` in the project (gitignored).                                     |
 | CLAUDE.local.md reminder  | `PostCompact`        | S M L | Reminds Claude to re-read `.claude/CLAUDE.local.md` after `/compact`.                                                                                      |
