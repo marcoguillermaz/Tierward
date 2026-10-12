@@ -46,6 +46,8 @@ Existing projects: `tierward upgrade` shows the new governance gate as a diff an
 - In `.claude/settings.json`, change the matcher `^mcp__.+__merge_pull_request$` to `^mcp__.+__(merge_pull_request|push_files|create_or_update_file|delete_file)$`. Without it the gate never sees the MCP writes.
 - Optional, for the new defaults: remove `permissions.allow` and `permissions.ask`, and add `Bash(git -c *)`, `Bash(npm exec *)` and `Bash(npm x *)` to `permissions.deny`.
 
+Known limits. The governance gate reads the commands Claude runs, so it does not see a merge made through the REST API (`gh api .../pulls/<n>/merge`) or a command inside an unquoted heredoc substitution. For a push that names no branch, it does not follow a `cd` earlier in the same command or a remote's `push` refspec mapping, and in a command it cannot parse it checks the text only, which needs the branch name. The deny list does not match a combined short flag such as `-uf` or an option written before `push`; the gate still holds those pushes when they target `main` or `staging`. `init` lists the inline hooks earlier versions wrote but does not remove them.
+
 ---
 
 ## [2.2.0] — 2026-10-11
