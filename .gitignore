@@ -80,7 +80,6 @@ scripts/*
 !scripts/release-sha-followup.sh
 !scripts/worktree-setup.sh
 !scripts/gen-skill-registry.mjs
-!scripts/fill-skill-content.mjs
 
 # Internal project management (not product docs)
 FIRST_SESSION.md
