@@ -656,7 +656,7 @@ Deny rules match the command text Claude usually writes. They are not a security
 | Python            | twine upload, alembic downgrade base          |
 | Go                | -                                             |
 
-**A project that already has `.claude/settings.json`** keeps it. `init`, in either mode, writes a backup next to it (`settings.json.bak.<timestamp>`) and adds Tierward's hooks. Your allow, ask and deny rules and every other setting stay as they are, so Tierward's deny list is not added to that file. Running `init` again, or switching tier, replaces Tierward's hooks instead of adding them twice. Tierward recognises a hook as its own when it matches one of its templates or only runs one of its hook files; a hook you edited counts as yours and stays. It does not recognise the inline hooks earlier Tierward versions wrote, so `init` lists the hooks of yours it kept on the events Tierward hooks, with the path of the backup. Remove any that duplicate Tierward's.
+**A project that already has `.claude/settings.json`** keeps it. `init`, in either mode, writes a backup next to it (`settings.json.bak.<timestamp>`) before it touches anything, adds Tierward's hooks, and adds Tierward's deny rules after yours: the tier's list, the pushes to `main` in `pr` mode and the stack's publish commands, skipping any rule you already have. It writes no allow or ask rule, changes none of yours, and prints the deny rules it added. Running `init` again, or switching tier, replaces Tierward's hooks instead of adding them twice and adds only the deny rules still missing; a Tierward rule you removed on purpose comes back, so remove it again afterwards. Tierward recognises a hook as its own when it matches one of its templates or only runs one of its hook files; a hook you edited counts as yours and stays. It does not recognise the inline hooks earlier Tierward versions wrote, so `init` lists the hooks of yours it kept on the events Tierward hooks, with the path of the backup. Remove any that duplicate Tierward's.
 
 > **Git-deploy hosts (Cloudflare Pages, Vercel, Netlify, Render):** these platforms deploy by watching pushes to `main`. In `staging` and `direct` mode a push to `main` waits for your `Promote` inside a block, or for your confirmation outside one, so it never happens by accident. If the host should only ever deploy reviewed code, use the `pr` promotion mode ([4d](#4d-how-changes-reach-main-promotion-modes)): `feature/*` → PR → merge to `main`, the host picks up the merge commit, and pushes to `main` are denied. Do **not** add the push to `main` to `permissions.allow`.
 
@@ -1508,6 +1508,8 @@ git worktree add .claude/worktrees/feature-name -b worktree-feature-name staging
 ```
 
 Rules: each worktree has its own branch. Merge to `staging` sequentially - smoke-test the first before merging the second. Check migration numbering across worktrees.
+
+Promote from inside the worktree with the worktree form of the pipeline's step 10: each `git` runs with `-C ../../..`, the main working tree, because `main` is checked out there and git refuses to check it out a second time. The session, and the governance gate with its `Promote`, stay in the worktree; leave it only at the step-11 cleanup.
 
 ---
 

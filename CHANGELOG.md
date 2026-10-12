@@ -9,6 +9,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`init` adds its deny rules to an existing `.claude/settings.json`.** 2.3.0 left an existing file with its own rules only, so a project that had one got none of Tierward's deny rules, and in `pr` mode the pushes to `main` that the guide promises to deny were not denied. The same held on a tier switch and on an `init` over a project scaffolded by 2.1.0. `init` now adds Tierward's deny rules after yours, the tier's list, the `pr`-mode pushes to `main` and the stack's publish commands, skipping the ones you already have, and prints what it added with the backup path. It still writes no allow or ask rule and changes none of yours. A Tierward rule you removed on purpose comes back at the next `init`: remove it again afterwards. Existing projects: run `init` again, "Existing project", to receive the rules.
+
+### Fixed
+
+- **`init` no longer loses an existing `.claude/settings.json` when the scaffold fails.** Since 2.3.0 the backup of that file was written at the end of the scaffold, after the templates had already replaced it, so a scaffold that failed in between left the file broken and no backup. The backup (`settings.json.bak.<timestamp>`) is now written before anything else is copied, in every mode and tier, and a scaffold that fails after the copy puts your file back as it was. If a 2.3.0 or 2.3.1 `init` failed over your settings file, restore it from git history.
+- **Promoting from inside a block worktree works again.** 2.3.0 moved the worktree teardown after the promotion (step 11), so step 10 of the Tier L and Tier M pipelines now runs inside the worktree, where `git checkout main` fails because the main working tree already has `main` checked out, and the `Promote` just given is spent. Step 10 now carries two forms: outside a worktree the command as before, inside a worktree the same command with `git -C ../../..` on each `git`, so it runs in the main working tree while the session and the governance gate stay in the worktree. In `direct` mode the worktree form merges the worktree's own branch. Existing projects: copy the worktree form into step 10 of `.claude/rules/pipeline.md`, or add `-C ../../..` to each `git` of the promotion by hand.
+- **A test command with double quotes renders a valid `settings.json`.** The Stop hook runs your test command inside a JSON string, so a command such as `npx vitest run -t "fast"` broke the file; since 2.3.0 it also made `init` fail over an existing settings file. Values are now escaped, and `init` checks that each settings file it renders is valid JSON before writing it. If you scaffolded a project with such a command before this fix, `.claude/settings.json` is not valid JSON and Claude Code ignores it: run `init` again, or put a backslash before each quote in the hook's command by hand.
+
 ---
 
 ## [2.3.1] — 2026-10-12
