@@ -119,7 +119,7 @@ Node.js/TS, Node.js/JS, Python, Go, Swift, Kotlin, Rust, .NET, Ruby, Java - plus
 
 The `tierward` package ships an MCP server (`tierward-mcp` binary) alongside the CLI, version-locked, single `npm install -g`. Any MCP-aware client (Claude Desktop, ChatGPT desktop, Cursor, VS Code, Copilot Studio) can query Tierward governance state without the Tierward CLI running. Six read-only tools cover the doctor report, team-settings, last arch-audit, skill inventory, package metadata, and `/pr-review` comments. Full reference in the [MCP server](#mcp-server) section below.
 
-Tierward is also available as a [Claude Code plugin](https://claude.ai/code) in the Claude Code marketplace (v1.32.0+). The plugin adds eight governance skills to Claude Code: commit, arch-audit, security-audit, perf-audit, simplify, skill-dev, skill-security and humanize. The MCP server isn't part of it, so install the npm package if you need that. Install the plugin from inside Claude Code (2.1.275 or later):
+Tierward is also a [Claude Code plugin](https://claude.ai/code) (v1.32.0+), distributed through the plugin marketplace in this repository. The plugin adds 8 governance skills to Claude Code: commit, arch-audit, security-audit, perf-audit, simplify, skill-dev, skill-security and humanize. The MCP server isn't part of it, so install the npm package if you need that. Install the plugin from inside Claude Code (2.1.275 or later):
 
 ```
 /plugin install tierward --marketplace marcoguillermaz/Tierward
