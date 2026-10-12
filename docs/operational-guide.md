@@ -210,6 +210,8 @@ The wizard asks for:
 - Which repo is the primary (if multiple)
 - Pipeline tier, pre-commit, `.github/`
 
+To skip the questions, pass the same values with `--answers`: `sourceRepos` (list), `sourceDocs` (list, optional), `projectName`, `primaryRepo`, `tier` (`s`, `m` or `l`), `includePreCommit`, `includeGithub`, and optionally `techStack` and `promotion`. A `CONTEXT.md` with `project.mode: from-context` supplies them from its `sources` block (`primary_repo`, `repos`, `docs`) and its other fields. With answers nothing is asked, so a run with no source repository, an unavailable promotion mode, or an existing project directory stops with an error before writing anything.
+
 What happens:
 
 1. Each source repo is cloned into `.claude/context/repos/<name>/` using `gh` CLI (private repos) or `git clone --depth=1` (public).

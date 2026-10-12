@@ -15,7 +15,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { execFileSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { load as loadYaml } from 'js-yaml';
 import { scaffoldTier, scaffoldTierSafe, PR_MODE_PUSH_DENY } from '../../src/scaffold/index.js';
 import { generateClaudeMd } from '../../src/generators/claude-md.js';
@@ -5525,6 +5525,169 @@ async function scenarioSkillTempFiles() {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+// ── Scenario: "From existing docs" reads --answers and CONTEXT.md (DEC-60 a) ──
+//
+// The mode used to prompt for everything and ignore both, so a CONTEXT.md
+// promising a deterministic scaffold still asked for the repositories. Every
+// run here has an empty stdin and a timeout: a prompt fails fast instead of
+// hanging. Sources are absolute local paths (a relative `a/b` reads as a
+// GitHub repository and would go to the network).
+async function scenarioFromContextAnswers() {
+  section('From existing docs - --answers and CONTEXT.md, no prompts');
+  const CLI = path.resolve(__dirname, '../../src/index.js');
+  const base = path.join(OUTPUT_DIR, 'from-context');
+  fs.removeSync(base);
+  const source = path.join(base, 'source-repo');
+  fs.ensureDirSync(source);
+  fs.writeFileSync(path.join(source, 'README.md'), '# Source repo\n');
+  const doc = path.join(base, 'brief.md');
+  fs.writeFileSync(doc, '# Brief\n');
+  const directMerge = 'git merge feature/block-name --no-ff && git push origin main';
+
+  const run = (cwd, args) =>
+    spawnSync('node', [CLI, 'init', ...args], {
+      cwd,
+      input: '',
+      encoding: 'utf8',
+      timeout: 60000,
+    });
+  const answers = {
+    mode: 'from-context',
+    projectName: 'fc-app',
+    sourceRepos: [source],
+    sourceDocs: [doc],
+    tier: 'm',
+    techStack: 'node-ts',
+    includePreCommit: false,
+    includeGithub: false,
+    promotion: 'direct',
+  };
+  const scaffolded = (dir, label) => {
+    const pipelinePath = path.join(dir, '.claude/rules/pipeline.md');
+    const problems = [];
+    if (!fs.existsSync(pipelinePath)) problems.push('no pipeline.md');
+    else {
+      const pipeline = fs.readFileSync(pipelinePath, 'utf8');
+      if (/staging/i.test(pipeline) || !pipeline.includes(directMerge)) {
+        problems.push('promotion did not reach the pipeline');
+      }
+    }
+    if (!fs.existsSync(path.join(dir, '.claude/context/repos/source-repo/README.md'))) {
+      problems.push('source repo not copied');
+    }
+    if (!fs.existsSync(path.join(dir, '.claude/context/docs/brief.md'))) {
+      problems.push('doc not copied');
+    }
+    if (fs.existsSync(path.join(dir, '.pre-commit-config.yaml'))) problems.push('pre-commit kept');
+    if (fs.existsSync(path.join(dir, '.github'))) problems.push('.github kept');
+    if (problems.length === 0) pass(`from-context[${label}]: scaffolded from the given values`);
+    else fail(`from-context[${label}]`, problems.join('; '));
+  };
+
+  // --answers
+  const answersCwd = path.join(base, 'answers');
+  fs.ensureDirSync(answersCwd);
+  const viaAnswers = run(answersCwd, ['--answers', JSON.stringify(answers)]);
+  if (viaAnswers.status === 0) scaffolded(path.join(answersCwd, 'fc-app'), '--answers');
+  else {
+    fail(
+      'from-context[--answers]: init did not finish without prompts',
+      `exit ${viaAnswers.status}: ${(viaAnswers.stderr || '').trim().split('\n').pop()}`,
+    );
+  }
+
+  // CONTEXT.md with a sources block
+  const contextCwd = path.join(base, 'context');
+  fs.ensureDirSync(contextCwd);
+  fs.writeFileSync(
+    path.join(contextCwd, 'CONTEXT.md'),
+    [
+      '---',
+      'schema_version: 1',
+      "generated_at: '2026-10-12T10:00:00Z'",
+      'generated_by: context-builder',
+      'generated_by_version: 2.2.0',
+      'project:',
+      '  name: fc-context',
+      '  description: From existing docs via CONTEXT.md',
+      '  mode: from-context',
+      'stack:',
+      '  primary: node-ts',
+      'commands:',
+      '  install: npm install',
+      '  test: npm test',
+      'tier:',
+      '  selected: m',
+      '  rationale: Feature blocks',
+      'scaffold_options:',
+      '  include_pre_commit: false',
+      '  include_github: false',
+      '  promotion: direct',
+      'sources:',
+      `  primary_repo: ${source}`,
+      '  repos:',
+      `    - ${source}`,
+      '  docs:',
+      `    - ${doc}`,
+      'inference:',
+      '  source_files:',
+      '    - README.md',
+      '---',
+      '',
+      'body',
+      '',
+    ].join('\n'),
+  );
+  const viaContext = run(contextCwd, []);
+  if (viaContext.status === 0) scaffolded(path.join(contextCwd, 'fc-context'), 'CONTEXT.md');
+  else {
+    fail(
+      'from-context[CONTEXT.md]: init did not finish without prompts',
+      `exit ${viaContext.status}: ${(viaContext.stderr || '').trim().split('\n').pop()}`,
+    );
+  }
+
+  // Refused before any write: no source, `staging` on a native stack, tier 0,
+  // and a target directory that already exists.
+  const refusals = [
+    ['no source', { sourceRepos: [] }, /source repositor/i],
+    ['staging/swift', { techStack: 'swift', promotion: 'staging' }, /not available for the swift/],
+    ['tier 0', { tier: '0', includePreCommit: false, includeGithub: false }, /tier S, M or L/],
+  ];
+  for (const [label, override, message] of refusals) {
+    const cwd = path.join(base, `refused-${label.replace(/[^a-z0-9]+/gi, '-')}`);
+    fs.ensureDirSync(cwd);
+    const res = run(cwd, ['--answers', JSON.stringify({ ...answers, ...override })]);
+    const written = fs.readdirSync(cwd);
+    if (res.status === 1 && message.test(res.stderr || '') && written.length === 0) {
+      pass(`from-context[${label}]: refused before any write`);
+    } else {
+      fail(
+        `from-context[${label}]: expected exit 1, the reason, and no file`,
+        `exit ${res.status}, files: ${written.join(', ')}, stderr: ${(res.stderr || '').trim().split('\n').pop()}`,
+      );
+    }
+  }
+
+  const existingCwd = path.join(base, 'existing');
+  fs.ensureDirSync(path.join(existingCwd, 'fc-app'));
+  fs.writeFileSync(path.join(existingCwd, 'fc-app', 'keep.txt'), 'mine\n');
+  const existing = run(existingCwd, ['--answers', JSON.stringify(answers)]);
+  const kept = fs.readdirSync(path.join(existingCwd, 'fc-app'));
+  if (
+    existing.status === 1 &&
+    /already exists/.test(existing.stderr || '') &&
+    kept.join() === 'keep.txt'
+  ) {
+    pass('from-context[existing directory]: refused, nothing written');
+  } else {
+    fail(
+      'from-context[existing directory]: expected exit 1 and the directory untouched',
+      `exit ${existing.status}, files: ${kept.join(', ')}`,
+    );
+  }
+}
+
 // ── Scenario: doctor checks that .pre-commit-config.yaml parses (DEC-11) ─────
 //
 // A config that does not parse aborts every `git commit` once `pre-commit install`
@@ -5662,6 +5825,7 @@ async function main() {
   await scenarioNoPreapprovedCommands();
   await scenarioExistingUserSettings();
   await scenarioDoctorPreCommitYaml();
+  await scenarioFromContextAnswers();
 
   // ── Summary ────────────────────────────────────────────────────────────────
 
