@@ -346,3 +346,16 @@ Only run if the directory already exists (Tierward-scaffolded projects):
 ## Step 6 - Produce audit report
 
 Generate the report using the template in `${CLAUDE_SKILL_DIR}/REPORT.md`. Include all check results from Steps 3, 3b, 3c, 3d, 3e, and H1.
+
+---
+
+## Red flags
+
+The most common ways discipline is silently abandoned here:
+
+| Temptation | Why it fails |
+|---|---|
+| Relying on remembered doc content instead of fetching in Step 1 | Anthropic's docs change between audits; Step 1 exists to surface those deltas |
+| Classifying a RECOMMEND as AUTO-FIX to reduce the findings count | AUTO-FIX requires certainty of safety; any doubt must yield RECOMMEND |
+| Skipping a C-check because "the project hasn't changed" | The project's change history has no bearing on whether the reference docs changed |
+| Omitting the file path from a RECOMMEND entry | Every RECOMMEND must include a file path — this is a hard rule, not a style suggestion |

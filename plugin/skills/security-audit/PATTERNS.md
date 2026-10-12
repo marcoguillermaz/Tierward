@@ -184,6 +184,12 @@ Reuse A1 patterns. Grep for the auth verification call to determine how the call
 | SQL injection | `fmt.Sprintf.*SELECT\|fmt.Sprintf.*INSERT\|"SELECT.*" +` | String concatenation in SQL queries |
 | Context cancellation | `context.Background()\|context.TODO()` in request handlers | Missing context propagation |
 | Crypto stdlib | `crypto/md5\|crypto/sha1\|crypto/des` | Weak crypto algorithms |
+| CSRF protection | `gorilla/csrf\|nosurf\|csrf.Protect(` | Flag state-mutating routes without CSRF middleware (check absence) |
+| Secret in logs | `log\.Print.*token\|log\.Print.*password\|fmt\.Println.*password\|fmt\.Println.*token\|fmt\.Printf.*secret` | Credentials written to logs |
+| JWT pitfalls | `jwt\.Parse(\|"none"\|ParseUnverified(` | jwt.Parse without keyfunc; none algorithm accepted; unverified parse in production |
+| SSRF | `http\.Get(r\.\|http\.Post(r\.\|http\.NewRequest.*r\.FormValue\|http\.NewRequest.*r\.URL\.Query` | HTTP client called with user-controlled URL without allowlist |
+| TLS misconfiguration | `InsecureSkipVerify:\s*true\|tls\.VersionSSL30\|tls\.VersionTLS10\|MinVersion:\s*0` | TLS verification disabled or minimum TLS version too low |
+| Mutable global state | `^var [A-Za-z].*map\[` without nearby `sync\.Mutex\|sync\.RWMutex` | Mutable global map without synchronization guard |
 
 ### Python
 
