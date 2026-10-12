@@ -640,7 +640,7 @@ Hooks read session and tool data from the JSON Claude Code passes on stdin. The 
 
 Promotions are guarded by the governance gate, not by permission rules. It sees a `git push` to a protected branch, `gh pr merge`, and the MCP tools that merge a pull request or write a file to a branch (`merge_pull_request`, `push_files`, `create_or_update_file`, `delete_file`, on any server). Inside a block it waits for your `Promote`; with no block open it asks you to confirm.
 
-Deny rules match the command text Claude usually writes. They are not a security boundary: `npm install <package>` (install scripts), `node -e`, `uv run` or `docker` still run any code.
+Deny rules match the command text Claude usually writes. They are not a security boundary: `npm install <package>` (install scripts), `node -e`, `uv run` or `docker` still run any code. The force-push rules match `--force`, `-f` and a `+` refspec, but not a combined short flag such as `-uf` or an option written before `push` (`git -C <path> push --force`). When such a push targets `main` or `staging`, the governance gate still holds it for your `Promote` or your confirmation; a force push to any other branch goes through your own permission settings.
 
 | Stack             | Deny (additions)                              |
 | ----------------- | --------------------------------------------- |
@@ -1306,7 +1306,7 @@ Checks 13-27 are skipped for Tier 0 projects. Check 12 (`output-style.md`) now r
 
 **`--report` output**: machine-readable JSON with timestamp, cwd, summary (passed/warned/failed/skipped), and per-check details. Consumed by CI systems or external audit tools.
 
-**CI integration**: `.github/workflows/tierward-verify.yml` (scaffolded by `init`) runs doctor on every PR. Prevents merging when the scaffold is broken or bypassed.
+**CI integration**: `init` does not add a workflow to your project. The Tierward repository has one you can copy into your `.github/workflows/`: [`tierward-verify.yml`](https://github.com/marcoguillermaz/Tierward/blob/main/.github/workflows/tierward-verify.yml) runs doctor on pull requests to `main`.
 
 ---
 

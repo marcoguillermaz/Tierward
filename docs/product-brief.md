@@ -1,5 +1,7 @@
 # tierward - Product Brief
 
+> **Archived.** Last updated 2026-06-18, at v1.31.0; its version history stops at v1.27.0. It is kept as a record and is not maintained. For the current product, read the [README](../README.md) and the [CHANGELOG](../CHANGELOG.md).
+
 > Strategic context for the team. Not referenced by Claude during coding sessions - kept here to pass Anthropic's CLAUDE.md inclusion test.
 
 ---
