@@ -531,6 +531,120 @@ describe('governance-gate hook — pushes that name no branch (DEC-59 b)', () =>
       fs.rmSync(detached, { recursive: true, force: true });
     }
   });
+
+  // A command the parser cannot read (an unterminated quote, substitution or
+  // heredoc) that carries a push naming no protected branch is judged like a
+  // push that names no branch: git decides (DEC-75, F5).
+  it('reads an unreadable command with a push that names no protected branch as a push without a branch', () => {
+    const malformed = [
+      'git push\ncat <<EOF\nx',
+      "git push origin HEAD; echo 'x",
+      'git push origin HEAD; echo $(date',
+      'git push origin feature/x\ncat <<EOF\nx',
+    ];
+    const main = repoOn('main');
+    const work = repoOn('feature/x', 'feature/x');
+    try {
+      for (const cmd of malformed) {
+        assert.equal(push(cmd, main, { sessionFrontMatter: FM }), 'deny', `main: ${cmd}`);
+        assert.equal(push(cmd, main), 'ask', `main, no block: ${cmd}`);
+        assert.equal(push(cmd, work, { sessionFrontMatter: FM }), 'allow', `feature/x: ${cmd}`);
+      }
+    } finally {
+      fs.rmSync(main, { recursive: true, force: true });
+      fs.rmSync(work, { recursive: true, force: true });
+    }
+  });
+
+  it('reads `--all` and `--mirror` on the push itself, not elsewhere in an unreadable command', () => {
+    const work = repoOn('feature/x', 'feature/x');
+    const inBlock = { sessionFrontMatter: FM };
+    try {
+      assert.equal(
+        push('git log --all && git push origin feature/x\ncat <<EOF\nx', work, inBlock),
+        'allow',
+      );
+      assert.equal(push('git push --all\ncat <<EOF\nx', work, inBlock), 'deny');
+      assert.equal(push('git push origin --mirror\ncat <<EOF\nx', work, inBlock), 'deny');
+    } finally {
+      fs.rmSync(work, { recursive: true, force: true });
+    }
+  });
+});
+
+// The gate asks git twice for a push that names no branch, each call with its
+// own timeout. Their sum plus node's start-up must stay under the hook timeout
+// the tier templates wire, or Claude Code cancels the gate and the push goes
+// through unchecked (F6).
+describe('governance-gate hook — git latency vs the hook timeout (F6)', () => {
+  const TEMPLATES = path.resolve(__dirname, '../../templates');
+  const perCallMs = Number((fs.readFileSync(GATE, 'utf8').match(/timeout:\s*(\d+)/) || [])[1]);
+  const gateEntries = ['tier-s', 'tier-m', 'tier-l'].flatMap((tier) => {
+    const file = path.join(TEMPLATES, tier, '.claude', 'settings.json');
+    const settings = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return settings.hooks.PreToolUse.flatMap((group) => group.hooks)
+      .filter((h) => h.command.includes('tierward-governance-gate.mjs'))
+      .map((h) => ({ tier, timeout: h.timeout }));
+  });
+
+  it('wires the gate with a hook timeout that covers 2 git calls plus node start-up', () => {
+    assert.ok(perCallMs > 0, 'the gate sets a timeout on each git call');
+    assert.equal(gateEntries.length, 6, 'Bash and MCP entries on tiers S, M and L');
+    for (const { tier, timeout } of gateEntries) {
+      assert.ok(
+        timeout * 1000 >= 2 * perCallMs + 2000,
+        `${tier}: "timeout": ${timeout} cannot cover 2 git calls of ${perCallMs} ms plus start-up`,
+      );
+    }
+  });
+
+  it('answers before the hook timeout when git is slow but does not time out', () => {
+    const realGit = execFileSync('which', ['git'], { encoding: 'utf8' }).trim();
+    const stubDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-gate-slowgit-'));
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-gate-repo-'));
+    const calls = path.join(stubDir, 'calls');
+    try {
+      // Half the per-call timeout: slow, with room left for the shell and git
+      // themselves, so both calls complete and the gate takes its normal path.
+      const sleep = (perCallMs / 2000).toFixed(1);
+      fs.writeFileSync(
+        path.join(stubDir, 'git'),
+        `#!/bin/sh\necho "$*" >> "${calls}"\nsleep ${sleep}\nexec "${realGit}" "$@"\n`,
+        { mode: 0o755 },
+      );
+      execFileSync(realGit, ['init', '-q'], { cwd: repo });
+      execFileSync(realGit, ['symbolic-ref', 'HEAD', 'refs/heads/main'], { cwd: repo });
+      execFileSync(realGit, ['config', 'branch.main.merge', 'refs/heads/main'], { cwd: repo });
+      const started = Date.now();
+      const stdout = execFileSync('node', [GATE], {
+        input: JSON.stringify({
+          tool_name: 'Bash',
+          tool_input: { command: 'git push' },
+          cwd: repo,
+        }),
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: repo,
+          PATH: `${stubDir}${path.delimiter}${process.env.PATH}`,
+        },
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'ignore'],
+      });
+      const elapsed = Date.now() - started;
+      const budget = Math.min(...gateEntries.map((e) => e.timeout)) * 1000;
+      const made = fs.readFileSync(calls, 'utf8').trim().split('\n');
+      assert.equal(made.length, 2, `both git calls must complete, got: ${made.join(' | ')}`);
+      assert.match(
+        stdout,
+        /"permissionDecision":"ask"/,
+        'a slow git must still produce the decision',
+      );
+      assert.ok(elapsed < budget, `gate took ${elapsed} ms, the hook timeout is ${budget} ms`);
+    } finally {
+      fs.rmSync(stubDir, { recursive: true, force: true });
+      fs.rmSync(repo, { recursive: true, force: true });
+    }
+  });
 });
 
 // The scaffold no longer writes allow or ask rules (DEC-55), so the gate is
@@ -680,11 +794,21 @@ const PUSH_MUST_DENY = [
   'git push origin \\\nmain',
   "git push origin $'main'",
   'git push origin $"staging"',
+  // Refspecs that update main without naming it: `:` pushes every branch the
+  // remote also has, a glob destination that covers main pushes it too (F4).
+  'git push origin :',
+  "git push origin 'refs/heads/*:refs/heads/*'",
+  "git push origin 'refs/heads/*'",
+  "git push origin '+refs/heads/*:refs/heads/*'",
 ];
 
 const PUSH_STABLE_ALLOW = [
   'git push origin feature/main-nav',
   'git push -u origin fix/bug-123',
+  // Globs that cannot cover a protected branch (F4).
+  "git push origin 'refs/tags/*:refs/tags/*'",
+  "git push origin 'feature/*:feature/*'",
+  "git push origin 'refs/heads/feature/*'",
   'git log --oneline main',
   'git status',
   'ls -la',

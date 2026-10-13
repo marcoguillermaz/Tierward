@@ -39,7 +39,9 @@
 // misconfigured project never has commits blocked spuriously; worst case is the
 // pre-v1.34 status quo (no governance gate). A promotion with no active session
 // file asks instead of allowing. A command the parser cannot read falls back to
-// the whole-text check below, not to allow.
+// the whole-text check below, not to allow: a push that names a protected
+// branch, `--all` or `--mirror` is a promotion there, and any other push counts
+// as one that names no branch, so git decides.
 
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -56,7 +58,8 @@ const PROTECTED = '(staging|main)';
 // promotion when an argument names a protected branch (`staging` or `main`) as a standalone token,
 // a `refs/heads/` ref, or a refspec destination (`HEAD:main`, `+main`), so
 // `feature/main-nav` and `main:feature/x` never match; `--all` and `--mirror`
-// count, since they push every branch. The pipeline's promotion
+// count, since they push every branch, and so do the matching refspec `:` and
+// a glob destination that covers a protected branch (`refs/heads/*`). The pipeline's promotion
 // commands are compound (`git checkout staging && git merge … && git push origin staging`),
 // so every simple command is checked, not just the first. Quoted strings,
 // heredoc bodies and comments are data: a commit message that mentions a push
@@ -74,8 +77,13 @@ const PROTECTED = '(staging|main)';
 // Known limitations: a substitution inside an unquoted heredoc is not checked,
 // nor is a merge through the REST API (`gh api .../pulls/<n>/merge`); for a push
 // that names no branch, a `cd` earlier in the same command and the remote's
-// `push` refspec mappings are not followed.
+// `push` refspec mappings are not followed, nor is a `git -C` inside a command
+// the parser cannot read (the session's directory is used).
 const PROTECTED_BRANCH_RE = new RegExp(`^(?:refs/heads/)?${PROTECTED}$`);
+// The protected names, bare and as `refs/heads/` refs, for glob destinations.
+const PROTECTED_REFS = PROTECTED.slice(1, -1)
+  .split('|')
+  .flatMap((b) => [b, `refs/heads/${b}`]);
 const MCP_MERGE_TOOL_RE = /^mcp__.+__merge_pull_request$/;
 // MCP tools that commit a file straight to the branch they are given. Their
 // schemas require `branch`; a call without one is treated as a protected write.
@@ -248,11 +256,20 @@ function parse(src, start, closer, depth) {
   return { commands, pos: i };
 }
 
-// A `git push` argument that targets a protected branch.
+// A `git push` argument that targets a protected branch: a refspec whose
+// destination names one, the matching refspec `:` (every branch the remote
+// also has) or a glob destination that covers one (`refs/heads/*`).
 function namesProtectedBranch(arg) {
   if (arg.startsWith('-')) return false;
   const ref = arg.replace(/^\+/, '');
-  return PROTECTED_BRANCH_RE.test(ref.slice(ref.lastIndexOf(':') + 1));
+  if (ref === ':') return true;
+  const dst = ref.slice(ref.lastIndexOf(':') + 1);
+  if (dst.includes('*')) {
+    const escaped = dst.split('*').map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const glob = new RegExp(`^${escaped.join('.*')}$`);
+    return PROTECTED_REFS.some((b) => glob.test(b));
+  }
+  return PROTECTED_BRANCH_RE.test(dst);
 }
 
 // `--all` and `--mirror` push every branch, protected ones included, without
@@ -281,7 +298,11 @@ function currentPushBranches(cwd) {
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 3000,
+      // Two calls per push: their sum plus node's start-up must stay under
+      // the hook timeout wired in `.claude/settings.json` (10 s), or Claude
+      // Code cancels the gate and the push runs unchecked. A unit test keeps
+      // the two values aligned.
+      timeout: 2000,
     }).trim();
   let branch;
   try {
@@ -354,17 +375,33 @@ function analyze(command, depth) {
   return found;
 }
 
+// Whether `--all` or `--mirror` sits on a push itself, in text the parser
+// could not read: the text is cut at the shell separators first, so a
+// `git log --all` before the push does not count.
+function pushesAllBranchesInText(command) {
+  return command.split(/[;&|\n]/).some((segment) => {
+    const push = segment.match(FALLBACK_PUSH_RE);
+    return (
+      push !== null &&
+      /(^|\s)--(all|mirror)(\s|$)/.test(segment.slice(push.index + push[0].length))
+    );
+  });
+}
+
 function inspect(command) {
   try {
     return analyze(command, 0);
   } catch {
+    const push = FALLBACK_PUSH_RE.test(command);
+    const protectedPush =
+      push && (FALLBACK_PROTECTED_RE.test(command) || pushesAllBranchesInText(command));
     return {
-      push:
-        FALLBACK_PUSH_RE.test(command) &&
-        (FALLBACK_PROTECTED_RE.test(command) || /\s--(all|mirror)(\s|$)/.test(command)),
+      push: protectedPush,
       merge: FALLBACK_MERGE_RE.test(command) && !command.includes('--disable-auto'),
       commit: FALLBACK_COMMIT_RE.test(command),
-      currentPushDirs: [],
+      // A push the text check cannot place is judged like one that names no
+      // branch: git says which branch the session's directory would update.
+      currentPushDirs: push && !protectedPush ? [[]] : [],
     };
   }
 }

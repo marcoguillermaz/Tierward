@@ -9,6 +9,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The governance gate sees every way of pushing `main` without naming it.** `git push origin :` (every branch the remote also has) and a glob refspec such as `refs/heads/*:refs/heads/*` updated `main` without the gate noticing. Both now count as promotions, as `--all` and `--mirror` already did; a glob on tags or on work branches does not. Existing projects: copy `.claude/hooks/tierward-governance-gate.mjs` from the package.
+- **A push inside a command the gate cannot read no longer slips through.** When a command had an unterminated quote, substitution or heredoc, the gate only searched its text for a protected branch name. A `git push` on `main` followed by an unterminated heredoc, which bash still runs, therefore went through unchecked. Such a push now counts as one that names no branch, so the gate asks git which branch the session's directory would update. `--all` and `--mirror` are read on the push itself, so a `git log --all` earlier in the command no longer turns a work-branch push into a promotion. Existing projects: copy the gate file as above.
+- **The gate answers before its hook timeout on a slow filesystem.** For a push that names no branch the gate asks git twice, each call with a 3-second limit, while the templates gave the hook 5 seconds. When git took more than about 2.2 seconds per call, Claude Code cancelled the gate and the push ran unchecked, because a cancelled `PreToolUse` hook does not block the call. Each git call now gets 2 seconds, the templates give the hook 10, and a test keeps the two values aligned. Existing projects: copy the gate file, and set `"timeout": 10` on the two gate entries in `.claude/settings.json`.
+- **The guide now says what turns the governance gate off.** The gate runs in every permission mode, `bypassPermissions` included. It stops guarding only when the hook file or `node` is missing, `disableAllHooks` is set, or the hook times out. Only deny rules survive all of these.
+
 ---
 
 ## [2.3.2] — 2026-10-12
