@@ -49,8 +49,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "Review the code changes in this session. Check for: (1) hardcoded secrets or credentials, (2) missing input validation on API endpoints, (3) SQL injection or command injection patterns, (4) missing auth checks. If critical issues found, return {\"decision\": \"block\", \"reason\": \"...\"}. If clean, return {\"ok\": true}.",
-            "model": "haiku"
+            "prompt": "Review the code changes in this session. Check for: (1) hardcoded secrets or credentials, (2) missing input validation on API endpoints, (3) SQL injection or command injection patterns, (4) missing auth checks. If critical issues found, return {\"decision\": \"block\", \"reason\": \"...\"}. If clean, return {\"ok\": true}."
           }
         ]
       },
