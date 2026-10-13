@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [2.3.2] — 2026-10-12
+
 ### Changed
 
 - **`init` adds its deny rules to an existing `.claude/settings.json`.** 2.3.0 left an existing file with its own rules only, so a project that had one got none of Tierward's deny rules, and in `pr` mode the pushes to `main` that the guide promises to deny were not denied. The same held on a tier switch and on an `init` over a project scaffolded by 2.1.0. `init` now adds Tierward's deny rules after yours, the tier's list, the `pr`-mode pushes to `main` and the stack's publish commands, skipping the ones you already have, and prints what it added with the backup path. It still writes no allow or ask rule and changes none of yours. A Tierward rule you removed on purpose comes back at the next `init`: remove it again afterwards. Existing projects: run `init` again, "Existing project", to receive the rules.
