@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import { fileURLToPath } from 'url';
 import { _testHelpers } from '../../src/scaffold/index.js';
 
-const { interpolate, pruneSkills, patchSettingsPermissions } = _testHelpers;
+const { interpolate, pruneSkills, patchSettingsPermissions, renderFile } = _testHelpers;
+const TEMPLATES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../templates');
 
 // Helper: run interpolate on a single placeholder with given config
 function interp(placeholder, config) {
@@ -721,5 +723,56 @@ describe('patchSettingsPermissions', () => {
     assert.match(warnings[0], /could not patch/i);
     assert.match(warnings[0], /swift/i);
     assert.equal(await fs.readFile(settingsPath, 'utf8'), originalContent);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// renderFile() - a value the user typed lands inside a JSON string of the
+// settings templates (the Stop hook runs [TEST_COMMAND]), so a `.json`
+// destination is rendered with JSON escaping and parsed before any write.
+// ---------------------------------------------------------------------------
+
+describe('renderFile - settings.json with user text inside JSON strings', () => {
+  const quoted = 'npx vitest run -t "fast"';
+  const config = { techStack: 'node-ts', testCommand: quoted };
+  const settingsTemplate = (tier) =>
+    fs.readFile(path.join(TEMPLATES_DIR, `tier-${tier}`, '.claude', 'settings.json'), 'utf8');
+  const stopCommands = (settings) =>
+    (settings.hooks?.Stop || []).flatMap((group) => group.hooks.map((hook) => hook.command));
+
+  for (const tier of ['0', 's', 'm', 'l']) {
+    it(`tier ${tier} settings render as valid JSON with a quoted test command`, async () => {
+      const rendered = renderFile('.claude/settings.json', await settingsTemplate(tier), config);
+      const settings = JSON.parse(rendered);
+      assert.ok(
+        stopCommands(settings).some((command) => command.includes(quoted)),
+        `Stop hook runs ${quoted}`,
+      );
+    });
+  }
+
+  it('escapes a backslash and a quote in any string value', () => {
+    const template = '{"command": "[TEST_COMMAND] [PROJECT_NAME]"}';
+    const out = renderFile('settings.json', template, {
+      techStack: 'node-ts',
+      testCommand: 'npx vitest run -t "a\\b"',
+      projectName: 'Say "hi"',
+    });
+    assert.deepEqual(JSON.parse(out), { command: 'npx vitest run -t "a\\b" Say "hi"' });
+  });
+
+  it('refuses a rendered .json that is not valid JSON, naming the file', () => {
+    assert.throws(
+      () => renderFile('.claude/settings.json', '{"command": "[TEST_COMMAND]', config),
+      (err) => /\.claude\/settings\.json/.test(err.message) && /JSON/.test(err.message),
+    );
+  });
+
+  it('leaves every other file as interpolate renders it', () => {
+    assert.equal(renderFile('pipeline.md', '[TEST_COMMAND]', config), quoted);
+    assert.equal(
+      renderFile('pipeline.md', '[TEST_COMMAND]', config),
+      interpolate('[TEST_COMMAND]', config),
+    );
   });
 });

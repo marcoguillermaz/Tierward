@@ -4787,9 +4787,10 @@ const PR_MODE_MAIN_PUSHES = [
 async function scenarioPromotionCommands() {
   section('Promotion commands - not denied by the tier settings, gated only when promoting');
 
+  // `git -C <dir> push` is the step-10 worktree form (DEC-72)
   const isPromotion = (cmd) =>
     (/\bgh pr merge\b/.test(cmd) && !cmd.includes('--disable-auto')) ||
-    /\bgit push( -\S+)* origin (main|staging)(\s|$)/.test(cmd);
+    /\bgit( -C \S+)? push( -\S+)* origin (main|staging)(\s|$)/.test(cmd);
   const bareProtectedPush = /git checkout (main|staging)\b.*&& git push\s*$/;
   const profiles = [
     ['web-staging', {}],
@@ -5034,6 +5035,116 @@ async function scenarioPhase8CleanupOrder() {
   }
 }
 
+// Phase 8 step 10 runs inside the block worktree (DEC-56 B moved the teardown
+// after it), where git refuses to check out `main` while the main working tree
+// holds it. The pipeline's worktree form of the command (DEC-72) must promote
+// from there, in staging and direct mode, on tiers M and L.
+async function scenarioPromotionInsideWorktree() {
+  section('Phase 8 step 10 - the worktree form promotes from inside the block worktree');
+
+  const env = {
+    ...process.env,
+    GIT_AUTHOR_NAME: 'Tierward Test',
+    GIT_AUTHOR_EMAIL: 'test@example.com',
+    GIT_COMMITTER_NAME: 'Tierward Test',
+    GIT_COMMITTER_EMAIL: 'test@example.com',
+    GIT_MERGE_AUTOEDIT: 'no',
+  };
+  const git = (cwd, ...args) =>
+    execFileSync('git', args, {
+      cwd,
+      env,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  const commit = (cwd, name) => {
+    fs.writeFileSync(path.join(cwd, name), `${name}\n`);
+    git(cwd, 'add', name);
+    git(cwd, 'commit', '-q', '-m', `add ${name}`);
+  };
+  const worktreeForm = (pipeline) => {
+    const step10 = pipeline.slice(
+      pipeline.indexOf('10. Promote to production'),
+      pipeline.indexOf('11. **Branch cleanup**'),
+    );
+    const found = /In a worktree[^\n]*?`(git [^`]+)`/.exec(step10);
+    return found ? found[1] : null;
+  };
+
+  for (const tier of ['m', 'l']) {
+    for (const promotion of ['staging', 'direct']) {
+      const label = `promote-in-worktree[${promotion}/${tier}]`;
+      const dir = await scaffold(`promote-in-worktree-${promotion}-${tier}`, tier, {
+        ...BASE,
+        tier,
+        isDiscovery: false,
+        promotion,
+      });
+      const pipeline = fs.readFileSync(path.join(dir, '.claude/rules/pipeline.md'), 'utf8');
+      const command = worktreeForm(pipeline);
+      if (!command) {
+        fail(`${label}: step 10 has no worktree form`);
+        continue;
+      }
+
+      // A repository as the pipeline leaves it before step 10: a bare origin,
+      // the main working tree on `main`, the block worktree on its own branch
+      // (in staging mode the block is already merged into staging and pushed).
+      const repo = path.join(OUTPUT_DIR, `promote-in-worktree-repo-${promotion}-${tier}`);
+      await fs.remove(repo);
+      const origin = path.join(repo, 'origin.git');
+      const proj = path.join(repo, 'proj');
+      await fs.ensureDir(origin);
+      await fs.ensureDir(proj);
+      git(origin, 'init', '-q', '--bare');
+      git(proj, 'init', '-q', '-b', 'main');
+      commit(proj, 'base.txt');
+      git(proj, 'remote', 'add', 'origin', origin);
+      const source = promotion === 'staging' ? 'staging' : 'main';
+      if (promotion === 'staging') git(proj, 'branch', 'staging');
+      git(proj, 'push', '-q', 'origin', 'main', ...(promotion === 'staging' ? ['staging'] : []));
+      const worktree = path.join(proj, '.claude', 'worktrees', 'blk');
+      git(proj, 'worktree', 'add', '-q', worktree, '-b', 'worktree-blk', source);
+      commit(worktree, 'block.txt');
+      if (promotion === 'staging') {
+        git(worktree, 'checkout', '-q', 'staging');
+        git(worktree, 'merge', '-q', '--no-ff', '-m', 'merge block into staging', 'worktree-blk');
+        git(worktree, 'push', '-q', 'origin', 'staging');
+        git(worktree, 'checkout', '-q', 'worktree-blk');
+      }
+      const before = git(proj, 'rev-parse', 'main');
+
+      const run = spawnSync('bash', ['-c', command.replace(/\[block-name\]/g, 'blk')], {
+        cwd: worktree,
+        env,
+        encoding: 'utf8',
+      });
+      const problems = [];
+      if (run.status !== 0) {
+        problems.push(`exit ${run.status}: ${(run.stderr || '').trim().split('\n').pop()}`);
+      }
+      const main = git(proj, 'rev-parse', 'main');
+      const remoteMain = git(proj, 'ls-remote', 'origin', 'main').split(/\s/)[0];
+      if (main === before) problems.push('local main unchanged');
+      if (remoteMain !== main) problems.push('origin/main not updated');
+      if (git(proj, 'rev-list', '--parents', '-n', '1', 'main').split(' ').length !== 3) {
+        problems.push('no merge commit on main');
+      }
+      if (git(proj, 'branch', '--show-current') !== 'main') {
+        problems.push('main working tree left its branch');
+      }
+      if (git(worktree, 'branch', '--show-current') !== 'worktree-blk') {
+        problems.push('worktree left its branch');
+      }
+      if (problems.length === 0) {
+        pass(`${label}: the worktree form merged into main and pushed it from the worktree`);
+      } else {
+        fail(`${label}: worktree form failed`, problems.join(' | '));
+      }
+    }
+  }
+}
+
 // Nothing pre-approved (DEC-55): the scaffold writes deny rules only. A
 // promotion is guarded by the governance gate (`Promote` inside a block, a
 // confirmation outside), which also sees the MCP tools that write to a branch.
@@ -5139,11 +5250,27 @@ async function scenarioExistingUserSettings() {
       const dir = await seed(`existing-settings-${initMode}-${stack}`);
       await run(dir);
 
+      // DEC-73: the user's deny rules first, then the template's (a fresh
+      // scaffold of the same config says which), allow and ask untouched
+      const fresh = await scaffold(`existing-settings-fresh-${initMode}-${stack}`, 'm', config);
+      const freshDeny = JSON.parse(read(fresh)).permissions.deny;
+      const expectedDeny = [
+        ...userSettings.permissions.deny,
+        ...freshDeny.filter((rule) => !userSettings.permissions.deny.includes(rule)),
+      ];
       const after = JSON.parse(read(dir));
       const problems = [
-        ...['permissions', 'env']
-          .filter((key) => JSON.stringify(after[key]) !== JSON.stringify(userSettings[key]))
+        ...['allow', 'ask']
+          .filter(
+            (key) =>
+              JSON.stringify(after.permissions?.[key]) !==
+              JSON.stringify(userSettings.permissions[key]),
+          )
           .map((key) => `${key} changed`),
+        ...(JSON.stringify(after.permissions?.deny) === JSON.stringify(expectedDeny)
+          ? []
+          : ['deny is not the user list followed by the template list']),
+        ...(JSON.stringify(after.env) === JSON.stringify(userSettings.env) ? [] : ['env changed']),
         ...(after.hooks?.Stop?.some(
           (g) => JSON.stringify(g) === JSON.stringify(userSettings.hooks.Stop[0]),
         )
@@ -5162,7 +5289,7 @@ async function scenarioExistingUserSettings() {
         problems.push(`backup: ${saved.join(', ') || 'none'}`);
       }
       if (problems.length === 0) {
-        pass(`${label}: user permissions and keys kept, Tierward hooks added, backup written`);
+        pass(`${label}: allow, ask and keys kept, Tierward hooks and deny rules added, backup`);
       } else {
         fail(`${label}: existing settings not kept`, problems.join(' | '));
       }
@@ -5184,10 +5311,295 @@ async function scenarioExistingUserSettings() {
   await scaffoldTier('m', switched, cfg('m'), TEMPLATES_DIR);
   const direct = await seed('existing-settings-direct-m');
   await scaffoldTier('m', direct, cfg('m'), TEMPLATES_DIR);
-  if (read(switched) === read(direct)) {
-    pass('existing-settings[tier change s->m]: same file as a direct Tier M install');
+  const switchedJson = JSON.parse(read(switched));
+  const directJson = JSON.parse(read(direct));
+  const switchProblems = [
+    ...(JSON.stringify(switchedJson.hooks) === JSON.stringify(directJson.hooks)
+      ? []
+      : ['Tier S hooks left next to Tier M hooks']),
+    ...directJson.permissions.deny
+      .filter((rule) => !switchedJson.permissions.deny.includes(rule))
+      .map((rule) => `Tier M deny rule missing: ${rule}`),
+  ];
+  if (switchProblems.length === 0) {
+    pass(
+      'existing-settings[tier change s->m]: same hooks and deny rules as a direct Tier M install',
+    );
   } else {
-    fail('existing-settings[tier change s->m]: Tier S hooks left next to Tier M hooks');
+    fail(
+      'existing-settings[tier change s->m]: differs from a direct install',
+      switchProblems.join(' | '),
+    );
+  }
+}
+
+// F3 (DEC-73): an existing settings.json gains Tierward's deny rules on every
+// init path: the pr-mode push denies, the tier's extra rules on a tier switch,
+// the stack's publish denies in place. Allow and ask rules are never written
+// or changed, and init lists the rules it added with the backup path.
+async function scenarioExistingSettingsDeny() {
+  section('Existing settings.json - Tierward deny rules added, allow and ask untouched');
+
+  const settingsFile = (dir) => path.join(dir, '.claude', 'settings.json');
+  const readJson = (dir) => JSON.parse(fs.readFileSync(settingsFile(dir), 'utf8'));
+  const seed = async (name, settings) => {
+    const dir = path.join(OUTPUT_DIR, name);
+    await fs.remove(dir);
+    await fs.ensureDir(path.join(dir, '.claude'));
+    await fs.writeFile(settingsFile(dir), JSON.stringify(settings, null, 2) + '\n');
+    return dir;
+  };
+  const cfg = (tier, extra = {}) => ({ ...BASE, tier, isDiscovery: false, ...extra });
+  const captured = async (fn) => {
+    const logs = [];
+    const origLog = console.log;
+    console.log = (msg) => logs.push(String(msg));
+    try {
+      await fn();
+    } finally {
+      console.log = origLog;
+    }
+    return logs.join('\n');
+  };
+
+  // pr mode over an empty deny list: the pushes to main are denied there too
+  {
+    const label = 'existing-settings-deny[pr/m]';
+    const dir = await seed('existing-settings-deny-pr', { permissions: { deny: [] } });
+    await scaffoldTier('m', dir, cfg('m', { promotion: 'pr' }), TEMPLATES_DIR);
+    const { allow, ask, deny = [] } = readJson(dir).permissions;
+    const problems = [
+      ...PR_MODE_PUSH_DENY.filter((rule) => !deny.includes(rule)).map((rule) => `missing ${rule}`),
+      ...(allow === undefined ? [] : ['allow written']),
+      ...(ask === undefined ? [] : ['ask written']),
+    ];
+    if (problems.length === 0) {
+      pass(`${label}: pushes to main denied in the user file, no allow or ask written`);
+    } else {
+      fail(`${label}: pr-mode denies not applied`, problems.join(' | '));
+    }
+  }
+
+  // tier switch m -> l: Tier L's extra rules join, Tier M's stay
+  {
+    const label = 'existing-settings-deny[tier change m->l]';
+    const dir = await seed('existing-settings-deny-m-to-l', { permissions: { deny: [] } });
+    await scaffoldTier('m', dir, cfg('m'), TEMPLATES_DIR);
+    const afterM = readJson(dir).permissions.deny;
+    await scaffoldTier('l', dir, cfg('l'), TEMPLATES_DIR);
+    const afterL = readJson(dir).permissions.deny;
+    const freshL = readJson(await scaffold('existing-settings-deny-fresh-l', 'l', cfg('l')))
+      .permissions.deny;
+    const problems = [
+      ...freshL
+        .filter((rule) => !afterL.includes(rule))
+        .map((rule) => `Tier L rule missing: ${rule}`),
+      ...afterM.filter((rule) => !afterL.includes(rule)).map((rule) => `Tier M rule lost: ${rule}`),
+    ];
+    if (problems.length === 0) {
+      pass(`${label}: Tier L rules added, Tier M rules kept`);
+    } else {
+      fail(`${label}: deny rules after the switch`, problems.join(' | '));
+    }
+  }
+
+  // in-place init over a file shaped like a 2.1.0 scaffold, native stack: the
+  // old allow and ask lists stay, the old deny rules stay first, the template's
+  // and the stack's deny rules follow, and init names what it added
+  {
+    const label = 'existing-settings-deny[in-place/swift/m over a 2.1.0 file]';
+    const old = {
+      permissions: {
+        allow: [
+          'Bash(node:*)',
+          'Bash(npm:*)',
+          'Bash(npx:*)',
+          'Bash(git status:*)',
+          'Bash(git diff:*)',
+        ],
+        ask: ['Bash(git push origin main*)'],
+        deny: ['Bash(rm -rf /*)', 'Bash(git push --force*)'],
+      },
+    };
+    const swift = { techStack: 'swift', testCommand: 'swift test', typeCheckCommand: '' };
+    const dir = await seed('existing-settings-deny-2-1-0', old);
+    const out = await captured(() =>
+      scaffoldTierSafe('m', dir, cfg('m', { ...swift, mode: 'in-place' }), TEMPLATES_DIR),
+    );
+    const freshDeny = readJson(
+      await scaffold('existing-settings-deny-fresh-swift-m', 'm', cfg('m', swift)),
+    ).permissions.deny;
+    const { allow, ask, deny } = readJson(dir).permissions;
+    const added = freshDeny.filter((rule) => !old.permissions.deny.includes(rule));
+    const problems = [
+      ...(JSON.stringify(allow) === JSON.stringify(old.permissions.allow) ? [] : ['allow changed']),
+      ...(JSON.stringify(ask) === JSON.stringify(old.permissions.ask) ? [] : ['ask changed']),
+      ...(JSON.stringify(deny.slice(0, 2)) === JSON.stringify(old.permissions.deny)
+        ? []
+        : ['old deny rules not kept first']),
+      ...added.filter((rule) => !deny.includes(rule)).map((rule) => `missing ${rule}`),
+      ...(deny.includes('Bash(xcodebuild archive*)') ? [] : ['stack publish deny missing']),
+      ...added.filter((rule) => !out.includes(rule)).map((rule) => `not listed: ${rule}`),
+      ...(/settings\.json\.bak\./.test(out) ? [] : ['backup path not printed']),
+      ...(old.permissions.allow.some((rule) => out.includes(rule)) ? ['allow rules listed'] : []),
+    ];
+    if (problems.length === 0) {
+      pass(`${label}: allow and ask kept, deny rules added and listed with the backup`);
+    } else {
+      fail(`${label}: deny rules on an older file`, problems.join(' | '));
+    }
+  }
+}
+
+// A quoted test command, or a scaffold that fails midway, must never cost the
+// project its settings.json (P15a, DEC-71): the backup is written before any
+// template is copied, a `.json` render is escaped and parsed before the write,
+// and a scaffold that fails after the copy puts the user's file back.
+async function scenarioSettingsSafety() {
+  section('settings.json safety - quoted commands, backup before any write, restore on failure');
+
+  const userSettings = { permissions: { allow: ['Bash(make:*)'] }, env: { MY: '1' } };
+  const userRaw = JSON.stringify(userSettings, null, 2) + '\n';
+  const quoted = 'npx vitest run -t "fast"';
+  const settingsFile = (dir) => path.join(dir, '.claude', 'settings.json');
+  const read = (dir) => fs.readFileSync(settingsFile(dir), 'utf8');
+  const backups = (dir) =>
+    fs.readdirSync(path.join(dir, '.claude')).filter((f) => f.startsWith('settings.json.bak.'));
+  const backupRaw = (dir) => fs.readFileSync(path.join(dir, '.claude', backups(dir)[0]), 'utf8');
+  const seed = async (name, withSettings) => {
+    const dir = path.join(OUTPUT_DIR, name);
+    await fs.remove(dir);
+    await fs.ensureDir(path.join(dir, '.claude'));
+    if (withSettings) await fs.writeFile(settingsFile(dir), userRaw);
+    return dir;
+  };
+  const stopCommands = (settings) =>
+    (settings.hooks?.Stop || []).flatMap((group) => group.hooks.map((hook) => hook.command));
+
+  // (a) every tier and mode, with and without a prior settings.json: the quoted
+  // command renders as valid JSON, and a prior file keeps its keys with 1 backup
+  for (const tier of ['0', 's', 'm', 'l']) {
+    for (const safe of [false, true]) {
+      if (tier === '0' && safe) continue; // in-place init has no Tier 0
+      const initMode = safe ? 'in-place' : 'greenfield';
+      for (const withSettings of [true, false]) {
+        const label = `settings-safety[${tier}/${initMode}/${withSettings ? 'existing' : 'fresh'}]`;
+        const config = {
+          ...BASE,
+          tier,
+          isDiscovery: tier === '0',
+          mode: initMode,
+          testCommand: quoted,
+        };
+        const dir = await seed(`settings-safety-${tier}-${initMode}-${withSettings}`, withSettings);
+        try {
+          await (safe ? scaffoldTierSafe : scaffoldTier)(tier, dir, config, TEMPLATES_DIR);
+        } catch (err) {
+          fail(`${label}: scaffold threw`, err.message);
+          continue;
+        }
+        let settings;
+        try {
+          settings = JSON.parse(read(dir));
+        } catch (err) {
+          fail(`${label}: settings.json is not valid JSON`, err.message);
+          continue;
+        }
+        const problems = [];
+        if (!stopCommands(settings).some((command) => command.includes(quoted))) {
+          problems.push('Stop hook does not run the quoted command');
+        }
+        if (withSettings) {
+          // the deny list grows by Tierward's rules (DEC-73); allow and env stay
+          if (
+            JSON.stringify(settings.permissions?.allow) !==
+            JSON.stringify(userSettings.permissions.allow)
+          ) {
+            problems.push('allow changed');
+          }
+          if (JSON.stringify(settings.env) !== JSON.stringify(userSettings.env)) {
+            problems.push('env changed');
+          }
+          if (backups(dir).length !== 1 || backupRaw(dir) !== userRaw) {
+            problems.push(`backup: ${backups(dir).join(', ') || 'none'}`);
+          }
+        } else if (backups(dir).length !== 0) {
+          problems.push('a backup was written with no prior settings.json');
+        }
+        if (problems.length === 0) {
+          pass(
+            `${label}: valid JSON, quoted command kept${withSettings ? ', keys kept, 1 backup' : ''}`,
+          );
+        } else {
+          fail(`${label}: settings.json unsafe`, problems.join(' | '));
+        }
+      }
+    }
+  }
+
+  // (b) a scaffold that fails after settings.json was copied: a templates copy
+  // whose common rule is a directory, so reading it throws once the tier files
+  // (settings.json included) are already on disk. The backup must exist and
+  // the user's file must be back as it was.
+  const brokenRule = path.join(OUTPUT_DIR, 'settings-safety-templates-broken-rule');
+  await fs.remove(brokenRule);
+  await fs.copy(TEMPLATES_DIR, brokenRule);
+  await fs.ensureDir(path.join(brokenRule, 'common', 'rules', 'zz-not-a-file.md'));
+  {
+    const label = 'settings-safety[m/greenfield/failure after the copy]';
+    const dir = await seed('settings-safety-failure-after-copy', true);
+    let threw = false;
+    try {
+      await scaffoldTier('m', dir, { ...BASE, tier: 'm', isDiscovery: false }, brokenRule);
+    } catch {
+      threw = true;
+    }
+    const problems = [];
+    if (!threw) problems.push('scaffold did not fail (fixture broken)');
+    if (backups(dir).length !== 1 || backupRaw(dir) !== userRaw) {
+      problems.push(`backup: ${backups(dir).join(', ') || 'none'}`);
+    }
+    if (read(dir) !== userRaw) problems.push('settings.json not restored');
+    if (problems.length === 0) {
+      pass(`${label}: scaffold failed, backup written before the copy, user file restored`);
+    } else {
+      fail(`${label}: settings.json lost`, problems.join(' | '));
+    }
+  }
+
+  // (c) a settings template that does not render as JSON is refused by name,
+  // before the write: the user's file is untouched and backed up.
+  const brokenSettings = path.join(OUTPUT_DIR, 'settings-safety-templates-broken-settings');
+  await fs.remove(brokenSettings);
+  await fs.copy(TEMPLATES_DIR, brokenSettings);
+  for (const tier of ['0', 'm']) {
+    await fs.writeFile(
+      path.join(brokenSettings, `tier-${tier}`, '.claude', 'settings.json'),
+      '{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "[TEST_COMMAND]"}]}]}',
+    );
+  }
+  for (const tier of ['0', 'm']) {
+    const label = `settings-safety[${tier}/greenfield/template not JSON]`;
+    const dir = await seed(`settings-safety-template-not-json-${tier}`, true);
+    let message = '';
+    try {
+      await scaffoldTier(tier, dir, { ...BASE, tier, isDiscovery: tier === '0' }, brokenSettings);
+    } catch (err) {
+      message = err.message;
+    }
+    const problems = [];
+    if (!/settings\.json/.test(message) || !/JSON/.test(message)) {
+      problems.push(`error: ${message || 'none'}`);
+    }
+    if (read(dir) !== userRaw) problems.push('settings.json changed');
+    if (backups(dir).length !== 1 || backupRaw(dir) !== userRaw) {
+      problems.push(`backup: ${backups(dir).join(', ') || 'none'}`);
+    }
+    if (problems.length === 0) {
+      pass(`${label}: refused by name, user file untouched, backup written`);
+    } else {
+      fail(`${label}: settings.json unsafe`, problems.join(' | '));
+    }
   }
 }
 
@@ -5829,8 +6241,11 @@ async function main() {
   await scenarioSkillTempFiles();
   await scenarioAuditModel();
   await scenarioPhase8CleanupOrder();
+  await scenarioPromotionInsideWorktree();
   await scenarioNoPreapprovedCommands();
   await scenarioExistingUserSettings();
+  await scenarioExistingSettingsDeny();
+  await scenarioSettingsSafety();
   await scenarioDoctorPreCommitYaml();
   await scenarioFromContextAnswers();
 

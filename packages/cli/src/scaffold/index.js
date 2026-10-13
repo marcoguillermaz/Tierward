@@ -9,7 +9,7 @@ import {
   getCheatsheetSkillsToRemove,
 } from './skill-registry.js';
 import { STACK_COMMANDS, TEST_INFRA_MARKERS } from '../utils/stack-commands.js';
-import { keepUserSettings } from './user-settings.js';
+import { backupUserSettings, keepUserSettings } from './user-settings.js';
 import { DEFAULT_AUDIT_MODEL, auditModelAlias } from '../utils/constants.js';
 
 // Skills that take the wizard's audit-model answer (DEC-57)
@@ -38,10 +38,38 @@ async function applyAuditModel(targetDir, config, keep = []) {
 
 const SETTINGS_FILE = path.join('.claude', 'settings.json');
 
-// The settings.json the project had before the scaffold ran, or null.
+// Publish and release commands denied per stack, on top of the tier template's
+// deny list. JavaScript stacks and Go: the template list is complete.
+const STACK_DENY = {
+  swift: ['Bash(xcodebuild archive*)', 'Bash(xcrun altool --upload-app*)'],
+  kotlin: ['Bash(./gradlew publish*)', 'Bash(gradle publish*)'],
+  rust: ['Bash(cargo publish*)'],
+  dotnet: ['Bash(dotnet nuget push*)'],
+  java: ['Bash(mvn deploy*)', 'Bash(./gradlew publish*)', 'Bash(gradle publish*)'],
+  ruby: ['Bash(gem push*)'],
+  python: ['Bash(twine upload*)', 'Bash(alembic downgrade base*)'],
+};
+const stackDenyRules = (config) => STACK_DENY[config.techStack] || [];
+
+// The settings.json the project had before the scaffold ran, as
+// `{ raw, backup }` with its backup already written, or null. Read and backed
+// up before any template is copied, so a scaffold that fails midway cannot
+// cost the project the file (DEC-71).
 async function existingSettings(targetDir) {
-  const file = path.join(targetDir, SETTINGS_FILE);
-  return (await fs.pathExists(file)) ? fs.readFile(file, 'utf8') : null;
+  return backupUserSettings(path.join(targetDir, SETTINGS_FILE));
+}
+
+// Run a scaffold body; when it fails after the project's settings.json was
+// read, put that file back as it was (the backup stays) before rethrowing.
+async function restoringSettings(targetDir, userSettings, body) {
+  try {
+    await body();
+  } catch (err) {
+    if (userSettings) {
+      await fs.writeFile(path.join(targetDir, SETTINGS_FILE), userSettings.raw).catch(() => {});
+    }
+    throw err;
+  }
 }
 
 // Tierward's settings for this tier, rendered for this project, and what
@@ -51,7 +79,9 @@ async function tierwardSettings(tier, config, templatesDir) {
   const render = async (t) => {
     const file = path.join(templatesDir, `tier-${t}`, SETTINGS_FILE);
     if (!(await fs.pathExists(file))) return null;
-    return JSON.parse(interpolate(await fs.readFile(file, 'utf8'), { ...config, tier: t }));
+    return JSON.parse(
+      renderFile(SETTINGS_FILE, await fs.readFile(file, 'utf8'), { ...config, tier: t }),
+    );
   };
   const knownGroups = [];
   for (const t of ['0', 's', 'm', 'l']) {
@@ -64,16 +94,22 @@ async function tierwardSettings(tier, config, templatesDir) {
 }
 
 // Last step of every scaffold. A settings.json the scaffold wrote gets the
-// stack's deny rules. One the project already had keeps the user's
-// permissions and every other key, and gains Tierward's hooks (DEC-55).
-async function finishSettings(tier, targetDir, config, templatesDir, userRaw) {
-  if (userRaw === null) {
+// stack's deny rules. One the project already had keeps the user's allow and
+// ask rules and every other key, and gains Tierward's hooks (DEC-55) and its
+// deny rules, the stack's included (DEC-73); Tier 0 carries no rules.
+async function finishSettings(tier, targetDir, config, templatesDir, userSettings) {
+  if (userSettings === null) {
     await patchSettingsPermissions(targetDir, config);
     return;
   }
   const { tierward, context } = await tierwardSettings(tier, config, templatesDir);
   if (!tierward) return;
-  await keepUserSettings(path.join(targetDir, SETTINGS_FILE), userRaw, tierward, context);
+  const deny = [
+    ...(tierward.permissions?.deny || []),
+    ...(tier === '0' ? [] : stackDenyRules(config)),
+  ];
+  const withStackDeny = { ...tierward, permissions: { ...tierward.permissions, deny } };
+  await keepUserSettings(path.join(targetDir, SETTINGS_FILE), userSettings, withStackDeny, context);
 }
 
 /**
@@ -82,8 +118,14 @@ async function finishSettings(tier, targetDir, config, templatesDir, userRaw) {
  * No pipeline, no docs folder, no pre-commit, no .github.
  */
 async function scaffoldTier0(targetDir, config, templatesDir) {
-  const tierDir = path.join(templatesDir, 'tier-0');
   const userSettings = await existingSettings(targetDir);
+  await restoringSettings(targetDir, userSettings, () =>
+    writeTier0(targetDir, config, templatesDir, userSettings),
+  );
+}
+
+async function writeTier0(targetDir, config, templatesDir, userSettings) {
+  const tierDir = path.join(templatesDir, 'tier-0');
 
   // Copy Tier 0 files with interpolation (CLAUDE.md handled by generateClaudeMd)
   const files = [
@@ -97,7 +139,7 @@ async function scaffoldTier0(targetDir, config, templatesDir) {
     if (!(await fs.pathExists(srcPath))) continue;
     await fs.ensureDir(path.dirname(destPath));
     const content = await fs.readFile(srcPath, 'utf8');
-    await fs.writeFile(destPath, interpolate(content, config));
+    await fs.writeFile(destPath, renderFile(destPath, content, config));
   }
 
   // Copy the communication-governance rule only. Tier 0 deliberately gets no
@@ -129,9 +171,15 @@ export async function scaffoldTier(tier, targetDir, config, templatesDir) {
     return scaffoldTier0(targetDir, config, templatesDir);
   }
   assertPromotion(config);
+  const userSettings = await existingSettings(targetDir);
+  await restoringSettings(targetDir, userSettings, () =>
+    writeTier(tier, targetDir, config, templatesDir, userSettings),
+  );
+}
+
+async function writeTier(tier, targetDir, config, templatesDir, userSettings) {
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
-  const userSettings = await existingSettings(targetDir);
 
   // Copy common files - skip rules/ here, handled separately below
   const commonFileMap = {
@@ -320,18 +368,8 @@ async function patchSettingsPermissions(targetDir, config) {
   const settingsPath = path.join(targetDir, '.claude', 'settings.json');
   if (!(await fs.pathExists(settingsPath))) return;
 
-  const denyByStack = {
-    swift: ['Bash(xcodebuild archive*)', 'Bash(xcrun altool --upload-app*)'],
-    kotlin: ['Bash(./gradlew publish*)', 'Bash(gradle publish*)'],
-    rust: ['Bash(cargo publish*)'],
-    dotnet: ['Bash(dotnet nuget push*)'],
-    java: ['Bash(mvn deploy*)', 'Bash(./gradlew publish*)', 'Bash(gradle publish*)'],
-    ruby: ['Bash(gem push*)'],
-    python: ['Bash(twine upload*)', 'Bash(alembic downgrade base*)'],
-  };
-
-  const stackDeny = denyByStack[config.techStack];
-  if (!stackDeny) return; // JavaScript stacks and Go: the template list is complete
+  const stackDeny = stackDenyRules(config);
+  if (stackDeny.length === 0) return;
 
   try {
     const raw = await fs.readFile(settingsPath, 'utf8');
@@ -395,7 +433,7 @@ async function copyTemplateDir(
     await fs.ensureDir(path.dirname(dest));
 
     const content = await fs.readFile(src, 'utf8');
-    await fs.writeFile(dest, interpolate(content, config));
+    await fs.writeFile(dest, renderFile(dest, content, config));
   }
 }
 
@@ -406,9 +444,15 @@ async function copyTemplateDir(
  */
 export async function scaffoldTierSafe(tier, targetDir, config, templatesDir) {
   assertPromotion(config);
+  const userSettings = await existingSettings(targetDir);
+  await restoringSettings(targetDir, userSettings, () =>
+    writeTierSafe(tier, targetDir, config, templatesDir, userSettings),
+  );
+}
+
+async function writeTierSafe(tier, targetDir, config, templatesDir, userSettings) {
   const commonDir = path.join(templatesDir, 'common');
   const tierDir = path.join(templatesDir, `tier-${tier.toLowerCase()}`);
-  const userSettings = await existingSettings(targetDir);
   const userAuditSkills = await existingAuditModelSkills(targetDir);
 
   await copyTemplateDirSafe(
@@ -530,8 +574,35 @@ async function copyTemplateDirSafe(
 
     await fs.ensureDir(path.dirname(dest));
     const content = await fs.readFile(src, 'utf8');
-    await fs.writeFile(dest, interpolate(content, config));
+    await fs.writeFile(dest, renderFile(dest, content, config));
   }
+}
+
+/**
+ * Render one template file for its destination. A `.json` destination (the
+ * settings templates) carries user text inside JSON strings, the Stop hook's
+ * [TEST_COMMAND] among them, so every string value of the config is escaped
+ * as JSON writes it, and the result is parsed before anything is written: a
+ * template that does not render as JSON is refused by name instead of
+ * reaching the project. Every other file takes the values as typed.
+ */
+function renderFile(destName, content, config) {
+  if (!destName.endsWith('.json')) return interpolate(content, config);
+  const escaped = Object.fromEntries(
+    Object.entries(config).map(([key, value]) => [
+      key,
+      typeof value === 'string' ? JSON.stringify(value).slice(1, -1) : value,
+    ]),
+  );
+  const rendered = interpolate(content, escaped);
+  try {
+    JSON.parse(rendered);
+  } catch (err) {
+    throw new Error(`${destName}: the rendered file is not valid JSON (${err.message})`, {
+      cause: err,
+    });
+  }
+  return rendered;
 }
 
 /**
@@ -973,6 +1044,11 @@ function interpolate(content, config) {
       /git checkout main && git merge staging --no-ff && git push origin main/g,
       `git checkout main && git merge ${workBranch} --no-ff && git push origin main`,
     );
+    // The step-10 worktree form (DEC-72) merges the worktree's own branch
+    result = result.replace(
+      /git -C \.\.\/\.\.\/\.\. checkout main && git -C \.\.\/\.\.\/\.\. merge staging --no-ff && git -C \.\.\/\.\.\/\.\. push origin main/g,
+      'git -C ../../.. checkout main && git -C ../../.. merge worktree-[block-name] --no-ff && git -C ../../.. push origin main',
+    );
     // Branch protection rules: remove staging (covers m/l + tier-s + git.md wording)
     result = result.replace(
       /Never commit to `main` or `staging` directly\./g,
@@ -1377,6 +1453,7 @@ export { interpolate };
 // Exported for unit testing only - not part of the public API
 export const _testHelpers = {
   interpolate,
+  renderFile,
   pruneSkills,
   patchSettingsPermissions,
 };

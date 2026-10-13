@@ -1,7 +1,8 @@
 // A project that already has a `.claude/settings.json` keeps it (DEC-55):
-// Tierward writes a timestamped backup, then adds only its own hooks. The
-// user's permissions and every other key stay exactly as they were, so an
-// `init` never overrides what the user allowed, asked or denied.
+// Tierward writes a timestamped backup before the scaffold touches anything,
+// then adds its own hooks and its own deny rules (DEC-73). The user's allow
+// and ask rules and every other key stay exactly as they were, so an `init`
+// never overrides what the user allowed or asked, and never grants anything.
 //
 // Tierward's own hook groups are recognised, so a second `init` or a tier
 // change replaces them instead of adding them again: a group is Tierward's
@@ -64,6 +65,42 @@ export function mergeTierwardHooks(user, tierward, context) {
 }
 
 /**
+ * Tierward's deny rules the user's file does not have yet, in template order.
+ */
+export function addedDenyRules(user, tierward) {
+  const own = Array.isArray(user.permissions?.deny) ? user.permissions.deny : [];
+  const rules = Array.isArray(tierward.permissions?.deny) ? tierward.permissions.deny : [];
+  return rules.filter((rule, i) => !own.includes(rule) && rules.indexOf(rule) === i);
+}
+
+/**
+ * The user's settings with Tierward's hooks merged in and Tierward's deny
+ * rules added after the user's own (DEC-73). Allow and ask rules, and every
+ * other key, stay as the user wrote them, in the same order; `permissions`
+ * is added only when a deny rule has to go somewhere.
+ */
+export function mergeTierwardSettings(user, tierward, context) {
+  const merged = mergeTierwardHooks(user, tierward, context);
+  const added = addedDenyRules(user, tierward);
+  if (added.length === 0) return merged;
+  const permissions =
+    user.permissions && typeof user.permissions === 'object' && !Array.isArray(user.permissions)
+      ? user.permissions
+      : {};
+  const deny = [...(Array.isArray(permissions.deny) ? permissions.deny : []), ...added];
+  const withDeny =
+    'deny' in permissions
+      ? Object.fromEntries(
+          Object.entries(permissions).map(([key, value]) => [key, key === 'deny' ? deny : value]),
+        )
+      : { ...permissions, deny };
+  if (!('permissions' in merged)) return { ...merged, permissions: withDeny };
+  return Object.fromEntries(
+    Object.entries(merged).map(([key, value]) => [key, key === 'permissions' ? withDeny : value]),
+  );
+}
+
+/**
  * The user's own hook groups on the events Tierward also hooks, as
  * `{ event, commands }`. An inline hook an earlier Tierward version wrote is not
  * recognised (DEC-60 f), so a duplicate would show up here.
@@ -84,34 +121,57 @@ export function keptUserHooks(user, tierward, context) {
 }
 
 /**
- * Write the user's settings back with Tierward's hooks merged in, after a
- * timestamped backup of the user's original bytes. `userRaw` is the file as it
- * was before the scaffold ran. A file that is not valid JSON is restored as it
- * was and left without Tierward's hooks. Lists the user's hooks kept on the
- * events Tierward hooks. Returns `{ backup, keptHooks }`, or `null` when
- * nothing was merged.
+ * The project's settings.json before the scaffold runs, as `{ raw, backup }`:
+ * the file's bytes and the timestamped backup written here, before anything
+ * else touches the file. `null` when the project has none.
  */
-export async function keepUserSettings(settingsPath, userRaw, tierward, context, now = new Date()) {
+export async function backupUserSettings(settingsPath, now = new Date()) {
+  if (!(await fs.pathExists(settingsPath))) return null;
+  const raw = await fs.readFile(settingsPath, 'utf8');
+  const backup = backupPath(settingsPath, now);
+  await fs.writeFile(backup, raw);
+  return { raw, backup };
+}
+
+/**
+ * Write the user's settings back with Tierward's hooks merged in and its deny
+ * rules added. `user` is what backupUserSettings returned before the scaffold
+ * ran: the file's bytes and the path of its backup. A file that is not valid
+ * JSON is put back as it was and left without Tierward's hooks or rules. Lists
+ * the deny rules added and the user's hooks kept on the events Tierward hooks.
+ * Returns `{ backup, keptHooks, addedDeny }`, or `null` when nothing was merged.
+ */
+export async function keepUserSettings(settingsPath, { raw, backup }, tierward, context) {
   let user;
   try {
-    user = JSON.parse(userRaw);
+    user = JSON.parse(raw);
     if (!user || typeof user !== 'object' || Array.isArray(user)) {
       throw new Error('the top level is not an object');
     }
   } catch (err) {
-    await fs.writeFile(settingsPath, userRaw);
+    await fs.writeFile(settingsPath, raw);
     console.warn(
       `[tierward] Warning: ${settingsPath} is not valid JSON (${err.message}). ` +
-        `It was left as it was and Tierward's hooks were not added: ` +
-        `fix the file and run init again.`,
+        `It was put back as it was and Tierward's hooks were not added: ` +
+        `fix the file and run init again. Your original file: ${backup}`,
     );
     return null;
   }
 
-  const backup = backupPath(settingsPath, now);
-  await fs.writeFile(backup, userRaw);
-  const merged = mergeTierwardHooks(user, tierward, context);
+  const merged = mergeTierwardSettings(user, tierward, context);
   await fs.writeFile(settingsPath, JSON.stringify(merged, null, 2) + '\n');
+
+  const addedDeny = addedDenyRules(user, tierward);
+  if (addedDeny.length > 0) {
+    console.log(
+      [
+        `[tierward] ${settingsPath}: ${addedDeny.length} deny rules added after yours ` +
+          `(Tierward writes no allow or ask rule and changes none of yours):`,
+        ...addedDeny.map((rule) => `  ${rule}`),
+        `  Your original file: ${backup}`,
+      ].join('\n'),
+    );
+  }
 
   const keptHooks = keptUserHooks(user, tierward, context);
   if (keptHooks.length > 0) {
@@ -124,5 +184,5 @@ export async function keepUserSettings(settingsPath, userRaw, tierward, context,
       ].join('\n'),
     );
   }
-  return { backup, keptHooks };
+  return { backup, keptHooks, addedDeny };
 }

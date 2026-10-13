@@ -404,11 +404,12 @@ Only after explicit confirmation (it covers the closure steps below, never the s
 
     ***** STOP — Promotion authorization (production) *****
     - WHY we stopped: the next command writes to the protected `main` branch and ships the block to production. No prior approval (Phase 6 sign-off, closure confirmation, or a `/pr-review` verdict) covers this push.
-    - WHAT to do: confirm you want exactly this to run: `git checkout main && git merge staging --no-ff && git push origin main`.
+    - WHAT to do: confirm you want exactly this to run: `git checkout main && git merge staging --no-ff && git push origin main` (in a worktree, the form below with `-C ../../..` on each `git`).
     - NEXT after action: reply with the bare keyword `Promote` to authorize this ONE push; the merge+push runs, then the step-11 branch cleanup.
     *****
 
-    `git checkout main && git merge staging --no-ff && git push origin main`
+    - Not in a worktree: `git checkout main && git merge staging --no-ff && git push origin main`
+    - In a worktree, stay in it: `git -C ../../.. checkout main && git -C ../../.. merge staging --no-ff && git -C ../../.. push origin main`. From `.claude/worktrees/[block-name]`, `../../..` is the main working tree, which holds `main`: git refuses to check out a branch another working tree has, so the merge lands where `main` lives.
 
 11. **Branch cleanup** (the block branch, and the worktree if this block ran in one, left the step-1 cleanup gate because the closure commits and the promotion needed them):
 
