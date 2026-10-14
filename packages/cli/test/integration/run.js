@@ -4767,6 +4767,34 @@ function promotionStepCommands(dir) {
   return [...commands];
 }
 
+// Every git/npx command the pipeline, the cheatsheet and the commit skill
+// quote, the step-10 worktree form (`git -C ../../.. push origin main`, DEC-72)
+// included. Restored from the pre-2.3.0 default-permissions scenario (F15).
+function workflowCommands(dir) {
+  const commands = new Set();
+  for (const rel of [
+    '.claude/rules/pipeline.md',
+    '.claude/cheatsheet.md',
+    '.claude/skills/commit/SKILL.md',
+  ]) {
+    const file = path.join(dir, rel);
+    if (!fs.existsSync(file)) continue;
+    const text = fs.readFileSync(file, 'utf8');
+    const snippets = [
+      ...[...text.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]),
+      ...[...text.matchAll(/```[a-z]*\n([\s\S]*?)```/g)].flatMap((m) => m[1].split('\n')),
+    ];
+    for (const snippet of snippets) {
+      for (const part of snippet.split(/\s*(?:&&|\|\||;|\|)\s*/)) {
+        const cmd = part.trim();
+        // any git, npm, npx, pnpm, yarn or gh invocation, options first included
+        if (/^(git|npm|npx|pnpm|yarn|gh)\s+\S+/.test(cmd)) commands.add(cmd);
+      }
+    }
+  }
+  return [...commands];
+}
+
 // Pushes that land on `main` without a pull request; `pr` mode denies each one.
 const PR_MODE_MAIN_PUSHES = [
   'git push origin main',
@@ -5204,6 +5232,22 @@ async function scenarioNoPreapprovedCommands() {
         pass(`${label}: the governance gate sees Bash and every MCP merge or write tool`);
       } else {
         fail(`${label}: tools the governance gate does not see`, unseen.join(' | '));
+      }
+
+      // The deny list must never refuse a command the templates tell Claude to
+      // run (F15): a later template edit quoting `git -c ...` or `npm exec` would
+      // otherwise ship denied by its own settings.
+      const workflow = workflowCommands(dir);
+      const refused = workflow.filter(denied);
+      if (workflow.length > 0 && refused.length === 0) {
+        pass(
+          `${label}: no git/npx command of the pipeline, cheatsheet or commit skill is denied (${workflow.length})`,
+        );
+      } else {
+        fail(
+          `${label}: a command the templates quote is denied`,
+          refused.length ? refused.join(' | ') : 'no command found',
+        );
       }
     }
   }
