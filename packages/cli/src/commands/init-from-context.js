@@ -23,6 +23,16 @@ function resolveDoc(doc) {
   return doc.startsWith('~') ? path.join(process.env.HOME || '~', doc.slice(1)) : path.resolve(doc);
 }
 
+// The project name a source suggests: its last path segment, trailing slashes
+// and a `.git` suffix dropped. '' when the source has no segment (`/`).
+function projectNameFromSource(source) {
+  return String(source)
+    .replace(/\/+$/, '')
+    .split('/')
+    .pop()
+    .replace(/\.git$/, '');
+}
+
 // The values `--answers` (or a CONTEXT.md, which init turns into answers)
 // gives: no prompt is asked. `sourceRepos` and `sourceDocs` are the repository
 // and document inputs, `primaryRepo` the main repository.
@@ -41,15 +51,17 @@ async function valuesFromAnswers(answers, options) {
     if (await fs.pathExists(resolved)) docInputs.push(resolved);
     else console.log(chalk.yellow(`  ⚠ File not found: ${resolved} - skipping`));
   }
+  const projectName =
+    String(answers.projectName || '').trim() || projectNameFromSource(sourceInputs[0]);
+  if (!projectName) {
+    refuse(
+      `From existing docs cannot name the project after the source '${sourceInputs[0]}': set \`projectName\` in --answers.`,
+    );
+  }
   return {
     sourceInputs,
     docInputs,
-    projectName:
-      answers.projectName ||
-      sourceInputs[0]
-        .split('/')
-        .pop()
-        .replace(/\.git$/, ''),
+    projectName,
     primaryRepo: answers.primaryRepo || sourceInputs[0],
     tier: options.tier || answers.tier || 's',
     includePreCommit: answers.includePreCommit ?? true,
@@ -191,10 +203,7 @@ async function promptValues(options) {
         name: 'projectName',
         message: 'New project name:',
         default: path.basename(
-          sourceInputs[0]
-            ?.split('/')
-            .pop()
-            ?.replace(/\.git$/, '') || process.cwd(),
+          (sourceInputs[0] && projectNameFromSource(sourceInputs[0])) || process.cwd(),
         ),
         validate: (v) => v.trim().length > 0 || 'Required',
       },

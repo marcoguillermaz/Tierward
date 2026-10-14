@@ -1,6 +1,6 @@
 {
   "name": "tierward",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "description": "Scaffold for legible, reviewable AI-assisted development",
   "type": "module",
   "mcpName": "io.github.marcoguillermaz/tierward",

@@ -305,7 +305,7 @@ Only after explicit confirmation (it covers the closure steps below, never the s
 
    ***** STOP — Cleanup confirmation *****
    - WHY we stopped: block files are about to be removed; removal is never bundled into the closure confirmation - each removal gets an explicit sign-off here.
-   - WHAT to do: review the full candidate list presented via `AskUserQuestion`: `.claude/session/block-[name].md` (session file - consolidated in steps 0/0b), `.claude/session/refactoring-findings.md` (scratch, now flushed), `.claude/FIRST_SESSION.md` (one-time onboarding guide, obsolete after the first block), audit-generated screenshots/artifacts (enumerate from `git status --porcelain` untracked leftovers and known output dirs; an empty scan must be stated, not assumed). The `feature/block-name` branch is not a candidate here: it carries the closure commits and the promotion, and is removed at the branch cleanup (step 11). The spec archive move (step 5) is a move, not a removal - it is not part of this gate.
+   - WHAT to do: review the full candidate list presented via `AskUserQuestion`: `.claude/session/block-[name].md` (session file - consolidated in steps 0/0b), `.claude/session/refactoring-findings.md` (scratch, now flushed), `.claude/FIRST_SESSION.md` (one-time onboarding guide, obsolete after the first block), audit-generated screenshots/artifacts (enumerate from `git status --porcelain` untracked leftovers and known output dirs; an empty scan must be stated, not assumed). The block branch and, if this block ran in a worktree, the worktree directory are not candidates here: they carry the closure commits and the promotion, and are removed at the branch cleanup (step 11). The spec archive move (step 5) is a move, not a removal - it is not part of this gate.
    - NEXT after action: only the approved items are deleted, then closure continues with step 2. If the session file is kept: set `block_closed: true` in its front matter so the next session does not resume it as interrupted.
    *****
 2. Update `docs/implementation-checklist.md`: mark the block ✅.
@@ -336,15 +336,16 @@ Only after explicit confirmation (it covers the closure steps below, never the s
     - Not in a worktree: `git checkout main && git merge staging --no-ff && git push origin main`
     - In a worktree, stay in it: `git -C ../../.. checkout main && git -C ../../.. merge staging --no-ff && git -C ../../.. push origin main`. From `.claude/worktrees/[block-name]`, `../../..` is the main working tree, which holds `main`: git refuses to check out a branch another working tree has, so the merge lands where `main` lives.
 
-11. **Branch cleanup** (the branch left the step-1 cleanup gate because the closure commits and the promotion needed it):
+11. **Branch cleanup** (the block branch, and the worktree if this block ran in one, left the step-1 cleanup gate because the closure commits and the promotion needed them):
 
     ***** STOP — Branch cleanup confirmation *****
-    - WHY we stopped: the merged branch is about to be removed; removal is never bundled into the promotion authorization.
-    - WHAT to do: review the candidate: the local `feature/block-name` branch, now merged into `main`.
-    - NEXT after action: confirm (or keep the branch); only an approved branch is deleted, then Phase 8.5 context review closes the session.
+    - WHY we stopped: the merged block branch, and its worktree, are about to be removed; removal is never bundled into the promotion authorization.
+    - WHAT to do: review the candidates: the local block branch, now merged into `main`, and the worktree directory `.claude/worktrees/[block-name]` if this block ran in one.
+    - NEXT after action: confirm the list (or name what to keep); only the approved items are deleted, then Phase 8.5 context review closes the session.
     *****
 
-    `git branch -d feature/block-name`
+    - Not in a worktree: `git branch -d feature/block-name`.
+    - In a worktree: run `ExitWorktree({action: "keep"})` first (never `"remove"` — the tool only removes worktrees it created via `name:`, not ones entered via `path:`; `"remove"` always fails here), or close the worktree session. Then `git worktree remove .claude/worktrees/[block-name]` and `git branch -d worktree-[block-name]`.
 
 ## Phase 8.5 - Context review + compact
 

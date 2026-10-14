@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Sonnet | `[target:file:&lt;filename&gt;|target:range:&lt;from&gt;-&lt;to&gt;|mode:all]` |
+| Tier M · Tier L | Sonnet | `[target:file:<filename>\|target:range:<from>-<to>\|mode:all]` |
 
 ---
 

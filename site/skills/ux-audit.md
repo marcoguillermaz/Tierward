@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Opus (deep) | `[flow:&lt;flow-id&gt;|role:&lt;role&gt;|full] [target:page:&lt;route&gt;|target:role:&lt;role&gt;|target:section:&lt;section&gt;]` |
+| Tier M · Tier L | Opus (deep) | `[flow:<flow-id>\|role:<role>\|full] [target:page:<route>\|target:role:<role>\|target:section:<section>]` |
 
 ---
 

@@ -33,6 +33,7 @@ export const IN_PLACE_GITIGNORE_ENTRIES = [
   '.claude/worktrees/',
   '.claude/CLAUDE.local.md',
   '.claude/settings.local.json',
+  '.claude/settings.json.bak.*',
   'CONTEXT_IMPORT.md',
 ];
 

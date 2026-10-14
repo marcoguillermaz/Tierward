@@ -139,7 +139,8 @@ Reuse the local report (skip the subagent) **only when all** of these hold:
 - `$LOCAL_REPORT` exists and `$REVIEWED_SHA` == `$PR_HEAD_SHA` (head unchanged since the local pass);
 - `$REVIEWED_BASE` == `$PR_BASE` (same three-dot diff scope — a local review taken against a different base covers a different change set and must not be reused);
 - the report has **zero Critical and zero Major** findings — key the skip on the finding *counts*, never on the verdict line: a soft or mis-generated `✅ LGTM` that still carries a Major must **not** ride the skip (count the entries under the report's `### Critical (N)` / `### Major (N)` sections; `N=0` on both is the only pass);
-- the current invocation is **not** `--deep`, unless `$REVIEWED_MODEL` is already `opus` (an explicit deep request is never satisfied by a shallower pass).
+- the current invocation is **not** `--deep`, unless `$REVIEWED_MODEL` is already `opus` (an explicit deep request is never satisfied by a shallower pass);
+- `$REVIEWED_MODEL` is `sonnet` or `opus`: a report whose header says `none` was not written by the review subagent and is never reused.
 
 When all hold, write the reused body to the PR output path with a reuse banner prepended, carry the local report's verdict to Step 6, and **skip the rest of Step 4**:
 
@@ -164,7 +165,7 @@ The subagent returns a structured markdown review.
 gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file .tierward/tmp/pr-review-${PR_NUMBER}-output.md
 ```
 
-Always post — even on LGTM clean reviews, and even on the Step 4 reuse path — to maintain a permanent audit trail. Reuse skips the *second review run*, never this comment: it posts the reused report written to the same `.tierward/tmp/pr-review-${PR_NUMBER}-output.md` path. The comment is the canonical record; the in-conversation summary in Step 6 is for the maintainer's terminal.
+Always post — even on LGTM clean reviews, and even on the Step 4 reuse path — to maintain a permanent audit trail. Reuse skips the *second review run*, never this comment: it posts the reused report written to the same `.tierward/tmp/pr-review-${PR_NUMBER}-output.md` path. The comment is the canonical record; the in-conversation summary in Step 6 is for the maintainer's terminal. In both modes the report is saved and posted as the subagent returned it: never fix a citation, drop a finding or soften a severity inside it. A correction (a line number the diff no longer has, a path that moved) goes in a `Reviewer note:` line at the top of the comment, or right after the provenance header in local mode.
 
 **Local mode:** there is no PR to comment on, so skip `gh pr comment`. Write the report to `.tierward/tmp/pr-review-local-${SLUG}-output.md`, then prepend a provenance header so a later PR-mode run can safely detect a same-commit pre-PR review:
 
@@ -172,7 +173,7 @@ Always post — even on LGTM clean reviews, and even on the Step 4 reuse path �
 {
   printf 'Reviewed-SHA: %s\n'  "$(git rev-parse HEAD)"
   printf 'Reviewed-Base: %s\n' "${BASE#origin/}"      # normalized: strip origin/ so it matches a PR's baseRefName
-  printf 'Reviewed-Model: <sonnet|opus>\n\n'          # the model chosen in Step 4 (opus when --deep)
+  printf 'Reviewed-Model: <sonnet|opus|none>\n\n'     # the model that ran the Step 4 subagent; none if no Agent call ran
   cat .tierward/tmp/pr-review-local-${SLUG}-output.md
 } > .tierward/tmp/pr-review-local-${SLUG}-output.md.tmp \
   && mv .tierward/tmp/pr-review-local-${SLUG}-output.md.tmp .tierward/tmp/pr-review-local-${SLUG}-output.md

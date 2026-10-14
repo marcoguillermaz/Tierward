@@ -9,7 +9,7 @@ import {
   getCheatsheetSkillsToRemove,
 } from './skill-registry.js';
 import { STACK_COMMANDS, TEST_INFRA_MARKERS } from '../utils/stack-commands.js';
-import { backupUserSettings, keepUserSettings } from './user-settings.js';
+import { backupUserSettings, hookGroupPattern, keepUserSettings } from './user-settings.js';
 import { DEFAULT_AUDIT_MODEL, auditModelAlias } from '../utils/constants.js';
 
 // Skills that take the wizard's audit-model answer (DEC-57)
@@ -74,23 +74,36 @@ async function restoringSettings(targetDir, userSettings, body) {
 
 // Tierward's settings for this tier, rendered for this project, and what
 // recognises Tierward's hook groups in a user's file: the groups of every tier
-// template rendered for this project, and the names of Tierward's hook files.
+// template rendered for this project, the same groups as patterns that match
+// any rendering (a hook rendered with an earlier test command is still
+// Tierward's), and the names of Tierward's hook files.
 async function tierwardSettings(tier, config, templatesDir) {
-  const render = async (t) => {
+  const raw = async (t) => {
     const file = path.join(templatesDir, `tier-${t}`, SETTINGS_FILE);
-    if (!(await fs.pathExists(file))) return null;
-    return JSON.parse(
-      renderFile(SETTINGS_FILE, await fs.readFile(file, 'utf8'), { ...config, tier: t }),
-    );
+    return (await fs.pathExists(file)) ? fs.readFile(file, 'utf8') : null;
+  };
+  const render = async (t) => {
+    const text = await raw(t);
+    return text === null
+      ? null
+      : JSON.parse(renderFile(SETTINGS_FILE, text, { ...config, tier: t }));
   };
   const knownGroups = [];
+  const knownPatterns = [];
   for (const t of ['0', 's', 'm', 'l']) {
     const rendered = await render(t);
     for (const groups of Object.values(rendered?.hooks || {})) knownGroups.push(...groups);
+    const template = JSON.parse((await raw(t)) || '{}');
+    for (const groups of Object.values(template.hooks || {})) {
+      knownPatterns.push(...groups.map(hookGroupPattern));
+    }
   }
   const hooksDir = path.join(templatesDir, 'common', '.claude', 'hooks');
   const hookFiles = (await fs.pathExists(hooksDir)) ? await fs.readdir(hooksDir) : [];
-  return { tierward: await render(tier.toLowerCase()), context: { knownGroups, hookFiles } };
+  return {
+    tierward: await render(tier.toLowerCase()),
+    context: { knownGroups, knownPatterns, hookFiles },
+  };
 }
 
 // Last step of every scaffold. A settings.json the scaffold wrote gets the
@@ -1360,15 +1373,14 @@ function toPullRequestPromotion(content) {
     `9. **Open the pull request**: ${blockBranch}. Pushing the work branch and opening the PR are not promotions; the step-10 merge is. If the repository runs CI on pull requests, wait for it: \`gh pr checks --watch\`.\n\n   **PR review** (recommended): once CI is green, run`,
   );
 
-  // Tier M/L step 10: merge behind the gate; step 11: post-merge cleanup
+  // Tier M/L step 10: merge behind the gate; step 11: post-merge cleanup, in
+  // two forms on both tiers since a block of either may run in a worktree
   const branchCleanup = (branch) =>
     `\`git checkout main && git pull --ff-only\`, then \`git branch -d ${branch}\` and \`git push origin --delete ${branch}\` ${remoteGone}`;
-  const cleanupCommands = isTierL
-    ? [
-        `    - Not in a worktree: ${branchCleanup('feature/block-name')}.`,
-        `    - In a worktree: run \`ExitWorktree({action: "keep"})\` first (never \`"remove"\`), then from the main working tree \`git checkout main && git pull --ff-only\`, \`git worktree remove .claude/worktrees/[block-name]\`, \`git branch -d worktree-[block-name]\` and \`git push origin --delete worktree-[block-name]\` ${remoteGone}.`,
-      ]
-    : [`    ${branchCleanup('feature/block-name')}.`];
+  const cleanupCommands = [
+    `    - Not in a worktree: ${branchCleanup('feature/block-name')}.`,
+    `    - In a worktree: run \`ExitWorktree({action: "keep"})\` first (never \`"remove"\`), then from the main working tree \`git checkout main && git pull --ff-only\`, \`git worktree remove .claude/worktrees/[block-name]\`, \`git branch -d worktree-[block-name]\` and \`git push origin --delete worktree-[block-name]\` ${remoteGone}.`,
+  ];
   result = result.replace(
     /10\. Promote to production - behind its own gate:\n[\s\S]*?(?=## Phase 8\.5)/,
     [
@@ -1386,7 +1398,7 @@ function toPullRequestPromotion(content) {
       '',
       '    ***** STOP — Post-merge cleanup confirmation *****',
       '    - WHY we stopped: the merged branch is about to be removed; removal is never bundled into the promotion authorization.',
-      `    - WHAT to do: review the candidates: the local block branch and its remote copy (GitHub may have deleted it already)${isTierL ? ', and the worktree directory `.claude/worktrees/[block-name]` if this block ran in a worktree' : ''}.`,
+      '    - WHAT to do: review the candidates: the local block branch and its remote copy (GitHub may have deleted it already), and the worktree directory `.claude/worktrees/[block-name]` if this block ran in a worktree.',
       '    - NEXT after action: confirm the list (or name what to keep); local `main` is updated, only the approved items are deleted, then Phase 8.5 context review closes the session.',
       '    *****',
       '',
