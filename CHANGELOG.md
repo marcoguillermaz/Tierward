@@ -9,9 +9,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [2.3.3] — 2026-10-14
+
 ### Fixed
 
-- **The Tier L session-close security review runs again.** Its prompt hook named the model by the alias `haiku`, which the Claude Code hook evaluator did not resolve on a first-party Anthropic API setup (Claude Code 2.1.283 and 2.1.296): every Stop event logged `Hook evaluator API error: There's an issue with the selected model (haiku)` and the review was skipped without blocking the session. The hook now sets no `model` and runs on the default model Claude Code picks for prompt hooks (Haiku 5.5 on that setup). This reverses the 1.10.3 change from `claude-haiku-4-5` to the alias. Skill frontmatter is unchanged.
+- **The Tier L session-close security review runs again.** Its prompt hook named the model by the alias `haiku`, which the Claude Code hook evaluator did not resolve on a first-party Anthropic API setup (Claude Code 2.1.283 and 2.1.296). Every Stop event logged `Hook evaluator API error: There's an issue with the selected model (haiku)`, and the review was skipped without blocking the session. The hook now sets no `model` and runs on the default model Claude Code picks for prompt hooks (Haiku 5.5 on that setup), which reverses the 1.10.3 change from `claude-haiku-4-5` to the alias. Skill frontmatter is unchanged. Existing Tier L projects should delete the `"model": "haiku"` line from the Stop prompt hook in `.claude/settings.json`. Running `init` again does not fix it, because it adds the new hook and keeps the old one next to it, listed as an empty `Stop:` line among the hooks it kept. If you already ran it, delete the old hook, the one that still names `haiku`.
 
 ---
 
