@@ -64,9 +64,10 @@ jobs:
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
-    # Own job, not a step of "Lint & format": that job is a required check,
-    # so an advisory published against an existing dependency would fail
-    # every PR. This job is not required. Dependency review
+    # Own job, not a step of "Lint & format": that job feeds the required
+    # "CI passed" check, so an advisory published against an existing
+    # dependency would fail every PR. This job is not required and stays out
+    # of "CI passed". Dependency review
     # (dependency-review.yml) covers the PR-level case: it flags only the
     # dependencies the PR itself adds or changes.
 
@@ -151,3 +152,24 @@ jobs:
       # and bin-symlink regressions the source-path tests cannot see.
       - name: Published-package smoke
         run: npm run test:smoke --prefix packages/cli
+
+  # The one CI check the main and staging rulesets require. It passes only
+  # when every job it needs passed, so auto-merge waits for all of them, and
+  # a change to a Node matrix needs no ruleset update. `always()` makes it
+  # report a failure when a job fails or is cancelled: a skipped required
+  # check would count as passed. Dependency audit stays out on purpose.
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [verify, lint, unit-tests, drift-tracker-tests, integration-tests, published-smoke]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Every CI job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            [ "$result" = "success" ] || exit 1
+          done
