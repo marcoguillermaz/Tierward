@@ -6015,6 +6015,25 @@ async function scenarioFromContextAnswers() {
     );
   }
 
+  // No projectName and a source written with a trailing slash: the project is
+  // named after the source's last segment, not after an empty string (F14).
+  const slashCwd = path.join(base, 'trailing-slash');
+  fs.ensureDirSync(slashCwd);
+  const noName = { ...answers, sourceRepos: [`${source}/`] };
+  delete noName.projectName;
+  const viaSlash = run(slashCwd, ['--answers', JSON.stringify(noName)]);
+  if (
+    viaSlash.status === 0 &&
+    fs.existsSync(path.join(slashCwd, 'source-repo', '.claude/rules/pipeline.md'))
+  ) {
+    pass('from-context[trailing slash]: project named after the source');
+  } else {
+    fail(
+      'from-context[trailing slash]: expected the project in source-repo/',
+      `exit ${viaSlash.status}, files: ${fs.readdirSync(slashCwd).join(', ')}, stderr: ${(viaSlash.stderr || '').trim().split('\n').pop()}`,
+    );
+  }
+
   // CONTEXT.md with a sources block
   const contextCwd = path.join(base, 'context');
   fs.ensureDirSync(contextCwd);
