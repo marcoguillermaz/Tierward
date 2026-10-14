@@ -139,12 +139,17 @@ async function main() {
     }
 
     // 4. Doctor must report a clean fresh scaffold (0 fails; warns tolerated).
+    // A `--report` check carries `status` ('pass' | 'warn' | 'fail' | 'skip',
+    // doctor.js), not `pass`: a filter on `pass` never matched, so this
+    // assertion could not fail (I8). On CI the `claude-cli` check warns
+    // instead of failing (the `CI` variable is set), so the filter stays green
+    // on a runner without Claude Code.
     console.log('· installed `tierward doctor --report`');
     const doctor = run(binTierward, ['doctor', '--report'], { cwd: scaffold });
     try {
       const report = JSON.parse(doctor.stdout);
       const checks = report.checks || [];
-      const fails = checks.filter((ch) => ch.pass === false && !ch.warn && !ch.skip);
+      const fails = checks.filter((ch) => ch.status === 'fail');
       assert(
         fails.length === 0,
         'doctor: 0 fails on fresh scaffold',

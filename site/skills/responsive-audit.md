@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Opus (deep) | `[quick|full|wcag] [target:page:&lt;route&gt;|target:role:&lt;role&gt;|target:section:&lt;section&gt;]` |
+| Tier M · Tier L | Opus (deep) | `[quick\|full\|wcag] [target:page:<route>\|target:role:<role>\|target:section:<section>]` |
 
 ---
 

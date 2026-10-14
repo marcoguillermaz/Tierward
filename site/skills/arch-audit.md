@@ -1,6 +1,6 @@
 # /arch-audit
 
-> Audit Claude Code architecture files against Anthropic docs and release notes, and verify internal ecosystem consistency. Run weekly to maintain compliance, catch new features, and keep the context system clean.
+> Audit Claude Code architecture files against Anthropic docs and release notes, and verify internal ecosystem consistency. Run on demand to maintain compliance, catch new features, and keep the context system clean.
 
 | Tiers | Model | Flags |
 |---|---|---|

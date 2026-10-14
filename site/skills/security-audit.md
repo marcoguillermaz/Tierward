@@ -1,10 +1,10 @@
 # /security-audit
 
-> Security audit: auth/authz on API routes, input validation, RLS policies, response shape review, secret exposure, HTTP headers. Native mode checks entitlements and Keychain. MCP-aware (v1.20+): when `mcp-nvd` server is wired, Step 3c queries live CVE data instead of static `npm audit` / `pip-audit` snapshots; falls back to local audit commands when MCP unreachable.
+> Security audit: auth/authz on API routes, input validation, row-level access control (RLS in Postgres, ORM scopes or app-level guards elsewhere), response shape review, secret exposure, HTTP headers. Native mode checks entitlements and Keychain. MCP-aware (v1.20+): when `mcp-nvd` server is wired, Step 3c queries live CVE data instead of static `npm audit` / `pip-audit` snapshots; falls back to local audit commands when MCP unreachable.
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier S · Tier L | Sonnet | `[target:page:&lt;route&gt;|target:role:&lt;role&gt;|target:section:&lt;section&gt;]` |
+| Tier M · Tier S · Tier L | Sonnet | `[target:page:<route>\|target:role:<role>\|target:section:<section>]` |
 
 ---
 

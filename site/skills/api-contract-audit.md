@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Sonnet | `[target:spec:&lt;path&gt;|target:endpoint:&lt;path&gt;|mode:drift|mode:richardson|mode:all]` |
+| Tier M · Tier L | Sonnet | `[target:spec:<path>\|target:endpoint:<path>\|mode:drift\|mode:richardson\|mode:all]` |
 
 ---
 

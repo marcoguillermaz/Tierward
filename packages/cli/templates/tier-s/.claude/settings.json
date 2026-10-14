@@ -46,7 +46,7 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-governance-gate.mjs\"",
-            "timeout": 5
+            "timeout": 10
           }
         ]
       },
@@ -56,7 +56,7 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-governance-gate.mjs\"",
-            "timeout": 5
+            "timeout": 10
           }
         ]
       }

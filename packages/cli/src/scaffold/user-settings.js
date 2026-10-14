@@ -6,9 +6,11 @@
 //
 // Tierward's own hook groups are recognised, so a second `init` or a tier
 // change replaces them instead of adding them again: a group is Tierward's
-// when it equals a group of a Tierward template rendered for this project, or
-// when each of its hooks only runs one of Tierward's hook files. A group the
-// user extended with a command of their own is left alone.
+// when it equals a group of a Tierward template rendered for this project,
+// when it matches a template group rendered for any project (the raw
+// template with its placeholders, `[TEST_COMMAND]` for one, gives the
+// pattern), or when each of its hooks only runs one of Tierward's hook files.
+// A group the user extended with a command of their own is left alone.
 
 import fs from 'fs-extra';
 import { backupPath } from '../commands/upgrade.js';
@@ -16,13 +18,34 @@ import { backupPath } from '../commands/upgrade.js';
 const HOOK_FILE_COMMAND = /^node "\$CLAUDE_PROJECT_DIR\/\.claude\/hooks\/([\w.-]+)"$/;
 
 /**
- * Whether a hook group (one entry of `hooks.<Event>`) belongs to Tierward.
- * `knownGroups`: the groups of every Tierward template rendered for this
- * project; `hookFiles`: the names of Tierward's hook files.
+ * A regular expression matching the JSON of a template hook group rendered
+ * for any project: each `[PLACEHOLDER]` of the raw template matches anything,
+ * the rest matches as written.
  */
-export function isTierwardHookGroup(group, { knownGroups, hookFiles }) {
+export function hookGroupPattern(rawGroup) {
+  const escaped = JSON.stringify(rawGroup).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escaped.replace(/\\\[[A-Z_]+\\\]/g, '[\\s\\S]*?')}$`);
+}
+
+/**
+ * Whether a hook group was copied from a Tierward template: it equals a
+ * template group rendered for this project (`knownGroups`) or matches one
+ * rendered for any project (`knownPatterns`, see hookGroupPattern).
+ */
+export function isTemplateHookGroup(group, { knownGroups, knownPatterns = [] }) {
   const json = JSON.stringify(group);
   if (knownGroups.some((known) => JSON.stringify(known) === json)) return true;
+  return knownPatterns.some((pattern) => pattern.test(json));
+}
+
+/**
+ * Whether a hook group (one entry of `hooks.<Event>`) belongs to Tierward: a
+ * template group, or one whose every hook only runs a Tierward hook file
+ * (`hookFiles`: the names of those files).
+ */
+export function isTierwardHookGroup(group, context) {
+  if (isTemplateHookGroup(group, context)) return true;
+  const { hookFiles } = context;
   const hooks = group?.hooks;
   return (
     Array.isArray(hooks) &&
@@ -38,15 +61,17 @@ export function isTierwardHookGroup(group, { knownGroups, hookFiles }) {
  * The user's settings with Tierward's hooks in place of any earlier Tierward
  * hooks. Every key but `hooks` is returned as the user wrote it, in the same
  * order. Within an event the user's own groups come first; events follow the
- * Tierward template's order, then the events only the user hooks.
+ * Tierward template's order, then the events only the user hooks. On those
+ * events nothing of Tierward's is added, so only a group copied from a
+ * Tierward template (of any tier) is stale and goes; a group the user wired
+ * there stays, even one that only runs a Tierward hook file.
  */
 export function mergeTierwardHooks(user, tierward, context) {
   const userHooks = user.hooks && typeof user.hooks === 'object' ? user.hooks : {};
   const tierwardHooks = tierward.hooks || {};
+  const groupsOf = (event) => (Array.isArray(userHooks[event]) ? userHooks[event] : []);
   const ownGroups = (event) =>
-    (Array.isArray(userHooks[event]) ? userHooks[event] : []).filter(
-      (group) => !isTierwardHookGroup(group, context),
-    );
+    groupsOf(event).filter((group) => !isTierwardHookGroup(group, context));
 
   const hooks = {};
   for (const [event, groups] of Object.entries(tierwardHooks)) {
@@ -54,7 +79,7 @@ export function mergeTierwardHooks(user, tierward, context) {
   }
   for (const event of Object.keys(userHooks)) {
     if (event in hooks) continue;
-    const own = ownGroups(event);
+    const own = groupsOf(event).filter((group) => !isTemplateHookGroup(group, context));
     if (own.length > 0) hooks[event] = own;
   }
 
@@ -123,12 +148,16 @@ export function keptUserHooks(user, tierward, context) {
 /**
  * The project's settings.json before the scaffold runs, as `{ raw, backup }`:
  * the file's bytes and the timestamped backup written here, before anything
- * else touches the file. `null` when the project has none.
+ * else touches the file. An earlier backup is never overwritten: a second
+ * init in the same second gets a numbered name. `null` when the project has
+ * none.
  */
 export async function backupUserSettings(settingsPath, now = new Date()) {
   if (!(await fs.pathExists(settingsPath))) return null;
   const raw = await fs.readFile(settingsPath, 'utf8');
-  const backup = backupPath(settingsPath, now);
+  const stamped = backupPath(settingsPath, now);
+  let backup = stamped;
+  for (let n = 1; await fs.pathExists(backup); n += 1) backup = `${stamped}-${n}`;
   await fs.writeFile(backup, raw);
   return { raw, backup };
 }

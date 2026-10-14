@@ -3406,6 +3406,25 @@ async function scenarioPrReviewPresent() {
       }
 
       const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
+
+      // Local mode: the report is saved as the subagent returned it, with
+      // corrections in a reviewer note (I3); the provenance header records the
+      // model that ran, `none` without a subagent, and a `none` report is never
+      // reused by a later PR-mode run (I4).
+      const provenance =
+        /Reviewed-Model: <sonnet\|opus\|none>/.test(skillMd) &&
+        /`\$REVIEWED_MODEL` is `sonnet` or `opus`/.test(skillMd);
+      const asReturned =
+        /as the subagent returned it/.test(skillMd) && /Reviewer note:/.test(skillMd);
+      if (provenance && asReturned) {
+        pass(`Tier ${tier}: pr-review saves the report as returned and records the model that ran`);
+      } else {
+        fail(
+          `Tier ${tier}: pr-review report provenance`,
+          `${provenance ? '' : 'Reviewed-Model rule missing'} ${asReturned ? '' : 'as-returned sentence missing'}`.trim(),
+        );
+      }
+
       const isReadOnly =
         /Never call `gh pr merge`/.test(skillMd) && /Never modify code/.test(skillMd);
       if (isReadOnly) {
@@ -4767,6 +4786,34 @@ function promotionStepCommands(dir) {
   return [...commands];
 }
 
+// Every git/npx command the pipeline, the cheatsheet and the commit skill
+// quote, the step-10 worktree form (`git -C ../../.. push origin main`, DEC-72)
+// included. Restored from the pre-2.3.0 default-permissions scenario (F15).
+function workflowCommands(dir) {
+  const commands = new Set();
+  for (const rel of [
+    '.claude/rules/pipeline.md',
+    '.claude/cheatsheet.md',
+    '.claude/skills/commit/SKILL.md',
+  ]) {
+    const file = path.join(dir, rel);
+    if (!fs.existsSync(file)) continue;
+    const text = fs.readFileSync(file, 'utf8');
+    const snippets = [
+      ...[...text.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]),
+      ...[...text.matchAll(/```[a-z]*\n([\s\S]*?)```/g)].flatMap((m) => m[1].split('\n')),
+    ];
+    for (const snippet of snippets) {
+      for (const part of snippet.split(/\s*(?:&&|\|\||;|\|)\s*/)) {
+        const cmd = part.trim();
+        // any git, npm, npx, pnpm, yarn or gh invocation, options first included
+        if (/^(git|npm|npx|pnpm|yarn|gh)\s+\S+/.test(cmd)) commands.add(cmd);
+      }
+    }
+  }
+  return [...commands];
+}
+
 // Pushes that land on `main` without a pull request; `pr` mode denies each one.
 const PR_MODE_MAIN_PUSHES = [
   'git push origin main',
@@ -5023,11 +5070,13 @@ async function scenarioPhase8CleanupOrder() {
           : []),
         ...(branchDelete.all.length === 0 ? ['no branch removal after the promotion'] : []),
         ...(branchDelete.early.length ? ['branch removed before the promotion'] : []),
-        ...(tier === 'l' && worktreeRemove.all.length === 0 ? ['no worktree removal'] : []),
+        // a block of either tier may run in a worktree (guide FAQ), so step 11
+        // tears it down on both (I7)
+        ...(worktreeRemove.all.length === 0 ? ['no worktree removal'] : []),
         ...(worktreeRemove.early.length ? ['worktree removed before the promotion'] : []),
       ];
       if (problems.length === 0) {
-        pass(`${label}: branch${tier === 'l' ? ' and worktree' : ''} removed after the promotion`);
+        pass(`${label}: branch and worktree removed after the promotion`);
       } else {
         fail(`${label}: Phase 8 removes what later steps need`, problems.join(' | '));
       }
@@ -5204,6 +5253,22 @@ async function scenarioNoPreapprovedCommands() {
         pass(`${label}: the governance gate sees Bash and every MCP merge or write tool`);
       } else {
         fail(`${label}: tools the governance gate does not see`, unseen.join(' | '));
+      }
+
+      // The deny list must never refuse a command the templates tell Claude to
+      // run (F15): a later template edit quoting `git -c ...` or `npm exec` would
+      // otherwise ship denied by its own settings.
+      const workflow = workflowCommands(dir);
+      const refused = workflow.filter(denied);
+      if (workflow.length > 0 && refused.length === 0) {
+        pass(
+          `${label}: no git/npx command of the pipeline, cheatsheet or commit skill is denied (${workflow.length})`,
+        );
+      } else {
+        fail(
+          `${label}: a command the templates quote is denied`,
+          refused.length ? refused.join(' | ') : 'no command found',
+        );
       }
     }
   }
@@ -5632,7 +5697,12 @@ async function scenarioPrPromotion() {
       '`main` changes only through the pull request merged at FL-3',
       '`Promote` authorizes one promotion only',
     ],
-    m: [...shared, ...blockRewrites, 'is removed at the post-merge cleanup (step 11)'],
+    m: [
+      ...shared,
+      ...blockRewrites,
+      'are removed at the post-merge cleanup (step 11)',
+      '`git worktree remove .claude/worktrees/[block-name]`',
+    ],
     l: [
       ...shared,
       ...blockRewrites,
@@ -6015,6 +6085,25 @@ async function scenarioFromContextAnswers() {
     );
   }
 
+  // No projectName and a source written with a trailing slash: the project is
+  // named after the source's last segment, not after an empty string (F14).
+  const slashCwd = path.join(base, 'trailing-slash');
+  fs.ensureDirSync(slashCwd);
+  const noName = { ...answers, sourceRepos: [`${source}/`] };
+  delete noName.projectName;
+  const viaSlash = run(slashCwd, ['--answers', JSON.stringify(noName)]);
+  if (
+    viaSlash.status === 0 &&
+    fs.existsSync(path.join(slashCwd, 'source-repo', '.claude/rules/pipeline.md'))
+  ) {
+    pass('from-context[trailing slash]: project named after the source');
+  } else {
+    fail(
+      'from-context[trailing slash]: expected the project in source-repo/',
+      `exit ${viaSlash.status}, files: ${fs.readdirSync(slashCwd).join(', ')}, stderr: ${(viaSlash.stderr || '').trim().split('\n').pop()}`,
+    );
+  }
+
   // CONTEXT.md with a sources block
   const contextCwd = path.join(base, 'context');
   fs.ensureDirSync(contextCwd);
@@ -6086,6 +6175,25 @@ async function scenarioFromContextAnswers() {
         `exit ${res.status}, files: ${written.join(', ')}, stderr: ${(res.stderr || '').trim().split('\n').pop()}`,
       );
     }
+  }
+
+  // `--answers` without a `mode`: refused with the accepted modes named,
+  // instead of exiting 0 with nothing written (I2).
+  const noModeCwd = path.join(base, 'no-mode');
+  fs.ensureDirSync(noModeCwd);
+  const noMode = run(noModeCwd, ['--answers', JSON.stringify({ tier: 's', techStack: 'node-ts' })]);
+  const noModeErr = (noMode.stderr || '').trim();
+  if (
+    noMode.status === 1 &&
+    ['greenfield', 'in-place', 'from-context'].every((m) => noModeErr.includes(m)) &&
+    fs.readdirSync(noModeCwd).length === 0
+  ) {
+    pass('answers[no mode]: refused, the accepted modes named, nothing written');
+  } else {
+    fail(
+      'answers[no mode]: expected exit 1 naming the 3 modes and no file',
+      `exit ${noMode.status}, files: ${fs.readdirSync(noModeCwd).join(', ')}, stderr: ${noModeErr.split('\n').pop()}`,
+    );
   }
 
   const existingCwd = path.join(base, 'existing');
