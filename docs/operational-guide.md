@@ -1511,7 +1511,7 @@ git worktree add .claude/worktrees/feature-name -b worktree-feature-name staging
 
 Rules: each worktree has its own branch. Merge to `staging` sequentially - smoke-test the first before merging the second. Check migration numbering across worktrees.
 
-Promote from inside the worktree with the worktree form of the pipeline's step 10: each `git` runs with `-C ../../..`, the main working tree, because `main` is checked out there and git refuses to check it out a second time. The session, and the governance gate with its `Promote`, stay in the worktree; leave it only at the step-11 cleanup.
+Promote from inside the worktree with the worktree form of the pipeline's step 10: each `git` runs with `-C ../../..`, the main working tree, because `main` is checked out there and git refuses to check it out a second time. The session, and the governance gate with its `Promote`, stay in the worktree. You leave it only at the step-11 cleanup, which removes the worktree and its branch on Tier M and Tier L alike.
 
 ---
 

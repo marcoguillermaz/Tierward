@@ -5051,11 +5051,13 @@ async function scenarioPhase8CleanupOrder() {
           : []),
         ...(branchDelete.all.length === 0 ? ['no branch removal after the promotion'] : []),
         ...(branchDelete.early.length ? ['branch removed before the promotion'] : []),
-        ...(tier === 'l' && worktreeRemove.all.length === 0 ? ['no worktree removal'] : []),
+        // a block of either tier may run in a worktree (guide FAQ), so step 11
+        // tears it down on both (I7)
+        ...(worktreeRemove.all.length === 0 ? ['no worktree removal'] : []),
         ...(worktreeRemove.early.length ? ['worktree removed before the promotion'] : []),
       ];
       if (problems.length === 0) {
-        pass(`${label}: branch${tier === 'l' ? ' and worktree' : ''} removed after the promotion`);
+        pass(`${label}: branch and worktree removed after the promotion`);
       } else {
         fail(`${label}: Phase 8 removes what later steps need`, problems.join(' | '));
       }
@@ -5676,7 +5678,12 @@ async function scenarioPrPromotion() {
       '`main` changes only through the pull request merged at FL-3',
       '`Promote` authorizes one promotion only',
     ],
-    m: [...shared, ...blockRewrites, 'is removed at the post-merge cleanup (step 11)'],
+    m: [
+      ...shared,
+      ...blockRewrites,
+      'are removed at the post-merge cleanup (step 11)',
+      '`git worktree remove .claude/worktrees/[block-name]`',
+    ],
     l: [
       ...shared,
       ...blockRewrites,
