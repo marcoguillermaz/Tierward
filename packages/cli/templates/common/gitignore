@@ -11,6 +11,7 @@ credentials/
 # Claude Code — personal overrides (never share)
 .claude/CLAUDE.local.md
 .claude/settings.local.json
+.claude/settings.json.bak.*
 .claude/session/
 .claude/worktrees/
 .claude/logs/

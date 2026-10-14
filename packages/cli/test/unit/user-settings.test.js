@@ -10,6 +10,7 @@ import fs from 'fs-extra';
 import os from 'node:os';
 import path from 'node:path';
 import {
+  hookGroupPattern,
   isTierwardHookGroup,
   mergeTierwardHooks,
   mergeTierwardSettings,
@@ -71,6 +72,46 @@ describe('isTierwardHookGroup', () => {
     const mixed = { matcher: 'Bash', hooks: [...gate('Bash').hooks, userStop.hooks[0]] };
     assert.ok(!isTierwardHookGroup(mixed, ctx));
   });
+
+  // A template group rendered for another configuration (another test command,
+  // another stack guard) is still Tierward's: the raw template, placeholders
+  // included, gives the pattern (DEC-80, F8). Text changed outside a
+  // placeholder makes the group the user's.
+  it('recognises a template group rendered with another test command, from the raw template', () => {
+    const raw = {
+      hooks: [
+        {
+          type: 'command',
+          command:
+            'cat | grep -q stop_hook_active && exit 0; [TEST_GUARD]OUT=$([TEST_COMMAND] 2>&1); [ $? -ne 0 ] && echo block',
+        },
+      ],
+    };
+    const rendered = (guard, command) => ({
+      hooks: [
+        {
+          type: 'command',
+          command: `cat | grep -q stop_hook_active && exit 0; ${guard}OUT=$(${command} 2>&1); [ $? -ne 0 ] && echo block`,
+        },
+      ],
+    });
+    const withPattern = { ...ctx, knownPatterns: [hookGroupPattern(raw)] };
+    assert.ok(isTierwardHookGroup(rendered('', 'npm run test:unit'), withPattern));
+    assert.ok(
+      isTierwardHookGroup(
+        rendered('[ ! -f package.json ] && exit 0; ', 'npx vitest run -t "fast"'),
+        withPattern,
+      ),
+    );
+    assert.ok(!isTierwardHookGroup(rendered('', 'npm test'), ctx), 'no pattern, no match');
+    const edited = rendered('', 'npm test');
+    edited.hooks[0].command += ' && ./notify.sh';
+    assert.ok(
+      !isTierwardHookGroup(edited, withPattern),
+      "edited outside a placeholder: the user's",
+    );
+    assert.ok(!isTierwardHookGroup(userStop, withPattern));
+  });
 });
 
 describe('mergeTierwardHooks', () => {
@@ -106,6 +147,69 @@ describe('mergeTierwardHooks', () => {
     const merged = mergeTierwardHooks(noHooks, tierM, ctx);
     assert.deepEqual(merged.hooks, tierM.hooks);
     assert.deepEqual(merged.permissions, user.permissions);
+  });
+
+  // A re-init with another test command replaces the Stop hook instead of
+  // keeping the old one next to the new (DEC-80, F8).
+  it('replaces a Tierward hook rendered with the previous test command', () => {
+    const raw = tierStop('[TEST_GUARD]').hooks[0].command.replace('npm test', '[TEST_COMMAND]');
+    const pattern = hookGroupPattern({ hooks: [{ type: 'command', command: raw }] });
+    const withPattern = { ...ctx, knownPatterns: [pattern] };
+    const oldStop = {
+      hooks: [
+        {
+          type: 'command',
+          command: raw.replace('[TEST_GUARD]', '').replace('[TEST_COMMAND]', 'npx vitest run'),
+        },
+      ],
+    };
+    const newTier = {
+      hooks: {
+        Stop: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command: raw
+                  .replace('[TEST_GUARD]', '')
+                  .replace('[TEST_COMMAND]', 'npm run test:unit'),
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const merged = mergeTierwardHooks(
+      { hooks: { Stop: [userStop, oldStop] } },
+      newTier,
+      withPattern,
+    );
+    assert.deepEqual(merged.hooks.Stop, [userStop, ...newTier.hooks.Stop]);
+  });
+
+  // On an event Tierward does not hook there is nothing of Tierward's to
+  // replace: the user's wiring stays, even when it only runs a Tierward hook
+  // file; only a group copied from a Tierward template is stale (DEC-80, F9).
+  it('keeps a user group on an event Tierward does not hook, even one running a Tierward hook file', () => {
+    const preCompact = {
+      hooks: [
+        {
+          type: 'command',
+          command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/tierward-audit-log.mjs"',
+        },
+      ],
+    };
+    const stale = { hooks: [{ type: 'command', command: 'echo "stop failure" >> log' }] };
+    const withExtra = {
+      ...user,
+      hooks: { ...user.hooks, PreCompact: [preCompact], StopFailure: [stale] },
+    };
+    const merged = mergeTierwardHooks(withExtra, tierM, {
+      ...ctx,
+      knownGroups: [...ctx.knownGroups, stale],
+    });
+    assert.deepEqual(merged.hooks.PreCompact, [preCompact], "the user's wiring stays");
+    assert.ok(!('StopFailure' in merged.hooks), 'a template group of another tier goes');
   });
 });
 
@@ -186,6 +290,22 @@ describe('backupUserSettings', () => {
     assert.deepEqual(result, { raw, backup: `${settingsPath}.bak.2026-10-12T08-30-00` });
     assert.equal(await fs.readFile(result.backup, 'utf8'), raw);
     assert.equal(await fs.readFile(settingsPath, 'utf8'), raw, 'the file itself is untouched');
+  });
+
+  // Two inits within the same second (a script, a retry) must not lose the
+  // original under the already-merged file (DEC-80, F10).
+  it('never overwrites an earlier backup: a second one in the same second gets a numbered name', async () => {
+    await fs.writeFile(settingsPath, 'ORIGINAL\n');
+    const now = new Date('2026-10-12T08:30:00Z');
+    const first = await backupUserSettings(settingsPath, now);
+    await fs.writeFile(settingsPath, 'MERGED\n');
+    const second = await backupUserSettings(settingsPath, now);
+    assert.equal(first.backup, `${settingsPath}.bak.2026-10-12T08-30-00`);
+    assert.equal(second.backup, `${settingsPath}.bak.2026-10-12T08-30-00-1`);
+    assert.equal(await fs.readFile(first.backup, 'utf8'), 'ORIGINAL\n');
+    assert.equal(await fs.readFile(second.backup, 'utf8'), 'MERGED\n');
+    const third = await backupUserSettings(settingsPath, now);
+    assert.equal(third.backup, `${settingsPath}.bak.2026-10-12T08-30-00-2`);
   });
 
   it('backs up a file that is not valid JSON too: the scaffold may overwrite it', async () => {
