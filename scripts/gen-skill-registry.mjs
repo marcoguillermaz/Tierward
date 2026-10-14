@@ -71,9 +71,10 @@ export function collectSkills(templatesDir = TEMPLATES_DIR) {
 // ── Page header: title, description, tiers / model / flags table ────────────
 
 // A GFM table cell: a `|` would end the cell, inside a code span too, so it is
-// escaped (`\|`), which GFM also honours inside code spans.
+// escaped (`\|`), which GFM also honours inside code spans. A backslash in the
+// source is escaped as well, so it cannot pair with the one added before a pipe.
 export function tableCell(text) {
-  return text.replace(/\|/g, '\\|');
+  return text.replace(/[\\|]/g, (c) => `\\${c}`);
 }
 
 // The header of a skill page, from its entries across the tiers: the richest
@@ -131,6 +132,17 @@ export function expectedHeaders(templatesDir = TEMPLATES_DIR) {
 
 // ── Command line ────────────────────────────────────────────────────────────
 
+// The text of an existing page, or null when there is no page yet. The read
+// itself answers the question, so there is no existence check it could race.
+function readPage(path) {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
 function main() {
   const force = process.argv.includes('--force');
   const refresh = process.argv.includes('--refresh-headers');
@@ -142,30 +154,37 @@ function main() {
   for (const [name, entries] of Object.entries(bySkill).sort(([a], [b]) => a.localeCompare(b))) {
     const outPath = resolve(OUTPUT_DIR, `${name}.md`);
 
-    if (existsSync(outPath) && refresh) {
-      const page = splitPage(readFileSync(outPath, 'utf8'));
-      if (!page) {
-        console.log(`! ${name}: no divider, header left alone`);
-        skipped++;
+    if (refresh) {
+      const current = readPage(outPath);
+      if (current !== null) {
+        const page = splitPage(current);
+        if (!page) {
+          console.log(`! ${name}: no divider, header left alone`);
+          skipped++;
+          continue;
+        }
+        const header = pageHeader(name, entries);
+        if (page.header === header) {
+          skipped++;
+          continue;
+        }
+        writeFileSync(outPath, header + page.rest, 'utf8');
+        refreshed++;
+        console.log(`↻ ${name}`);
         continue;
       }
-      const header = pageHeader(name, entries);
-      if (page.header === header) {
-        skipped++;
-        continue;
-      }
-      writeFileSync(outPath, header + page.rest, 'utf8');
-      refreshed++;
-      console.log(`↻ ${name}`);
-      continue;
     }
 
-    if (existsSync(outPath) && !force) {
+    // A missing page is created; an existing one is left alone unless --force.
+    // The `wx` flag lets the file system refuse an existing file at write time,
+    // so no existence check runs before the write.
+    try {
+      writeFileSync(outPath, pageSkeleton(name, entries), { encoding: 'utf8', flag: force ? 'w' : 'wx' });
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
       skipped++;
       continue;
     }
-
-    writeFileSync(outPath, pageSkeleton(name, entries), 'utf8');
     generated++;
     console.log(`✓ ${name}`);
   }

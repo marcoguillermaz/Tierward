@@ -75,6 +75,9 @@ describe('maintainer scripts', () => {
   // live page showed the flags up to the first pipe (I5).
   it('escapes a pipe in the Flags cell so the table keeps its 3 cells', () => {
     assert.equal(tableCell('[static|full] [target:<path>]'), '[static\\|full] [target:<path>]');
+    // A backslash is escaped too, so one in the source cannot absorb the escape
+    // added before a pipe (no shipped argument-hint carries one today).
+    assert.equal(tableCell('a\\b|c'), 'a\\\\b\\|c');
     const entries = [{ tier: 'm', fm: { name: 'x', description: 'd', 'argument-hint': '[a|b]' } }];
     const row = pageHeader('x', entries).trim().split('\n').pop();
     assert.ok(row.includes('`[a\\|b]`'), row);
