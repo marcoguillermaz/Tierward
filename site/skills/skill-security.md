@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier S · Tier L | Sonnet | `[&lt;path&gt;|--llm]` |
+| Tier M · Tier S · Tier L | Sonnet | `[<path>\|--llm]` |
 
 ---
 

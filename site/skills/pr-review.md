@@ -1,10 +1,10 @@
 # /pr-review
 
-> Autonomous local PR review. Fetches the PR diff via `gh`, spawns a dedicated review subagent with universal + stack-specific severity criteria, posts the review as a comment on the PR (audit trail), and asks for a merge decision. Stack-aware via sibling PATTERNS.md (node-ts, python, swift in v1; agnostic body fallback for others). Severity rules configurable via `team-settings.json` `prReviewSeverity` (Option β); hard-coded universal defaults when absent (Option α). Default model is sonnet; `--deep` escalates to opus. Skill never modifies code, never auto-merges — merge is always the user's decision.
+> Autonomous local code review. Reviews either an open PR's diff (via `gh`) or the local working diff against a base branch (`--local`, auto-selected when no PR exists yet), spawns a dedicated review subagent with universal + stack-specific severity criteria, posts the review as a comment on the PR (audit trail; skipped in local mode), and asks for a decision. Stack-aware via sibling PATTERNS.md (node-ts, python, swift in v1; agnostic body fallback for others). Severity rules configurable via `team-settings.json` `prReviewSeverity` (Option β); hard-coded universal defaults when absent (Option α). Default model is sonnet; `--deep` escalates to opus. Skill never modifies code, never auto-merges — merge is always the user's decision.
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Sonnet | `[PR_NUMBER] [--deep] [--with-context]` |
+| Tier M · Tier L | Sonnet | `[PR_NUMBER] [--local] [--base <branch>] [--deep] [--with-context]` |
 
 ---
 

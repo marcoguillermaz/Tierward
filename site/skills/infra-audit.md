@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Sonnet | `[target:layer:&lt;gha|docker|k8s|terraform|gitlab&gt;|target:file:&lt;glob&gt;|mode:all]` |
+| Tier M · Tier L | Sonnet | `[target:layer:<gha\|docker\|k8s\|terraform\|gitlab>\|target:file:<glob>\|mode:all]` |
 
 ---
 

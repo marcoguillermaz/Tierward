@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Sonnet | `[static|full|wcag] [target:route:&lt;path&gt;|target:file:&lt;glob&gt;|target:role:&lt;role&gt;]` |
+| Tier M · Tier L | Sonnet | `[static\|full\|wcag] [target:route:<path>\|target:file:<glob>\|target:role:<role>]` |
 
 ---
 

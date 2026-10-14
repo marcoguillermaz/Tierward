@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier S · Tier L | Sonnet | `[target:section:&lt;section&gt;|target:page:&lt;route&gt;|mode:audit|mode:apply]` |
+| Tier M · Tier S · Tier L | Sonnet | `[target:section:<section>\|target:page:<route>\|mode:audit\|mode:apply]` |
 
 ---
 

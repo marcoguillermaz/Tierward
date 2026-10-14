@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Opus (deep) | `[skill-name] [tier:S|M|L|all] [mode:full|preflight-only|fixtures-only]` |
+| Tier M · Tier L | Opus (deep) | `[skill-name] [tier:S\|M\|L\|all] [mode:full\|preflight-only\|fixtures-only]` |
 
 ---
 

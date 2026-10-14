@@ -1,10 +1,10 @@
 # /skill-db
 
-> Database audit: schema quality, index coverage, RLS completeness, FK cascades, query patterns. Runs live SQL verification. Migration file safety → /migration-audit.
+> Database audit: schema quality, index coverage, row-level access-control completeness, FK cascades, query patterns. Runs live SQL verification (PostgreSQL instance in PATTERNS.md; other engines verify the equivalent guard). Migration file safety → /migration-audit.
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Sonnet | `[target:section:&lt;section&gt;|target:table:&lt;table&gt;]` |
+| Tier M · Tier L | Opus (deep) | `[target:section:<section>\|target:table:<table>]` |
 
 ---
 

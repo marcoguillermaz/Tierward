@@ -377,7 +377,7 @@ npm publish
 ### Maintainer scripts
 
 - `scripts/lint-templates.mjs` checks the templates for banned patterns, checks that every placeholder the wizard replaces still appears in a template, and checks that tier M and tier L hold the same files. The "Lint & format" CI job runs it; run it locally with `node scripts/lint-templates.mjs`.
-- `scripts/gen-skill-registry.mjs` writes a page under `site/skills/` for each skill that has none yet, from the skill's `SKILL.md` in the templates. Run it after adding a skill, then write the two sections under the divider by hand: the script never overwrites an existing page unless you pass `--force`, which regenerates every page.
+- `scripts/gen-skill-registry.mjs` writes a page under `site/skills/` for each skill that has none yet, from the skill's `SKILL.md` in the templates. Run it after adding a skill, then write the two sections under the divider by hand: the script never overwrites an existing page unless you pass `--force`, which regenerates every page. After editing a skill's description, model or flags, run it with `--refresh-headers`: it rewrites only the part above the divider of every page and leaves the sections alone. A unit test fails when a page's header differs from its skill.
 - `scripts/sync-plugin-version.mjs` and `scripts/release-sha-followup.sh` keep the plugin, marketplace and MCP registry manifests in step with the CLI version; see their headers.
 
 ### Auth scoping protocol

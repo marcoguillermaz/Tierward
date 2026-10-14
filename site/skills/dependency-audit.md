@@ -4,7 +4,7 @@
 
 | Tiers | Model | Flags |
 |---|---|---|
-| Tier M · Tier L | Sonnet | `[tier:A|tier:B|tier:C|pkg:&lt;name&gt;]` |
+| Tier M · Tier L | Sonnet | `[tier:A\|tier:B\|tier:C\|pkg:<name>]` |
 
 ---
 
