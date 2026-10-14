@@ -69,11 +69,14 @@ const PROTECTED = '(staging|main)';
 // A pull request merge is a promotion whatever its base: `gh pr merge` (also
 // `--auto`, which schedules the merge) and any MCP tool named
 // `merge_pull_request`. `gh pr merge --disable-auto` cancels a merge and is not.
-// A push that names no branch (`git push`, `git push origin`, `HEAD` or `@` as
-// the refspec) updates the current branch or its upstream, so the gate asks git
-// for both, in the session's directory or the one `git -C` names; when git cannot
-// tell (no repository, detached HEAD), the push counts as a promotion. A push of
-// tags only (`--tags` and no refspec) updates no branch.
+// A push that names no branch updates the current branch: with `HEAD` or `@`
+// as the refspec always the remote branch of the same name, with a bare
+// `git push` or `git push origin` possibly its upstream. The gate asks git for
+// the current branch, and for the upstream too on a bare push, in the
+// session's directory or the one `git -C` names (`$VAR`, `${VAR}` and a
+// leading `~` expanded from the hook's environment); when git cannot tell (no
+// repository, detached HEAD, an unknown variable), the push counts as a
+// promotion. A push of tags only (`--tags` and no refspec) updates no branch.
 // Known limitations: a substitution inside an unquoted heredoc is not checked,
 // nor is a merge through the REST API (`gh api .../pulls/<n>/merge`); for a push
 // that names no branch, a `cd` earlier in the same command and the remote's
@@ -85,8 +88,11 @@ const PROTECTED_REFS = PROTECTED.slice(1, -1)
   .split('|')
   .flatMap((b) => [b, `refs/heads/${b}`]);
 const MCP_MERGE_TOOL_RE = /^mcp__.+__merge_pull_request$/;
-// MCP tools that commit a file straight to the branch they are given. Their
-// schemas require `branch`; a call without one is treated as a protected write.
+// MCP tools that commit a file straight to the branch they are given, on any
+// server. The call's `branch` decides; with none, the GitHub shape (`owner`
+// and `repo`, whose schema requires `branch`) counts as a protected write,
+// and a same-named tool of another server that carries neither is not a
+// promotion.
 const MCP_WRITE_TOOL_RE = /^mcp__.+__(push_files|create_or_update_file|delete_file)$/;
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh']);
 const GIT_OPTIONS_WITH_VALUE = new Set([
@@ -277,22 +283,24 @@ function namesProtectedBranch(arg) {
 const ALL_BRANCHES_OPTIONS = new Set(['--all', '--mirror']);
 const PUSH_OPTIONS_WITH_VALUE = new Set(['-o', '--push-option', '--repo', '--receive-pack', '--exec']);
 
-// Whether a `git push` names no destination branch: no refspec after the
-// remote (unless it pushes tags only), or `HEAD`/`@` as a refspec.
-function pushesCurrentBranch(args) {
+// How a `git push` names no destination branch: 'bare' (no refspec after the
+// remote, tags-only pushes excepted), 'explicit' (`HEAD` or `@` as a refspec),
+// or null when it names one.
+function unnamedPush(args) {
   const positional = [];
   for (let n = 0; n < args.length; n += 1) {
     if (!args[n].startsWith('-')) positional.push(args[n]);
     else if (PUSH_OPTIONS_WITH_VALUE.has(args[n])) n += 1;
   }
   const refspecs = positional.slice(1);
-  if (refspecs.length === 0) return !args.includes('--tags');
-  return refspecs.some((r) => ['HEAD', '@'].includes(r.replace(/^\+/, '')));
+  if (refspecs.length === 0) return args.includes('--tags') ? null : 'bare';
+  return refspecs.some((r) => ['HEAD', '@'].includes(r.replace(/^\+/, ''))) ? 'explicit' : null;
 }
 
-// The branches a push that names none updates: the current branch and its
-// upstream. null when git cannot tell (no repository, detached HEAD, no git).
-function currentPushBranches(cwd) {
+// The branches a push that names none updates: the current branch and, when
+// asked, its upstream (a bare push may go there; `HEAD` never does). null
+// when git cannot tell (no repository, detached HEAD, no git).
+function currentPushBranches(cwd, withUpstream) {
   const git = (...args) =>
     execFileSync('git', args, {
       cwd,
@@ -312,11 +320,13 @@ function currentPushBranches(cwd) {
   }
   if (!branch) return null;
   const branches = [branch];
-  try {
-    const merge = git('config', '--get', `branch.${branch}.merge`);
-    if (merge) branches.push(merge.replace(/^refs\/heads\//, ''));
-  } catch {
-    // no upstream
+  if (withUpstream) {
+    try {
+      const merge = git('config', '--get', `branch.${branch}.merge`);
+      if (merge) branches.push(merge.replace(/^refs\/heads\//, ''));
+    } catch {
+      // no upstream
+    }
   }
   return branches;
 }
@@ -334,8 +344,9 @@ function isPrMerge(args) {
 
 // { push, merge, commit, currentPushDirs }: whether the command runs a
 // promotion push, a pull request merge, or a commit; currentPushDirs lists, for
-// each push that names no branch, its `git -C` paths (each one relative to the
-// previous, as git reads them).
+// each push that names no branch, its `git -C` paths (`dir`, each one relative
+// to the previous, as git reads them) and whether the upstream matters
+// (`upstream`, true for a bare push).
 function analyze(command, depth) {
   const found = { push: false, merge: false, commit: false, currentPushDirs: [] };
   for (const words of parse(command, 0, null, depth).commands) {
@@ -350,10 +361,11 @@ function analyze(command, depth) {
         }
         if (words[n] === 'commit') found.commit = true;
         const pushArgs = words[n] === 'push' ? words.slice(n + 1) : null;
+        const unnamed = pushArgs ? unnamedPush(pushArgs) : null;
         if (pushArgs?.some((a) => namesProtectedBranch(a) || ALL_BRANCHES_OPTIONS.has(a))) {
           found.push = true;
-        } else if (pushArgs && pushesCurrentBranch(pushArgs)) {
-          found.currentPushDirs.push(dir);
+        } else if (unnamed) {
+          found.currentPushDirs.push({ dir, upstream: unnamed === 'bare' });
         }
       } else if (name === 'gh') {
         if (isPrMerge(words.slice(k + 1))) found.merge = true;
@@ -401,16 +413,26 @@ function inspect(command) {
       commit: FALLBACK_COMMIT_RE.test(command),
       // A push the text check cannot place is judged like one that names no
       // branch: git says which branch the session's directory would update.
-      currentPushDirs: push && !protectedPush ? [[]] : [],
+      currentPushDirs: push && !protectedPush ? [{ dir: [], upstream: true }] : [],
     };
   }
+}
+
+// What the shell would expand in a `git -C` path: `$VAR` and `${VAR}` from
+// the hook's environment, and a leading `~`. An unset variable stays as
+// written, so the path resolves nowhere and git fails, which counts as a
+// promotion.
+function expandPath(p) {
+  return p
+    .replace(/^~(?=\/|$)/, process.env.HOME || '~')
+    .replace(/\$\{([A-Za-z_]\w*)\}|\$([A-Za-z_]\w*)/g, (m, braced, bare) => process.env[braced || bare] ?? m);
 }
 
 // A push that names no branch promotes when the branch it updates is protected,
 // or when git cannot tell which branch that is.
 function pushesProtectedCurrentBranch(dirs, cwd) {
-  return dirs.some((dir) => {
-    const branches = currentPushBranches(path.resolve(cwd, ...dir));
+  return dirs.some(({ dir, upstream }) => {
+    const branches = currentPushBranches(path.resolve(cwd, ...dir.map(expandPath)), upstream);
     return branches === null || branches.some((b) => PROTECTED_BRANCH_RE.test(b));
   });
 }
@@ -484,10 +506,16 @@ function decide(permissionDecision, reason) {
 const deny = (reason) => decide('deny', reason);
 const ask = (reason) => decide('ask', reason);
 
-// An MCP write lands on a protected branch when it names one, or names none.
-function writesProtectedBranch(branch) {
-  if (typeof branch !== 'string' || branch.trim() === '') return true;
-  return PROTECTED_BRANCH_RE.test(branch.trim());
+// An MCP write lands on a protected branch when its `branch` names one. With
+// no `branch`, a call of the GitHub shape (`owner` and `repo`, whose schema
+// requires `branch`) counts as a protected write; a call with neither is
+// another server's file tool, not a promotion.
+function writesProtectedBranch(input) {
+  const branch = input?.branch;
+  if (typeof branch === 'string' && branch.trim() !== '') {
+    return PROTECTED_BRANCH_RE.test(branch.trim());
+  }
+  return typeof input?.owner === 'string' && typeof input?.repo === 'string';
 }
 
 // { push, merge, commit } for one tool call.
@@ -495,7 +523,7 @@ function classify(payload) {
   const tool = payload?.tool_name || '';
   if (MCP_MERGE_TOOL_RE.test(tool)) return { push: false, merge: true, commit: false };
   if (MCP_WRITE_TOOL_RE.test(tool)) {
-    return { push: writesProtectedBranch(payload?.tool_input?.branch), merge: false, commit: false };
+    return { push: writesProtectedBranch(payload?.tool_input), merge: false, commit: false };
   }
   const found = inspect(payload?.tool_input?.command || '');
   const cwd = typeof payload?.cwd === 'string' && payload.cwd ? payload.cwd : PROJECT_DIR;

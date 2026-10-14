@@ -27,7 +27,7 @@ const GATE = path.join(HOOKS, 'tierward-governance-gate.mjs');
 // Run a hook with the given stdin JSON in an isolated project dir. Returns
 // { stdout, sessionContent } — sessionContent is the session file after the run
 // (or null if no session file was seeded).
-function runHook(hookPath, stdinObj, { sessionFrontMatter, sessionFileName } = {}) {
+function runHook(hookPath, stdinObj, { sessionFrontMatter, sessionFileName, env } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw-gov-'));
   const sessionDir = path.join(dir, '.claude', 'session');
   let sessionFile = null;
@@ -39,7 +39,7 @@ function runHook(hookPath, stdinObj, { sessionFrontMatter, sessionFileName } = {
   try {
     const stdout = execFileSync('node', [hookPath], {
       input: JSON.stringify(stdinObj),
-      env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+      env: { ...process.env, CLAUDE_PROJECT_DIR: dir, ...env },
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'ignore'],
     });
@@ -485,6 +485,55 @@ describe('governance-gate hook — pushes that name no branch (DEC-59 b)', () =>
     }
   });
 
+  // `HEAD` and `@` push to the remote branch of the same name whatever the
+  // upstream (DEC-78, F11); only a bare push may go to the upstream.
+  it('checks only the current branch for an explicit `HEAD` or `@` refspec', () => {
+    const dir = repoOn('feature/x', 'main');
+    try {
+      for (const cmd of ['git push -u origin HEAD', 'git push origin HEAD', 'git push origin @']) {
+        assert.equal(push(cmd, dir, { sessionFrontMatter: FM }), 'allow', cmd);
+        assert.equal(push(cmd, dir), 'allow', `${cmd}, outside a block`);
+      }
+      assert.equal(push('git push', dir, { sessionFrontMatter: FM }), 'deny', 'bare: upstream');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // `$VAR`, `${VAR}` and a leading `~` in a `git -C` path are expanded from
+  // the hook's environment (DEC-78, F13); an unset variable stays unknown.
+  it('expands `$VAR` and `~` in a `git -C` path', () => {
+    const main = repoOn('main');
+    const work = repoOn('feature/x', 'feature/x');
+    const env = { WORK_REPO: work, HOME: work };
+    try {
+      for (const cmd of [
+        'git -C "$WORK_REPO" push origin HEAD',
+        'git -C "${WORK_REPO}" push',
+        'git -C ~ push origin HEAD',
+        'git -C ~/ push origin HEAD',
+      ]) {
+        assert.equal(push(cmd, main, { sessionFrontMatter: FM, env }), 'allow', cmd);
+      }
+      assert.equal(
+        push('git -C "$NOT_SET_ANYWHERE" push origin HEAD', work, { sessionFrontMatter: FM, env }),
+        'deny',
+        'an unset variable leaves the repository unknown',
+      );
+      assert.equal(
+        push('git -C "$WORK_REPO" push origin HEAD', work, {
+          sessionFrontMatter: FM,
+          env: { WORK_REPO: main },
+        }),
+        'deny',
+        'the variable names a repository on main',
+      );
+    } finally {
+      fs.rmSync(main, { recursive: true, force: true });
+      fs.rmSync(work, { recursive: true, force: true });
+    }
+  });
+
   it('leaves them alone on a work branch', () => {
     const dir = repoOn('feature/x', 'feature/x');
     try {
@@ -695,6 +744,47 @@ describe('governance-gate hook — MCP writes and promotions outside a block (DE
       assert.equal(write('mcp__github__push_files', branch, { sessionFrontMatter: FM }).stdout, '');
       assert.equal(write('mcp__github__push_files', branch).stdout, '');
     }
+  });
+
+  // The write tools are recognised by what the call carries, not by the
+  // server name (DEC-78, F12): a protected `branch`, or the GitHub shape
+  // (`owner` and `repo`, whose schema requires `branch`) with no branch. A
+  // same-named tool of another server that carries neither is not a promotion.
+  it('ignores file tools of other servers that name no branch', () => {
+    const calls = [
+      ['mcp__drive__delete_file', { fileId: 'abc' }],
+      ['mcp__filesystem__create_or_update_file', { path: '/tmp/x', content: 'y' }],
+      ['mcp__notes__push_files', { files: [{ path: 'a.md', content: 'x' }], message: 'm' }],
+    ];
+    for (const [tool, toolInput] of calls) {
+      const payload = { tool_name: tool, tool_input: toolInput };
+      assert.equal(
+        runHook(GATE, payload, { sessionFrontMatter: FM }).stdout,
+        '',
+        `${tool} in a block`,
+      );
+      assert.equal(runHook(GATE, payload).stdout, '', `${tool} outside a block`);
+    }
+  });
+
+  it('gates a write of any server that names a protected branch', () => {
+    const gitlab = (branch) =>
+      runHook(
+        GATE,
+        {
+          tool_name: 'mcp__gitlab__create_or_update_file',
+          tool_input: {
+            project_id: '42',
+            file_path: 'a.md',
+            content: 'x',
+            commit_message: 'm',
+            branch,
+          },
+        },
+        { sessionFrontMatter: FM },
+      );
+    assert.equal(decision(gitlab('main').stdout), 'deny');
+    assert.equal(decision(gitlab('feature/x').stdout), 'allow');
   });
 
   it('asks outside a block for every promotion form: push, PR merge, MCP merge, MCP write', () => {
