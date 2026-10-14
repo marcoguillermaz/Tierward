@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [2.3.4] — 2026-10-14
+
 ### Fixed
 
 - **The governance gate sees every way of pushing `main` without naming it.** `git push origin :` (every branch the remote also has) and a glob refspec such as `refs/heads/*:refs/heads/*` updated `main` without the gate noticing. Both now count as promotions, as `--all` and `--mirror` already did; a glob on tags or on work branches does not. Existing projects: copy `.claude/hooks/tierward-governance-gate.mjs` from the package.
