@@ -3406,6 +3406,25 @@ async function scenarioPrReviewPresent() {
       }
 
       const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
+
+      // Local mode: the report is saved as the subagent returned it, with
+      // corrections in a reviewer note (I3); the provenance header records the
+      // model that ran, `none` without a subagent, and a `none` report is never
+      // reused by a later PR-mode run (I4).
+      const provenance =
+        /Reviewed-Model: <sonnet\|opus\|none>/.test(skillMd) &&
+        /`\$REVIEWED_MODEL` is `sonnet` or `opus`/.test(skillMd);
+      const asReturned =
+        /as the subagent returned it/.test(skillMd) && /Reviewer note:/.test(skillMd);
+      if (provenance && asReturned) {
+        pass(`Tier ${tier}: pr-review saves the report as returned and records the model that ran`);
+      } else {
+        fail(
+          `Tier ${tier}: pr-review report provenance`,
+          `${provenance ? '' : 'Reviewed-Model rule missing'} ${asReturned ? '' : 'as-returned sentence missing'}`.trim(),
+        );
+      }
+
       const isReadOnly =
         /Never call `gh pr merge`/.test(skillMd) && /Never modify code/.test(skillMd);
       if (isReadOnly) {
@@ -6156,6 +6175,25 @@ async function scenarioFromContextAnswers() {
         `exit ${res.status}, files: ${written.join(', ')}, stderr: ${(res.stderr || '').trim().split('\n').pop()}`,
       );
     }
+  }
+
+  // `--answers` without a `mode`: refused with the accepted modes named,
+  // instead of exiting 0 with nothing written (I2).
+  const noModeCwd = path.join(base, 'no-mode');
+  fs.ensureDirSync(noModeCwd);
+  const noMode = run(noModeCwd, ['--answers', JSON.stringify({ tier: 's', techStack: 'node-ts' })]);
+  const noModeErr = (noMode.stderr || '').trim();
+  if (
+    noMode.status === 1 &&
+    ['greenfield', 'in-place', 'from-context'].every((m) => noModeErr.includes(m)) &&
+    fs.readdirSync(noModeCwd).length === 0
+  ) {
+    pass('answers[no mode]: refused, the accepted modes named, nothing written');
+  } else {
+    fail(
+      'answers[no mode]: expected exit 1 naming the 3 modes and no file',
+      `exit ${noMode.status}, files: ${fs.readdirSync(noModeCwd).join(', ')}, stderr: ${noModeErr.split('\n').pop()}`,
+    );
   }
 
   const existingCwd = path.join(base, 'existing');

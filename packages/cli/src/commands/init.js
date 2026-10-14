@@ -68,6 +68,15 @@ export async function init(options) {
       return initFromContext(options);
     case 'in-place':
       return initInPlace(options);
+    default:
+      // `--answers` without a mode, or with an unknown one, used to fall
+      // through here and exit 0 with nothing written.
+      console.error(
+        chalk.red(
+          `--answers needs a "mode" of greenfield, in-place or from-context (got ${JSON.stringify(mode)}).`,
+        ),
+      );
+      process.exit(1);
   }
 }
 
