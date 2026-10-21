@@ -3884,6 +3884,16 @@ async function scenarioUpgradeSafety() {
     } else {
       fail(`${name}: upgrade changed a fresh scaffold`, `code=${out.code}; ${changes.join('; ')}`);
     }
+
+    // The tier-m skill-security template stands for every tier, so a fresh
+    // S, M or L scaffold must show no diff for it.
+    if (tier !== '0') {
+      if (!out.stdout.includes('── .claude/skills/skill-security/SKILL.md ──')) {
+        pass(`${name}: no skill-security diff on a fresh scaffold`);
+      } else {
+        fail(`${name}: fresh skill-security differs from the tier-m template`);
+      }
+    }
   }
 
   // Team edits: rule files the scaffold fills in are never overwritten (their
@@ -3956,6 +3966,35 @@ async function scenarioUpgradeSafety() {
       pass('old gate: upgrade prints the gate diff');
     } else {
       fail('old gate: upgrade output has no diff for the governance gate');
+    }
+  }
+
+  // An older /skill-security that still says pip: upgrade shows the diff that
+  // drops the line, and leaves the skill as the user has it.
+  {
+    const dir = await scaffold('upgrade-safe-old-skill-security-s', 's', {
+      ...BASE,
+      tier: 's',
+      isDiscovery: false,
+    });
+    const skill = path.join(dir, '.claude/skills/skill-security/SKILL.md');
+    const old = `${fs.readFileSync(skill, 'utf8')}\n  pip install skillspector\n`;
+    fs.writeFileSync(skill, old);
+
+    const out = runCli(['upgrade'], dir);
+
+    if (fs.readFileSync(skill, 'utf8') === old) {
+      pass('old skill-security: upgrade leaves the skill byte-identical');
+    } else {
+      fail('old skill-security: upgrade rewrote the skill');
+    }
+    if (
+      out.stdout.includes('── .claude/skills/skill-security/SKILL.md ──') &&
+      out.stdout.includes('-  pip install skillspector')
+    ) {
+      pass('old skill-security: upgrade prints the diff that removes the pip line');
+    } else {
+      fail('old skill-security: upgrade output has no diff for the pip line');
     }
   }
 

@@ -81,7 +81,7 @@ npx tierward upgrade --anthropic          # preview diff for Anthropic-influence
 npx tierward upgrade --anthropic --apply  # apply with .bak backup
 ```
 
-`upgrade` never overwrites a file you are expected to edit. It refreshes `.claude/rules/output-style.md`, keeping a `.bak` of the old copy, prints the template diff for the rules and files the scaffold filled in with your project's values, and lists `CLAUDE.md`, the pipeline, `settings.json` and the skills for manual review. Custom skills (anything prefixed `custom-`) are never touched.
+`upgrade` never overwrites a file you are expected to edit. It refreshes `.claude/rules/output-style.md`, keeping a `.bak` of the old copy. For the rules and files the scaffold filled in with your project's values, and for the `/skill-security` skill, it prints the template diff. It lists `CLAUDE.md`, the pipeline, `settings.json` and the other skills for manual review. Custom skills (anything prefixed `custom-`) are never touched.
 
 ## Which tier should I use?
 

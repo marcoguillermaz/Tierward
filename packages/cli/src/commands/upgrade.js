@@ -32,6 +32,12 @@ export const REVIEW_DIFF_FILES = [
     template: 'common/.claude/hooks/tierward-governance-gate.mjs',
     target: '.claude/hooks/tierward-governance-gate.mjs',
   },
+  // Byte-identical in tiers S, M and L (a test keeps it so), so the tier-m copy
+  // serves every tier. Users may edit it, so it is shown, never written.
+  {
+    template: 'tier-m/.claude/skills/skill-security/SKILL.md',
+    target: '.claude/skills/skill-security/SKILL.md',
+  },
 ];
 
 // Files that require user review before upgrade (they may contain customizations)

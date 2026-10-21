@@ -1,6 +1,6 @@
 # /skill-security
 
-> Security scan for Claude Code skills using SkillSpector. Detects 64 vulnerability patterns — prompt injection, data exfiltration, MCP tool poisoning, supply chain, taint tracking, and more — before a skill is installed. Requires Python 3.12+ with `pip install skillspector`, or Docker as a fallback.
+> Security scan for Claude Code skills using SkillSpector. Detects 64 vulnerability patterns — prompt injection, data exfiltration, MCP tool poisoning, supply chain, taint tracking, and more — before a skill is installed. Requires the `skillspector` CLI, installed with uv from NVIDIA's GitHub repository, or Docker as a fallback.
 
 | Tiers | Model | Flags |
 |---|---|---|
