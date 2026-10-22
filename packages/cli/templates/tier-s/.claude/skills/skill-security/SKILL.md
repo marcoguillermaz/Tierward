@@ -177,7 +177,7 @@ Verdict:     <risk_assessment.recommendation>
 Coverage:    <analysis_completeness.coverage_percent>% (<analysis_completeness.status>)
 ```
 
-If `analysis_completeness.is_complete` is false, add under the header: `Partial analysis: the verdict covers only the components SkillSpector fully inspected.`
+If `analysis_completeness.is_complete` is false, add under the header: `Partial analysis: the verdict covers only the components SkillSpector fully inspected.` If the JSON has no `analysis_completeness` object, write `Coverage:    not reported`.
 
 ### Severity badge
 

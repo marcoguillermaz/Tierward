@@ -15,7 +15,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **`/skill-security` reads SkillSpector's report as it is.** The skill looked for `risk_score`, `risk_severity`, `risk_recommendation` and `filtered_findings`, but the JSON report of SkillSpector v2.13.0 contains none of them: the score, severity and verdict sit under `risk_assessment`, and the findings are in `issues`. It also compared the verdict with `DO NOT INSTALL`, while SkillSpector writes `DO_NOT_INSTALL`, so the do-not-install closing did not match. The report now uses the documented fields, shows how much of the skill was analysed, and no longer labels a partly analysed skill safe to install. Existing projects: use the same `upgrade` diff as above.
+- **`/skill-security` reads SkillSpector's report as it is.** The skill looked for `risk_score`, `risk_severity`, `risk_recommendation` and `filtered_findings`, but the JSON report of SkillSpector v2.13.0 contains none of them: the score, severity and verdict sit under `risk_assessment`, and the findings are in `issues`. It also compared the verdict with `DO NOT INSTALL`, while SkillSpector writes `DO_NOT_INSTALL`, so the do-not-install closing did not match. The report now uses the fields SkillSpector documents and shows the analysis coverage its report carries. It also no longer labels a partly analysed skill safe to install. Existing projects: use the same `upgrade` diff as above.
 
 ---
 
