@@ -9,6 +9,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- **`/skill-security` no longer tells you to install SkillSpector from PyPI.** When the scanner was missing, the skill suggested `pip install skillspector` or `pipx install skillspector`. SkillSpector's own instructions never use PyPI, and the `skillspector` name there is registered with no files by an owner we could not identify (checked 2026-10-19). Whoever holds it could publish a package that those commands would then install and run. The skill now installs SkillSpector v2.13.0 from NVIDIA's GitHub repository with uv, pinned to the release commit, or builds the Docker image from that commit in a fresh temporary directory. Before, it used a shared `/tmp/skillspector` checked out at whatever the repository head was that day. The preflight now looks for the `skillspector` command instead of asking pip, which would have accepted any package published under that name. Existing projects: run `tierward upgrade`, which now prints the template diff for `.claude/skills/skill-security/SKILL.md` and never writes the file, then apply the diff yourself, or copy the file from the package. If you keep your own copy, delete the `pip install skillspector` and `pipx install skillspector` lines at the very least, replace the `pip show skillspector` check with `command -v skillspector`, and install SkillSpector with `uv tool install git+https://github.com/NVIDIA/skillspector.git@091a509b3d6ba8ff5be528966e1f43c2e68cf214`.
+
+### Fixed
+
+- **`/skill-security` reads SkillSpector's report as it is.** The skill looked for `risk_score`, `risk_severity`, `risk_recommendation` and `filtered_findings`, but the JSON report of SkillSpector v2.13.0 contains none of them: the score, severity and verdict sit under `risk_assessment`, and the findings are in `issues`. It also compared the verdict with `DO NOT INSTALL`, while SkillSpector writes `DO_NOT_INSTALL`, so the do-not-install closing did not match. The report now uses the fields SkillSpector documents and shows the analysis coverage its report carries. It also no longer labels a partly analysed skill safe to install. Existing projects: use the same `upgrade` diff as above.
+
 ---
 
 ## [2.3.4] — 2026-10-14

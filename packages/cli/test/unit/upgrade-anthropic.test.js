@@ -3,7 +3,15 @@ import assert from 'node:assert/strict';
 import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
-import { ANTHROPIC_FILES, backupPath, detectScaffoldedTier } from '../../src/commands/upgrade.js';
+import { fileURLToPath } from 'node:url';
+import {
+  ANTHROPIC_FILES,
+  REVIEW_DIFF_FILES,
+  backupPath,
+  detectScaffoldedTier,
+} from '../../src/commands/upgrade.js';
+
+const TEMPLATES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../templates');
 
 describe('ANTHROPIC_FILES registry', () => {
   it('contains the v1.15.0 1:1-scaffolded Anthropic-influenced file', () => {
@@ -116,4 +124,27 @@ describe('detectScaffoldedTier', () => {
       cleanup();
     }
   });
+});
+
+// upgrade diffs a project file against a single template. When that template is
+// one tier's copy, the other tiers must hold the same bytes, or their projects
+// would be shown differences that are not template changes.
+describe('REVIEW_DIFF_FILES tier templates', () => {
+  const tierEntries = REVIEW_DIFF_FILES.filter((e) => /^tier-[sml]\//.test(e.template));
+
+  it('include the skill-security skill', () => {
+    assert.ok(tierEntries.some((e) => e.target === '.claude/skills/skill-security/SKILL.md'));
+  });
+
+  for (const { template } of tierEntries) {
+    it(`${template} is byte-identical in every tier that ships it`, () => {
+      const rel = template.replace(/^tier-[sml]\//, '');
+      const expected = fs.readFileSync(path.join(TEMPLATES_DIR, template), 'utf8');
+      for (const tier of ['s', 'm', 'l']) {
+        const copy = path.join(TEMPLATES_DIR, `tier-${tier}`, rel);
+        if (!fs.existsSync(copy)) continue;
+        assert.equal(fs.readFileSync(copy, 'utf8'), expected, `tier-${tier}/${rel} differs`);
+      }
+    });
+  }
 });
