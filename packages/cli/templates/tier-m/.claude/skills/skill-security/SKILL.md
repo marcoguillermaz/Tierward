@@ -62,6 +62,11 @@ SkillSpector is not available. Install v2.13.0 from NVIDIA's GitHub repository w
 
   uv tool install git+https://github.com/NVIDIA/skillspector.git@091a509b3d6ba8ff5be528966e1f43c2e68cf214
 
+No uv? Install it from https://docs.astral.sh/uv/getting-started/installation/,
+or use pipx (Python 3.12 to 3.14) with the same pin:
+
+  pipx install "skillspector @ git+https://github.com/NVIDIA/skillspector.git@091a509b3d6ba8ff5be528966e1f43c2e68cf214"
+
 Or build the Docker image:
   SRC="$(mktemp -d)"
   git clone https://github.com/NVIDIA/skillspector.git "$SRC"
