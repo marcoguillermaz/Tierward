@@ -351,6 +351,10 @@ This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). Be kind to 
 
 This section is for repo administrators handling release cycles. Contributors don't need to read it — the workflow ends at "PR merged".
 
+### Before each release
+
+- **Check the SkillSpector pin.** `/skill-security` installs SkillSpector from NVIDIA's GitHub repository at a fixed release commit (v2.13.0 since Tierward 2.3.5). The commit appears in four identical copies of the skill: `packages/cli/templates/tier-s/`, `tier-m/` and `tier-l/` under `.claude/skills/skill-security/SKILL.md`, and `plugin/skills/skill-security/SKILL.md`. Look up the latest release at https://github.com/NVIDIA/SkillSpector/releases. If it is newer than the pinned one, read the JSON report format at that tag (README, "Machine-readable output") and update Step 4 of the skill if the fields changed. Then replace the commit and the version in all four copies, run `node scripts/gen-skill-registry.mjs --refresh-headers`, and add a CHANGELOG line. A unit test fails if the four copies drift apart. Existing projects get the new pin through the diff that `tierward upgrade` prints.
+
 ### Release process
 
 1. **Verify CI green on `main`** after the PR merge: `gh pr checks <merged-pr-number>` should show all green and the PR linked to a single squash commit on `main`.
